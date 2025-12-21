@@ -1,0 +1,11 @@
+[deps]
+Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+Cascadia = "54eefc05-d75b-58de-a785-1a3403f0919f"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+Gumbo = "708ec375-b3d6-5a57-a7ce-8257bf98657a"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+LoopOS = "a3e9bcb5-7ea5-4ea9-9966-9cf0624ab850"
+ReplMaker = "b873ce64-0db9-51f5-a568-4457d8e49576"
+SMTPClient = "c35d69d1-b747-5018-a192-25bc5e63c83d"
+Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"

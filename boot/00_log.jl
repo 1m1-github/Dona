@@ -1,0 +1,35 @@
+module LoggingModule
+
+export LOGS, string
+
+using Logging
+
+struct Logger <: AbstractLogger
+    console_logger::ConsoleLogger
+    file_logger::SimpleLogger
+end
+
+Logging.min_enabled_level(logger::Logger) = min(Logging.min_enabled_level(logger.console_logger), Logging.min_enabled_level(logger.file_logger))
+
+Logging.shouldlog(logger::Logger, level, _module, group, id) = Logging.shouldlog(logger.console_logger, level, _module, group, id) || Logging.shouldlog(logger.file_logger, level, _module, group, id)
+
+Logging.handle_message(logger::Logger, level, message, _module, group, id, file, line; kwargs...) = begin
+    message = ("<$(time())>",  message)
+    Logging.handle_message(logger.console_logger, level, message, _module, group, id, file, line; kwargs...) # DEBUG
+    Logging.handle_message(logger.file_logger, level, message, _module, group, id, file, line; kwargs...)
+    flush(logger.file_logger.stream)
+end
+
+const LOGS = joinpath(Main.ROOT, "logs")
+!isdir(LOGS) && mkdir(LOGS)
+const file_stream(x) = open(joinpath(LOGS, "$(time())-$x"), "a")
+const file_logger = SimpleLogger(file_stream("dona.txt"), Logging.Info)
+const console_logger = ConsoleLogger(stdout, Logging.Info)
+const logger = Logger(console_logger, file_logger)
+global_logger(logger)
+
+import Base.string
+string(::T) where T<:AbstractLogger = ""
+
+end
+using .LoggingModule
