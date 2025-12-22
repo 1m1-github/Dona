@@ -1,10 +1,9 @@
-using Serialization
-
 module LongMemoryModule
 
-export to_long_memory, from_long_memory
+export to_long_memory, from_long_memory, Serialization
 
-import Serialization: serialize, deserialize
+import Main: @install
+@install Serialization
 import Main.LoopOS: TrackedSymbol, Action, HISTORY, ModuleMethod, jvm
 
 struct SerializableAction

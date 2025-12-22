@@ -3,13 +3,12 @@ module LearningModule
 export learn
 
 "`learn` will wrap the code into a Module and save it to long memory, even add to boot if set. This should only be used for reliable, tested code and usually only when explicitly agreed to by all relevant parties."
-function learn(name::Symbol, exports::Vector{Symbol}, pkgs::Vector{Symbol}, code::String, boot=false)
+function learn(name::Symbol, exports::Vector{Symbol}, pkgs::Vector{Symbol}, code::String, boot::Bool=false)
     mname = "$(name)Module"
     m = """
     module $mname
     export $(join(exports,','))
-    import Main: @install
-    @install $(join(pkgs,','))
+    Main.@install $(join(pkgs,','))
     $code
     end
     using .$mname

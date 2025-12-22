@@ -6,18 +6,29 @@ import Main.LoopOS: TrackedSymbol
 
 const CACHE = TrackedSymbol[]
 
+function same_but_different(s::TrackedSymbol, _s::TrackedSymbol)
+    value = s.value isa Ref ? s.value[] : s.value
+    _value = _s.value isa Ref ? _s.value[] : _s.value
+    s.m == _s.m && s.sym == _s.sym && value ≠ _value
+end
+
 function cache(_state::Vector{TrackedSymbol})
-    if isempty(CACHE)
-        append!(CACHE, _state)
-        return CACHE, TrackedSymbol[]
-    end
     non_cached = TrackedSymbol[]
-    for s in _state
-        same_but_different(s, _s) = s.m == _s.m && s.sym == _s.sym && s.value ≠ _s.value
-        index = findfirst(_s -> same_but_different(s, _s), CACHE)
-        isnothing(index) && continue
-        deleteat!(CACHE, index)
-        push!(non_cached, s)
+    if isempty(CACHE)
+        for s in _state
+            if s.m == Main.LoopOS && s.sym ≠ :BOOT
+                push!(non_cached, s)
+            else
+                push!(CACHE, s)
+            end
+        end
+    else
+        for s in _state
+            index = findfirst(_s -> same_but_different(s, _s), CACHE)
+            isnothing(index) && continue
+            deleteat!(CACHE, index)
+            push!(non_cached, s)
+        end
     end
     CACHE, non_cached
 end
