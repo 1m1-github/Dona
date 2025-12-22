@@ -4,7 +4,7 @@ export to_long_memory, from_long_memory, Serialization
 
 import Main: @install
 @install Serialization
-import Main.LoopOS: TrackedSymbol, Action, HISTORY, ModuleMethod, jvm
+import Main.LoopOS: TrackedSymbol, Action, HISTORY, jvm
 
 struct SerializableAction
     ts::Float64
@@ -22,7 +22,7 @@ function serializable(s::TrackedSymbol)
         value = SerializableAction(value)
     elseif T == Vector{Action}
         value = SerializableAction.(value)
-    elseif T ∈ [Task, Function, ModuleMethod, Method]
+    elseif T ∈ [Task, Function, Method]
         return nothing
     end
     TrackedSymbol(s.m, s.sym, value, s.ts)

@@ -1,6 +1,6 @@
 module AudioInputModule
 
-export AUDIO_INPUT, AUDIO_CALLING_INTELLIGENCE, AUDIO_LISTENING, AUDIO_INPUT_TASK
+# export AUDIO_INPUT, AUDIO_CALLING_INTELLIGENCE, AUDIO_LISTENING, AUDIO_INPUT_TASK
 
 import Main: @install, LoopOS, TranscriptionModule
 import Main.Base: take!, put!
@@ -61,18 +61,18 @@ function start_listening()
         end
     end
 end
-const ZMQ_CONTEXT = ZMQ.context()
-const ZMQ_SOCKET = Socket(ZMQ_CONTEXT, PULL)
-bind(ZMQ_SOCKET, "tcp://*:8888")
-clear_zmq(ZMQ_SOCKET)
-const AUDIO_LISTENING = Ref(true)
-const AUDIO_CALLING_INTELLIGENCE = Ref(true)
+# const ZMQ_CONTEXT = ZMQ.context()
+# const ZMQ_SOCKET = Socket(ZMQ_CONTEXT, PULL)
+# bind(ZMQ_SOCKET, "tcp://*:8888")
+# clear_zmq(ZMQ_SOCKET)
+# const AUDIO_LISTENING = Ref(true)
+# const AUDIO_CALLING_INTELLIGENCE = Ref(true)
 
-const AUDIO_INPUT = AudioInput("imi", Channel{String}(Inf))
-const AUDIO_INPUT_TASK = @async begin 
-    while !Main.LoopOS.awake() yield() end
-    start_listening()
-end
+# const AUDIO_INPUT = AudioInput("imi", Channel{String}(Inf))
+# const AUDIO_INPUT_TASK = @async begin 
+#     while !Main.LoopOS.awake() yield() end
+#     start_listening()
+# end
 
 end
 using .AudioInputModule

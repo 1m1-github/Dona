@@ -1,4 +1,4 @@
-module CachingModule
+# module CachingModule
 
 export cache!
 
@@ -18,27 +18,39 @@ function first_copy(_state::Vector{TrackedSymbol})
     CACHE, non_cached
 end
 
-function same_found!(s::TrackedSymbol, _state::Vector{TrackedSymbol})
+function find_similar_remove_same!(c::TrackedSymbol, _state::Vector{TrackedSymbol})
+    found_same = false
+    found_similar = false
     for i in length(_state):-1:1
-        _s = _state[i]
-        value = s.value isa Ref ? s.value[] : s.value
-        _value = _s.value isa Ref ? _s.value[] : _s.value
+        s = _state[i]
+        value = c.value isa Ref ? c.value[] : c.value
+        _value = s.value isa Ref ? s.value[] : s.value
         if s.m == _s.m && s.sym == _s.sym
+            found_similar = true
             if value == _value
+                found_same = true
                 deleteat!(_state, i)
-                return true
+                break
             end
         end
     end
-    false
+    found_similar, found_same
 end
 
+_state=jvm()
+# 1. s in both, same => noop = found_same
+# 2. s in both, diff => delete from CACHE, push to non_cached = found_similar && !found_same
+# 3. s in old only => delete from CACHE = !found_similar && !found_same
+# 4. s in new only => push to non_cached = rest of _state
+# 5. s in neither => noop = not possible
 function cache!(_state::Vector{TrackedSymbol})
     isempty(CACHE) && return first_copy(_state)
     non_cached = TrackedSymbol[]
     for i in length(CACHE):-1:1
-        s = CACHE[i]
-        same_found!(s, _state) && continue
+        c = CACHE[i]
+        found_similar, found_same = find_similar_remove_same!(c, _state)
+        found_same && continue
+        found_similar && push!(non_cached, c)
         deleteat!(CACHE, i)
     end
     push!(non_cached, _state...)
@@ -109,5 +121,5 @@ end
 #     volatile = state(_STATE[CACHED_INDEX:end]) * STATE_POST
 #     cached, volatile
 
-end
+# end
 using .CachingModule
