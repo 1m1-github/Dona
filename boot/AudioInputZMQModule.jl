@@ -68,7 +68,7 @@ clear_zmq(ZMQ_SOCKET)
 const AUDIO_LISTENING = Ref(true)
 const AUDIO_CALLING_INTELLIGENCE = Ref(true)
 
-const AUDIO_INPUT = AudioInput("imi", Channel{String}())
+const AUDIO_INPUT = AudioInput("imi", Channel{String}(Inf))
 const AUDIO_INPUT_TASK = @async begin 
     while !Main.LoopOS.awake() yield() end
     start_listening()

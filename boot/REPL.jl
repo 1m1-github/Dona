@@ -12,7 +12,7 @@ import Base.take!
 take!(::REPLInput) = take!(REPL.c)
 export take!
 
-const REPL = REPLInput(Channel{String}())
+const REPL = REPLInput(Channel{String}(Inf))
 export REPL
 
 repl_parse(s) = put!(REPL.c, string(strip("""$s""")))

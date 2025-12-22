@@ -11,7 +11,13 @@ function same_but_different(s::TrackedSymbol, _s::TrackedSymbol)
     _value = _s.value isa Ref ? _s.value[] : _s.value
     s.m == _s.m && s.sym == _s.sym && value ≠ _value
 end
+function same(s::TrackedSymbol, _s::TrackedSymbol)
+    value = s.value isa Ref ? s.value[] : s.value
+    _value = _s.value isa Ref ? _s.value[] : _s.value
+    s.m == _s.m && s.sym == _s.sym && value == _value
+end
 
+# todo not yet working well
 function cache(_state::Vector{TrackedSymbol})
     non_cached = TrackedSymbol[]
     if isempty(CACHE)
@@ -24,8 +30,11 @@ function cache(_state::Vector{TrackedSymbol})
         end
     else
         for s in _state
-            index = findfirst(_s -> same_but_different(s, _s), CACHE)
-            isnothing(index) && continue
+            changed_indices = findall(_s -> same_but_different(s, _s), CACHE)
+            isempty(changed_indices) && continue
+            same_indices = findall(_s -> same(s, _s), CACHE)
+            !isempty(same_indices) && continue
+            index = only(changed_indices)
             deleteat!(CACHE, index)
             push!(non_cached, s)
         end
