@@ -4,7 +4,7 @@ export REPL
 import Main: @install, LoopOS
 @install ReplMaker
 
-struct REPLInput <: LoopOS.InputPeripheral 
+struct REPLInput <: LoopOS.InputPeripheral
     c::Channel{String}
 end
 
@@ -12,22 +12,20 @@ import Base.take!
 take!(::REPLInput) = take!(REPL.c)
 export take!
 
-const REPL = REPLInput(Channel{String}(1))
+const REPL = REPLInput(Channel{String}(Inf))
 export REPL
 
 repl_parse(s) = put!(REPL.c, string(strip("""$s""")))
 
 using Logging
 atreplinit() do _
-    with_logger(NullLogger()) do
-        ReplMaker.initrepl(
-            repl_parse,
-            prompt_text="> ",
-            prompt_color=:light_cyan,
-            start_key="\\C-g",
-            mode_name="GOD",
-        )
-    end
+    ReplMaker.initrepl(
+        repl_parse,
+        prompt_text="> ",
+        prompt_color=:light_cyan,
+        start_key="\\C-g",
+        mode_name="GOD",
+    )
     write(stdin.buffer, "\x07")
 end
 
