@@ -1,6 +1,5 @@
 module REPLModule
 
-export REPL
 import Main: @install, LoopOS
 @install ReplMaker
 
@@ -13,11 +12,10 @@ take!(::REPLInput) = take!(REPL.c)
 export take!
 
 const REPL = REPLInput(Channel{String}(Inf))
-export REPL
+LoopOS.listen(REPL)
 
 repl_parse(s) = put!(REPL.c, string(strip("""$s""")))
 
-using Logging
 atreplinit() do _
     ReplMaker.initrepl(
         repl_parse,

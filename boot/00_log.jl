@@ -1,6 +1,6 @@
 module LoggingModule
 
-export LOGS, string, file_logger
+export LOGS
 
 using Logging
 
@@ -14,7 +14,7 @@ Logging.min_enabled_level(logger::Logger) = min(Logging.min_enabled_level(logger
 Logging.shouldlog(logger::Logger, level, _module, group, id) = Logging.shouldlog(logger.console_logger, level, _module, group, id) || Logging.shouldlog(logger.file_logger, level, _module, group, id)
 
 Logging.handle_message(logger::Logger, level, message, _module, group, id, file, line; kwargs...) = begin
-    message = "<$(time())> $message"
+    message = "$(Threads.threadid())<$(time())> $message"
     Logging.handle_message(logger.console_logger, level, message, _module, group, id, file, line; kwargs...) # DEBUG
     Logging.handle_message(logger.file_logger, level, message, _module, group, id, file, line; kwargs...)
     flush(logger.file_logger.stream)
@@ -28,10 +28,9 @@ const console_logger = ConsoleLogger(stdout, Logging.Info)
 const logger = Logger(console_logger, file_logger)
 global_logger(logger)
 
-import Base.string
-string(::T) where T<:AbstractLogger = ""
+# import Main.LoopOS.state
+# state(::T) where T<:AbstractLogger = ""
 
 end
 using .LoggingModule
-@info "Logging initialized" file=file_logger.stream
-flush(file_logger.stream)
+

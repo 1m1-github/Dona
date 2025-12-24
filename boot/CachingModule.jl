@@ -32,22 +32,14 @@ function same_found!(s::TrackedSymbol, _state::Vector{TrackedSymbol})
 end
 
 function cache!(_state::Vector{TrackedSymbol})
-    @show isempty(CACHE)
     isempty(CACHE) && return first_copy(_state)
-    @show "CACHE"
-    for s in CACHE @show s.m,s.sym,s.value end
-    @show "_state"
-    for s in _state @show s.m,s.sym, s.value end
     non_cached = TrackedSymbol[]
     for i in length(CACHE):-1:1
         s = CACHE[i]
-        @show i, s.m, s.sym, s.value
         same_found!(s, _state) && continue
-        @show "!same_found!"
         deleteat!(CACHE, i)
     end
     push!(non_cached, _state...)
-    @show non_cached
     CACHE, non_cached
 end
 
