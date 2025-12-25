@@ -11,7 +11,7 @@ import Base.take!
 take!(::REPLInput) = take!(REPL.c)
 export take!
 
-const REPL = REPLInput(Channel{String}(Inf))
+const REPL = REPLInput(Channel{String}(10))
 LoopOS.listen(REPL)
 
 repl_parse(s) = put!(REPL.c, string(strip("""$s""")))

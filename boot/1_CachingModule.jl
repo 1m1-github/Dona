@@ -15,7 +15,7 @@ function first_copy(_state::Vector{TrackedSymbol})
             push!(CACHE, s)
         end
     end
-    CACHE, non_cached
+    copy(CACHE), non_cached
 end
 
 function same_found!(s::TrackedSymbol, _state::Vector{TrackedSymbol})
@@ -40,7 +40,7 @@ function cache!(_state::Vector{TrackedSymbol})
         deleteat!(CACHE, i)
     end
     push!(non_cached, _state...)
-    CACHE, non_cached
+    copy(CACHE), non_cached
 end
 
 # cached = STATE_PRE * state(_STATE[1:CACHED_INDEX])

@@ -13,21 +13,25 @@ DEFAULT_COMPLEXITY_INTELLIGENCE = 0.5
 DEFAULT_MAX_INPUT_TOKENS_INTELLIGENCE = 2^20
 DEFAULT_MAX_OUTPUT_TOKENS_INTELLIGENCE = 2^12
 DEFAULT_TEMPERATURE_INTELLIGENCE = 0.5
-const MAX_CUMULATIVE_CACHED_READ_TOKENS = 10 / 0.5 * 1e6
-const MAX_CUMULATIVE_CACHED_WRITE_TOKENS = 10 / 6.25 * 1e6
-const MAX_CUMULATIVE_READ_TOKENS = 10 / 5 * 1e6
-const MAX_CUMULATIVE_WRITE_TOKENS = 10 / 25 * 1e6
+const MAX_USD = 100
+const MAX_CUMULATIVE_CACHED_READ_TOKENS = MAX_USD / 0.05 * 1e6
+const MAX_CUMULATIVE_READ_TOKENS = MAX_USD / 0.2 * 1e6
+const MAX_CUMULATIVE_WRITE_TOKENS = MAX_USD / 0.5 * 1e6
+const MAX_CUMULATIVE_REASONING_TOKENS = MAX_USD / 0.5 * 1e6
 
 """
-intelligence connects to Anthropic Claude
+intelligence connects to X AI
 you can use `intelligence` directly if you ever need to
 the current mapping is
+if isa(complexity, Number)
 if complexity < 0.3
-    complexity = "claude-haiku-4-5-20251001"
+    complexity = "grok-4-1-fast-non-reasoning"
 elseif complexity < 0.7
-    complexity = "claude-sonnet-4-5-20250929"
+    # complexity = "grok-4-1-fast-non-reasoning"
+    complexity = "grok-4-1-fast-reasoning"
 else
-    complexity = "claude-opus-4-5-20251101"
+    complexity = "grok-4-1-fast-reasoning"
+end
 end
 """
 function intelligence(;
@@ -49,30 +53,29 @@ function intelligence(;
         history,
         STATE_POST
     )
-    url = "https://api.anthropic.com/v1/messages"
-
-    headers = [
-        "x-api-key" => ENV["ANTHROPIC_API_KEY"],
-        "anthropic-version" => "2023-06-01",
-        "Content-Type" => "application/json"
-    ]
 
     if isa(complexity, Number)
         if complexity < 0.3
-            complexity = "claude-haiku-4-5-20251001"
+            complexity = "grok-4-1-fast-non-reasoning"
         elseif complexity < 0.7
-            complexity = "claude-sonnet-4-5-20250929"
+            # complexity = "grok-4-1-fast-non-reasoning"
+            complexity = "grok-4-1-fast-reasoning"
         else
-            complexity = "claude-opus-4-5-20251101"
+            complexity = "grok-4-1-fast-reasoning"
         end
     end
 
-    system = [Dict("type" => "text", "text" => input_system, "cache_control" => Dict("type" => "ephemeral"))]
-    messages = [Dict("role" => "user", "content" => input_user)]
+    url = "https://api.x.ai/v1/chat/completions"
+    headers = [
+        "Authorization" => """Bearer $(ENV["X_AI_API_KEY"])""",
+        "Content-Type" => "application/json"
+    ]
 
+    messages = [Dict("role" => "system", "content" => input_system)]
+    push!(messages, Dict("role" => "user", "content" => input_user))
     body = Dict(
         "model" => complexity,
-        "system" => system,
+        "stream" => false,
         "messages" => messages,
         "temperature" => temperature,
         "max_tokens" => max_output_tokens,
@@ -90,11 +93,11 @@ function intelligence(;
     t1 = time() #DEBUG
     response = HTTP.post(url, headers, body_string)
     t2 = time()#DEBUG
-    # serialize(joinpath(LOGS, "$ts-response"), response) # DEBUG
+    serialize(joinpath(LOGS, "$ts-response"), response) # DEBUG
     response_body = String(response.body)
     result = JSON3.parse(response_body)
-    output = result["content"][1]["text"]
-    ΔE = ΔEnery(result)
+    output = result["choices"][1]["message"]["content"]
+    ΔE = ΔEnergy(result)
 
     #DEBUG
     write(joinpath(LOGS, "latest-output.jl"), output*"\nΔE=$ΔE")
@@ -117,13 +120,11 @@ function intelligence(;
     extract_julia_blocks(output), ΔE
 end
 
-function ΔEnery(result)
-    ΔE = result["usage"]["cache_read_input_tokens"] / MAX_CUMULATIVE_CACHED_READ_TOKENS
-    ΔE += result["usage"]["cache_creation_input_tokens"] / MAX_CUMULATIVE_CACHED_WRITE_TOKENS
-    # result["usage"]["ephemeral_5m_input_tokens"] / MAX_CUMULATIVE_CACHED_READ_BITS
-    # result["usage"]["ephemeral_1h_input_tokens"] / MAX_CUMULATIVE_CACHED_READ_BITS
-    ΔE += result["usage"]["input_tokens"] / MAX_CUMULATIVE_READ_TOKENS
-    ΔE += result["usage"]["output_tokens"] / MAX_CUMULATIVE_WRITE_TOKENS
+function ΔEnergy(result)
+    ΔE = result["usage"]["prompt_tokens_details"]["cached_tokens"] / MAX_CUMULATIVE_CACHED_READ_TOKENS
+    ΔE += result["usage"]["prompt_tokens"] / MAX_CUMULATIVE_READ_TOKENS
+    ΔE += result["usage"]["completion_tokens"] / MAX_CUMULATIVE_WRITE_TOKENS
+    ΔE += result["usage"]["completion_tokens_details"]["reasoning_tokens"] / MAX_CUMULATIVE_REASONING_TOKENS
 end
 
 const JULIA_PREPEND = "```julia"
