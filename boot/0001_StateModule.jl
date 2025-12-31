@@ -13,7 +13,6 @@ for (i, action) in enumerate(HISTORY)
         push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].output"), action.output, action.ts))
     end
 end
-push!(volatile, TrackedSymbol(LoopOS, :LOOP, LOOP, Inf))
 INPUT = join(StateModule.state.(INPUTS), '\n')
 cached_sections = [STATE_PRE, SELF, state(:JVM, cached)]
 volatile_section = [state(Symbol(:HISTORY,:+,:JVM), volatile), state(:INPUT, INPUT), STATE_POST]
@@ -51,7 +50,6 @@ function state(
             push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].output"), action.output, action.ts))
         end
     end
-    push!(volatile, TrackedSymbol(LoopOS, :LOOP, LOOP, Inf))
     INPUT = join(StateModule.state.(INPUTS), '\n')
     cached_sections = [STATE_PRE, SELF, state(:JVM, cached)]
     volatile_section = [state(Symbol(:HISTORY,:+,:JVM), volatile), state(:INPUT, INPUT), STATE_POST]
