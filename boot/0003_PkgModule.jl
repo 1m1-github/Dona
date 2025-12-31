@@ -1,3 +1,7 @@
+module PkgModule
+
+export @install
+
 import Pkg
 
 "To install Julia Pkgs: `@install Pkg1, Pkg2, Pkg3, ...` runs `Pkg.add` and `using` if not already loaded"
@@ -22,4 +26,6 @@ macro install(pkgs...)
     
     usings = [:(using $pkg) for pkg in new_pkgs]
     esc(Expr(:block, usings...))
+end
+
 end

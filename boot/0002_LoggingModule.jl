@@ -28,9 +28,4 @@ const console_logger = ConsoleLogger(stdout, Logging.Info)
 const logger = Logger(console_logger, file_logger)
 global_logger(logger)
 
-# import Main.LoopOS.state
-# state(::T) where T<:AbstractLogger = ""
-
 end
-using .LoggingModule
-

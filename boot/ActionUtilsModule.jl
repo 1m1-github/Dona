@@ -1,3 +1,7 @@
+module ActionUtilsModule
+
+export stop_action
+
 # "will cause an InterruptException in the `task` given the `input_summary` of an `Action`"
 #  function stop_action(input_summary::String)
 #     action = find_action(input_summary)
@@ -28,3 +32,5 @@ end
 #         delete!(HISTORY, ts)
 #     end
 # end
+
+end

@@ -1,15 +1,17 @@
 module REPLModule
 
-import Main: @install, LoopOS
+import Main: LoopOS, StateModule
+import Base.take!
+import Main.StateModule: state
+import Main.PkgModule: @install
 @install ReplMaker
 
 struct REPLInput <: LoopOS.InputPeripheral
     c::Channel{String}
 end
 
-import Base.take!
 take!(::REPLInput) = take!(REPL.c)
-export take!
+state(::REPLInput) = "REPL"
 
 const REPL = REPLInput(Channel{String}(10))
 LoopOS.listen(REPL)
@@ -28,4 +30,3 @@ atreplinit() do _
 end
 
 end
-using .REPLModule

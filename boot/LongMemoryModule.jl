@@ -2,7 +2,7 @@ module LongMemoryModule
 
 export to_long_memory, from_long_memory, Serialization
 
-import Main: @install
+import Main.PkgModule: @install
 @install Serialization
 import Main.LoopOS: TrackedSymbol, Action, HISTORY, jvm
 
@@ -29,10 +29,6 @@ function serializable(s::TrackedSymbol)
 end
 
 """
-    to_long_memory(filename, value) # save single value
-    to_long_memory(filename) # save entire JVM state
-    to_long_memory() # save entire JVM state to "state.jls"
-
 Save to long memory (STORAGE).
 + String values → `write` as text
 + Other values → `serialize`
@@ -52,9 +48,6 @@ function to_long_memory(filename::String="state.jls", value=nothing)
 end
 
 """
-    from_long_memory(filename) # restore from file
-    from_long_memory() # restore from state.jls
-
 Load from long memory (STORAGE) and restore to Module Main.
 + .txt/.md/.jl files → read as String
 + .jls files → deserialize
@@ -81,4 +74,3 @@ function from_long_memory(filename::String="state.jls")
 end
 
 end
-using .LongMemoryModule

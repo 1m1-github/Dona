@@ -1,12 +1,13 @@
 module TranscriptionModule
 
-Main.@install Whisper, Suppressor
+import Main.PkgModule: @install
+@install Whisper, Suppressor
 
 const SILENCE_THRESHOLD = 1e-6
-# const WHISPER_FILENAME = "transciption/ggml-large-v3.bin"
-const WHISPER_FILENAME = "transciption/ggml-base.en.bin"
-# WHISPER_FILENAME = "transciption/ggml-small.en.bin"
-# WHISPER_FILENAME = "transciption/ggml-tiny.en.bin"
+# const WHISPER_FILENAME = "transcription/ggml-large-v3.bin"
+const WHISPER_FILENAME = "transcription/ggml-base.en.bin"
+# WHISPER_FILENAME = "transcription/ggml-small.en.bin"
+# WHISPER_FILENAME = "transcription/ggml-tiny.en.bin"
 const WHISPER_CONTEXT = @suppress Whisper.whisper_init_from_file(WHISPER_FILENAME)
 const WHISPER_PARAMS = @suppress Whisper.whisper_full_default_params(Whisper.LibWhisper.WHISPER_SAMPLING_GREEDY)
 const RM_WHISPER_COMMENTS_PATTERN = r"\[.*?\]|\(.*?\)"
@@ -40,4 +41,3 @@ function raw_text_to_conversation!(speaker, raw_text, text_buffer)
 end
 
 end
-using .TranscriptionModule

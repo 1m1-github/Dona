@@ -1,3 +1,8 @@
+module BasicToolsModule
+
+export web_search, browse_page, download_file, run_shell, send_http_request, parse_json, send_email
+
+import Main.PkgModule: @install
 @install HTTP, JSON3, Base64, Dates, SMTPClient, Serialization, Gumbo, Cascadia
 
 "Uses DuckDuckGo API for searching returning a Dict with :title, :snippet and :url keys"
@@ -92,4 +97,6 @@ function send_email(to::Vector{String}, subject, message)
         passwd=ENV["GMAIL_PASSWORD"])
     url = "smtps://smtp.gmail.com:465"
     send(url, to, from, body, opt)
+end
+
 end

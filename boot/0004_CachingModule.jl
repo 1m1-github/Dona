@@ -1,7 +1,5 @@
 module CachingModule
 
-export cache!
-
 import Main.LoopOS: TrackedSymbol
 
 const CACHE = TrackedSymbol[]
@@ -108,4 +106,3 @@ end
 #     cached, volatile
 
 end
-using .CachingModule
