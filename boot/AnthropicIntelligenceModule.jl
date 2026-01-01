@@ -140,14 +140,36 @@ function ΔEnery(result)
     ΔE += result["usage"]["output_tokens"] / MAX_CUMULATIVE_WRITE_TOKENS
 end
 
-const JULIA_PREPEND = "```julia"
-const JULIA_POSTPEND = "```"
-function extract_julia_blocks(text)
-    pattern = r"```julia\n(.*?)\n```"s
-    combined_julia_blocks = join([m.captures[1] for m in eachmatch(pattern, text)], '\n')
-    !isempty(combined_julia_blocks) && return combined_julia_blocks
+const JULIA_PREPEND = "```julia\n"
+const JULIA_POSTPEND = "\n```"
+function extract_julia_blocks(text::String)
     text = strip(text)
-    """$text""" # assume all is Julia
+    blocks = split(text, JULIA_PREPEND)
+    result = String[]
+    for (i, block) in enumerate(blocks)
+        block = strip(block)
+        isempty(block) && continue
+        if i == 1 && !startswith(text, JULIA_PREPEND)
+            lines = [string("#", strip(line)) for line in split(block, '\n')]
+            push!(result, join(lines, '\n'))
+            continue
+        end
+        if contains(block, JULIA_POSTPEND)
+            parts = split(block, JULIA_POSTPEND, limit=2)
+            julia_part = strip(parts[1])
+            !isempty(julia_part) && push!(result, julia_part)
+            if length(parts) > 1
+                text_part = strip(parts[2])
+                if !isempty(text_part)
+                    lines = [string("#", strip(line)) for line in split(text_part, '\n')]
+                    push!(result, join(lines, '\n'))
+                end
+            end
+        else
+            !isempty(block) && push!(result, block)
+        end
+    end
+    join(result, '\n')
 end
 
 const ANTHROPIC_STATE_PRE = """
