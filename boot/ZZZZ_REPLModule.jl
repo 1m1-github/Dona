@@ -11,7 +11,7 @@ struct REPLInput <: LoopOS.InputPeripheral
 end
 
 take!(::REPLInput) = take!(REPL.c)
-state(::REPLInput) = "REPL"
+state(::REPLInput) = "REPLModule.REPL"
 
 const REPL = REPLInput(Channel{String}(10))
 LoopOS.listen(REPL)

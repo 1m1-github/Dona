@@ -1,6 +1,19 @@
 module LongMemoryModule
 
-export to_long_memory, from_long_memory, Serialization
+export to_long_memory, from_long_memory, Serialization, LONG_MEMORY_ADVICE
+
+const LONG_MEMORY_ADVICE = """
+`to_long_memory` saves to long memory (STORAGE):
++ String values → `write` as text
++ Other values → `serialize`
++ No value → snapshot entire JVM state
++ No filename → save to `state.jls`
+
+`from_long_memory` loads from long memory (STORAGE) and restore to Module Main:
++ .txt/.md/.jl files → `read` as `String`
++ .jls files → `deserialize`
++ No filename → load from `state.jls`
+"""
 
 import Main.PkgModule: @install
 @install Serialization
@@ -28,12 +41,6 @@ function serializable(s::TrackedSymbol)
     TrackedSymbol(s.m, s.sym, value, s.ts)
 end
 
-"""
-Save to long memory (STORAGE).
-+ String values → `write` as text
-+ Other values → `serialize`
-+ No value → snapshot entire JVM state
-"""
 function to_long_memory(filename::String="state.jls", value=nothing)
     path = joinpath(Main.STORAGE, filename)
     if isnothing(value)
@@ -47,11 +54,6 @@ function to_long_memory(filename::String="state.jls", value=nothing)
     end
 end
 
-"""
-Load from long memory (STORAGE) and restore to Module Main.
-+ .txt/.md/.jl files → read as String
-+ .jls files → deserialize
-"""
 function from_long_memory(filename::String="state.jls")
     path = joinpath(Main.STORAGE, filename)
     ext = splitext(filename)[2]

@@ -2,18 +2,18 @@ module CachingModule
 
 import Main.LoopOS: TrackedSymbol
 
-const CACHE = TrackedSymbol[]
+const CACHED = TrackedSymbol[]
+const VOLATILE = TrackedSymbol[]
 
 function first_copy(_state::Vector{TrackedSymbol})
-    non_cached = TrackedSymbol[]
     for s in _state
         if s.m == Main.LoopOS && s.sym ≠ :BOOT
-            push!(non_cached, s)
+            push!(VOLATILE, s)
         else
-            push!(CACHE, s)
+            push!(CACHED, s)
         end
     end
-    copy(CACHE), non_cached
+    copy(CACHED), copy(VOLATILE)
 end
 
 function same_found!(s::TrackedSymbol, _state::Vector{TrackedSymbol})
@@ -30,15 +30,19 @@ function same_found!(s::TrackedSymbol, _state::Vector{TrackedSymbol})
 end
 
 function cache!(_state::Vector{TrackedSymbol})
-    isempty(CACHE) && return first_copy(_state)
-    non_cached = TrackedSymbol[]
-    for i in length(CACHE):-1:1
-        s = CACHE[i]
+    isempty(CACHED) && return first_copy(_state)
+    for i in length(CACHED):-1:1
+        s = CACHED[i]
         same_found!(s, _state) && continue
-        deleteat!(CACHE, i)
+        deleteat!(CACHED, i)
     end
-    push!(non_cached, _state...)
-    copy(CACHE), non_cached
+    for i in length(VOLATILE):-1:1
+        s = VOLATILE[i]
+        same_found!(s, _state) && continue
+        deleteat!(VOLATILE, i)
+    end
+    push!(VOLATILE, _state...)
+    copy(CACHED), copy(VOLATILE)
 end
 
 # cached = STATE_PRE * state(_STATE[1:CACHED_INDEX])

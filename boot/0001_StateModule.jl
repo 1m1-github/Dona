@@ -4,8 +4,9 @@ export add_module_to_state, StateModuleAdvice
 
 const StateModuleAdvice = raw"""
 The following is how state is made:
-# state(sym::Symbol, value::Any) adds "$sym === BEGIN" and "$sym === END"
-cached, volatile = cache!(JVM)
+state(description::String, value::Any) = description * " === BEGIN" * "\n\n" * state(value) *  "\n\n" * description * " === END"
+# `Method`s `state` as `os_time` * `docstring` * signature
+cached, volatile = Main.CachingModule.cache!(JVM)
 for (i, action) in enumerate(HISTORY)
     push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].inputs"), action.inputs, action.ts))
     if istaskfailed(action.task)
@@ -13,9 +14,10 @@ for (i, action) in enumerate(HISTORY)
         push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].output"), action.output, action.ts))
     end
 end
+push!(volatile, TrackedSymbol(LoopOS, :LOOP, LOOP, Inf))
 INPUT = join(StateModule.state.(INPUTS), '\n')
-cached_sections = [STATE_PRE, SELF, state(:JVM, cached)]
-volatile_section = [state(Symbol(:HISTORY,:+,:JVM), volatile), state(:INPUT, INPUT), STATE_POST]
+cached_sections = [STATE_PRE, SELF, state("LoopOS.jvm()", cached)]
+volatile_section = [state("LoopOS.HISTORY[] ∪ LoopOS.jvm()", volatile), state("INPUTS", INPUT), STATE_POST]
 join(cached_sections, "\n\n"), join(volatile_section, "\n\n")
 """
 
@@ -50,21 +52,22 @@ function state(
             push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].output"), action.output, action.ts))
         end
     end
+    push!(volatile, TrackedSymbol(LoopOS, :LOOP, LOOP, Inf))
     INPUT = join(StateModule.state.(INPUTS), '\n')
-    cached_sections = [STATE_PRE, SELF, state(:JVM, cached)]
-    volatile_section = [state(Symbol(:HISTORY,:+,:JVM), volatile), state(:INPUT, INPUT), STATE_POST]
+    cached_sections = [STATE_PRE, SELF, state("LoopOS.jvm()", cached)]
+    volatile_section = [state("LoopOS.HISTORY[] ∪ LoopOS.jvm()", volatile), state("INPUTS", INPUT), STATE_POST]
     join(cached_sections, "\n\n"), join(volatile_section, "\n\n")
 end
 state(x) = string(x) # Use `dump` if you need to see more of anything but careful, it could be a lot
-function state(sym::Symbol, value::Any)
-    str = string(sym)
-    str * " === BEGIN" * "\n\n" * state(value) *  "\n\n" * str * " === END"
-end
+state(description::String, value::Any) = description * " === BEGIN" * "\n\n" * state(value) *  "\n\n" * description * " === END"
 state(T::DataType) = strip(sprint(dump, T)) * " end"
 state(r::Ref) = state(r[])
 function state(ts::Float64, m::Module)
     name = string(nameof(m))
-    m ∉ MODULES && return os_time(ts) * name * "::Module (`export`ed symbols not shown, use `add_module_to_state` if you need to)"
+    if m ∉ MODULES
+        m ∈ [Base, Core] && return ""
+        return os_time(ts) * name * "::Module (`export`ed symbols not shown, use `add_module_to_state` if you need to)"
+    end
     _state = String[]
     for name in names(m)
         f = getfield(m, name)
@@ -74,15 +77,15 @@ function state(ts::Float64, m::Module)
     join(_state, '\n')
 end
 state(s::String) = "\"$s\""
-state(l::Loop) = "Loop(duration=$(round(l.duration, digits=0))s, energy=$(round(l.energy, digits=4)), boot_time=$(l.boot_time), boot=$(l.boot))"
 state(v::Vector) = "[" * join(state.(v), ",\n") * "]"
 state(v::Vector{T}) where T <: Number = "[" * join(string.(v), ", ") * "]"
-state(i::Input) = "Input($(os_time(i.ts)), $(state(i.source)), $(state(i.input)))"
+state(i::Input) = "LoopOS.Input($(os_time(i.ts)), $(state(i.source)), $(state(i.input)))"
 function state(a::Action)
     _state = "inputs=$(state(a.inputs))"
     istaskfailed(a.task) && ( _state *= "\noutput=$(a.output)$(state(a.task))" )
     _state
 end
+state(::Loop) = "LoopOS.LOOP"
 function state(t::Task)
     _state = ["$(repr(f)):$(f(t))" for f in [istaskstarted, istaskdone, istaskfailed]]
     exception = istaskfailed(t) ? ",exception:$(state(t.exception))" : ""
@@ -118,15 +121,22 @@ function state(v::TrackedSymbol)
     end
     if T <: Function
         return join(state.([TrackedSymbol(v.m, v.sym, method, v.ts) for method in methods(value, v.m)]), '\n')
+    elseif T <: Method
+        return os_time(v.ts) * state(value)
     end
     T_str = T ∈ [DataType, Method] ? "" : string(T)
     _sizeofvalue = sizeof(value)
     sizeofvalue = iszero(_sizeofvalue) ? "" : "(sizeof=" * string(sizeof(value)) * ")"
-    # _state = T == Module ? state(v.ts, value) : state(value)
     if T == Module
         state(v.ts, value)
     else
-        os_time(v.ts) * m * string(v.sym) * ref * "::" * T_str * sizeofvalue * "==" * state(value)
+        _state = if value === LOOP && isinf(v.ts)
+            _s = strip(sprint(dump, value))
+            replace(_s, r": (\w+) " => s"::\1=") * " end"
+        else
+            state(value)
+        end
+        os_time(v.ts) * m * string(v.sym) * ref * "::" * T_str * sizeofvalue * "=" * _state
     end
 end
 function state(_state::Vector{TrackedSymbol})
