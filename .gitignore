@@ -4,3 +4,5 @@ transcription/*.bin
 !*.gitkeep
 
 Manifest.toml
+
+.DS_Store

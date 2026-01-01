@@ -46,7 +46,7 @@ function start_listening()
     @async while AUDIO_LISTENING[]
         yield()
         audios_data = get_audios_from_zmq(ZMQ_SOCKET)
-        serialize(joinpath(LOGS,"$(time())-audios_data"), audios_data) # DEBUG
+        # serialize(joinpath(LOGS,"$(time())-audios_data"), audios_data) # DEBUG
         @sync for (_, audio_data) in audios_data
             isnothing(audio_data.buffer) && continue
             @async audio_data.value = TranscriptionModule.transcribe(audio_data.buffer.data)

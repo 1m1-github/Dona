@@ -108,7 +108,7 @@ function intelligence(;
     output = result["content"][1]["text"]
 
     #DEBUG
-    o = output*JSON3.write(result["usage"])*"\nΔE=$ΔE"
+    o = output*"\n"*JSON3.write(result["usage"])*"\nΔE=$ΔE"
     write(joinpath(LOGS, "latest-output.jl"), o)
     write(joinpath(LOGS, "$ts-output.jl"), o)
     # cp(joinpath(LOGS, "$ts-output.jl"), joinpath(LOGS, "latest-output.jl"), force=true)

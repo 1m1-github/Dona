@@ -1,0 +1,54 @@
+module TypstModule
+
+export typst_sprite, TYPST_ADVICE
+
+const TYPST_ADVICE = """
+The TypstModule allows you to create a Sprite based on Typst code using `typst_sprite`.
+The page params are set automatically.
+`put!("hi", typst_sprite((0.5,0.5,Inf), "hi")` would draw "hi" in the center on top of all other sprites (Inf z depth).
+"""
+
+import Main: @install
+@install PNGFiles, Colors
+import Colors: RGBA
+import Main: CanvasModule
+import Main.CanvasModule: Sprite, WHITE, CLEAR
+
+const DPI = 300
+const TEMPLATE(content) = """
+#set page(width: auto, height: auto, margin: (top: 0pt, bottom: 4pt, left: 0pt, right: 0pt))
+#set text(font: "EB Garamond", size: 20pt)
+$content
+"""
+
+function load_png(path::String; transparent_white::Bool=true)
+    img = PNGFiles.load(path)
+    h, w = size(img)
+    pixels = Matrix{RGBA}(undef, h, w)
+    for y in 1:h, x in 1:w
+        c = img[y, x]
+        # if transparent_white && c == WHITE
+            # pixels[y, x] = CLEAR
+        # else
+            pixels[y, x] = c
+        # end
+    end
+    pixels
+end
+
+"compiles Typst code and returns a Sprite"
+typst_sprite(pos::NTuple{3,Float64}, code::String)::Sprite = Sprite(pos, typst_pixels(code))
+function typst_pixels(code::String)
+    dir = mktempdir()
+    typ_file = joinpath(dir, "input.typ")
+    png_file = joinpath(dir, "output.png")
+    full_code = contains(code, TEMPLATE("")) ? code : TEMPLATE(code)
+    write(typ_file, full_code)
+    run(`typst compile --format png --ppi $DPI $typ_file $png_file`)
+    !isfile(png_file) && error("Typst compilation failed")
+    pixels = load_png(png_file)
+    rm(dir; recursive=true)
+    pixels
+end
+
+end
