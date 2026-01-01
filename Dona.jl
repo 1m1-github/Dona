@@ -1,4 +1,5 @@
 # julia --quiet --interactive --threads 24 Dona.jl
+# todo: speak (tts+speaker) with interupting logic, see canvas (screenshot), see world (cam) [seeing latest frame only, drop old to save data]
 
 const ROOT = @__DIR__
 const STORAGE = joinpath(ROOT, "storage")
