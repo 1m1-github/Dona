@@ -5,14 +5,13 @@ export typst_sprite, TYPST_ADVICE
 const TYPST_ADVICE = """
 The TypstModule allows you to create a Sprite based on Typst code using `typst_sprite`.
 The page params are set automatically.
-`put!("hi", typst_sprite((0.5,0.5,Inf), "hi")` would draw "hi" in the center on top of all other sprites (Inf z depth).
+`put!(typst_sprite((0.5,0.5), "hi"))` would draw "hi" in the center on top of all other sprites (Inf z depth).
 """
 
 import Main: @install
 @install PNGFiles, Colors
 import Colors: RGBA
-import Main: CanvasModule
-import Main.CanvasModule: Sprite, WHITE, CLEAR
+import Main.CanvasModule: Position, Pixels, Sprite, WHITE, CLEAR
 
 const DPI = 300
 const TEMPLATE(content) = """
@@ -21,7 +20,8 @@ const TEMPLATE(content) = """
 $content
 """
 
-function load_png(path::String; transparent_white::Bool=true)
+# function load_png(path::String; transparent_white::Bool=true)
+function load_png(path::String)::Pixels
     img = PNGFiles.load(path)
     h, w = size(img)
     pixels = Matrix{RGBA}(undef, h, w)
@@ -37,8 +37,8 @@ function load_png(path::String; transparent_white::Bool=true)
 end
 
 "compiles Typst code and returns a Sprite"
-typst_sprite(pos::NTuple{3,Float64}, code::String)::Sprite = Sprite(pos, typst_pixels(code))
-function typst_pixels(code::String)
+typst_sprite(id::String, pos::Position, code::String)::Sprite = Sprite(id, pos, typst_pixels(code))
+function typst_pixels(code::String)::Pixels
     dir = mktempdir()
     typ_file = joinpath(dir, "input.typ")
     png_file = joinpath(dir, "output.png")

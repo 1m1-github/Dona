@@ -5,7 +5,7 @@ export DEFAULT_MAX_OUTPUT_TOKENS_INTELLIGENCE, DEFAULT_MAX_INPUT_TOKENS_INTELLIG
 
 import Main.PkgModule: @install
 @install HTTP, JSON3, Serialization
-import Main.LoopOS: TrackedSymbol, Input, Action, Loop
+import Main.LoopOS: TrackedSymbol, Input, Action, Loop, InputPeripheral, OutputPeripheral
 import Main.CachingModule: cache!
 import Main: StateModule
 
@@ -36,7 +36,8 @@ function intelligence(;
     SELF::String,
     HISTORY::Vector{Action},
     JVM::Vector{TrackedSymbol},
-    INPUTS::Vector{Input},
+    INPUTS::Dict{InputPeripheral, Vector{Input}},
+    OUTPUTS::Vector{OutputPeripheral},
     LOOP::Loop,
     STATE_POST::String,
     COMPLEXITY=DEFAULT_COMPLEXITY_INTELLIGENCE,
@@ -49,8 +50,9 @@ function intelligence(;
         HISTORY,
         JVM,
         INPUTS,
+        OUTPUTS,
         LOOP,
-        STATE_POST * ANTHROPIC_STATE_POST,
+        ANTHROPIC_STATE_POST * STATE_POST,
     )
     url = "https://api.anthropic.com/v1/messages"
 

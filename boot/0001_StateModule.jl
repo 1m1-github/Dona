@@ -22,7 +22,7 @@ join(cached_sections, "\n\n"), join(volatile_section, "\n\n")
 """
 
 import Main: LoopOS
-import Main.LoopOS: TrackedSymbol, Input, Action, LOOP, Loop
+import Main.LoopOS: TrackedSymbol, Input, Action, LOOP, Loop, InputPeripheral, OutputPeripheral
 
 const MODULES = Module[Main, LoopOS, @__MODULE__]
 "Will add the exported symbols of this module to your short memory"
@@ -39,7 +39,8 @@ function state(
     SELF::String,
     HISTORY::Vector{Action},
     JVM::Vector{TrackedSymbol},
-    INPUTS::Vector{Input},
+    INPUTS::Dict{InputPeripheral, Vector{Input}},
+    OUTPUTS::Vector{OutputPeripheral},
     LOOP::Loop,
     STATE_POST::String,
 )
@@ -53,9 +54,8 @@ function state(
         end
     end
     push!(volatile, TrackedSymbol(LoopOS, :LOOP, LOOP, Inf))
-    INPUT = join(StateModule.state.(INPUTS), '\n')
     cached_sections = [STATE_PRE, SELF, state("LoopOS.jvm()", cached)]
-    volatile_section = [state("LoopOS.HISTORY[] ∪ LoopOS.jvm()", volatile), state("INPUTS", INPUT), STATE_POST]
+    volatile_section = [state("LoopOS.HISTORY[] ∪ LoopOS.jvm()", volatile), state("OUTPUTS", OUTPUTS), state("INPUTS", INPUTS), STATE_POST]
     join(cached_sections, "\n\n"), join(volatile_section, "\n\n")
 end
 state(x) = string(x) # Use `dump` if you need to see more of anything but careful, it could be a lot
@@ -80,6 +80,8 @@ state(s::String) = "\"$s\""
 state(v::Vector) = "[" * join(state.(v), ",\n") * "]"
 state(v::Vector{T}) where T <: Number = "[" * join(string.(v), ", ") * "]"
 state(i::Input) = "LoopOS.Input($(os_time(i.ts)), $(state(i.source)), $(state(i.input)))"
+state(i::InputPeripheral) = state(typeof(i))
+state(o::OutputPeripheral) = state(typeof(o))
 function state(a::Action)
     _state = "inputs=$(state(a.inputs))"
     istaskfailed(a.task) && ( _state *= "\noutput=$(a.output)$(state(a.task))" )

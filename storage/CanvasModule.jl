@@ -1,8 +1,7 @@
 @install Colors
 module CanvasModule
 
-export Sprite, put!, mv!, rm!, clear!, scene!
-export circle, rect, CANVAS_ADVICE
+export Position, Color, Pixels, Sprite, put!, move!, delete!, clear!, CANVAS_ADVICE
 export @colorant_str
 
 const CANVAS_ADVICE = """
@@ -17,7 +16,7 @@ Use this Canvas as your main visual communications peripheral.
 
 import Main.StateModule: state
 import Main: LoopOS
-import Base.put!
+import Base: put!, delete!
 
 import Main: @install
 @install HTTP, JSON3, Colors, FixedPointNumbers
@@ -30,17 +29,25 @@ const WHITE = Color(1, 1, 1, 1)
 const BLACK = Color(0, 0, 0, 1)
 const CLEAR = Color(0, 0, 0, 0)
 
+"(x,y,z) with (x,y) the top-left corner on a 2d canvas and z the depth"
+const Position = NTuple{3, Float64}
+"(x,y)::TopPosition ==  (x,y,Inf)::Position"
+const TopPosition = NTuple{2, Float64}
+top_position(pos::TopPosition)::Position = Position((pos..., Inf))
+
 color(c::Colorant) = Color(c)
 color(c::Color) = c
 
 """
-A graphical sprite displayed on the canvas.
-`position` (x,y,z) such that (x,y) is the top left corner of `pixels` and z the depth (2d screen)
+A matrix of pixels displayed on the canvas.
 """
 mutable struct Sprite
-    position::NTuple{3,Float64}
+    id::String
+    center::Position
     pixels::Pixels
 end
+"Constructor for highest possible depth (on top of all) Sprites"
+Sprite(id::String, pos::TopPosition, pixels::Pixels) = Sprite(id, top_position(pos), pixels)
 
 mutable struct Canvas <: LoopOS.OutputPeripheral
     width::Int
@@ -54,7 +61,8 @@ end
 const CANVAS = Ref{Canvas}()
 
 state(::Canvas) = "width=$(CANVAS[].width),height=$(CANVAS[].height),sprites=[$(join(state.(sort(collect(keys(CANVAS[].sprites)))),','))]"
-state(s::Sprite) = "position=$(s.position)"
+state(s::Sprite) = "id=$(s.id),center=$(s.center)"
+state(::Matrix{RGBA}) = "(Matrix{RGBA} not shown in state for size reasons)"
 
 function init(width::Int, height::Int)
     CANVAS[] = Canvas(
@@ -69,52 +77,32 @@ end
 
 rel2abs(rel::Real, abs::Int) = round(Int, abs * rel)
 
-"0.0 ≤ radius ≤ 1.0"
-function circle(radius::Real, c::Colorant)::Pixels
-    d = rel2abs(2 * radius, max(CANVAS[].width, CANVAS[].height))
-    d < 1 && return fill(color(c), 1, 1)
-    pixels = fill(CLEAR, d, d)
-    center = d / 2
-    r² = center^2
-    for y in 1:d, x in 1:d
-        (x - center)^2 + (y - center)^2 <= r² && (pixels[y, x] = color(c))
-    end
-    pixels
-end
-
-"0.0 ≤ width,height ≤ 1.0"
-function rect(width::Real, height::Real, c::Colorant)::Pixels
-    w = rel2abs(width, CANVAS[].width)
-    h = rel2abs(height, CANVAS[].height)
-    fill(color(c), max(1, h), max(1, w))
-end
-
 "add `Sprite` to `Canvas`"
-function put!(id::String, sprite::Sprite)
+function put!(sprite::Sprite)
     lock(CANVAS[].lock) do
-        CANVAS[].sprites[id] = sprite
+        CANVAS[].sprites[sprite.id] = sprite
     end
     recomposite!()
 end
 
 "move `Sprite` with `id` to `pos`"
-function mv!(id::String, pos::Tuple)
-    p = (Float64(pos[1]), Float64(pos[2]), Float64(get(pos, 3, 0.0)))
+function move!(id::String, center::Position)
     lock(CANVAS[].lock) do
-        CANVAS[].sprites[id].position = p
+        CANVAS[].sprites[id].center = center
+    end
+    recomposite!()
+end
+move!(id::String, center::TopPosition) = mv!(id, top_position(center))
+
+"delete `Sprite` with `id` from `Canvas`"
+function delete!(id::String)
+    lock(CANVAS[].lock) do
+        Base.delete!(CANVAS[].sprites, id)
     end
     recomposite!()
 end
 
-"remove `Sprite` with `id` from `Canvas`"
-function rm!(id::String)
-    lock(CANVAS[].lock) do
-        delete!(CANVAS[].sprites, id)
-    end
-    recomposite!()
-end
-
-"remove all `Sprite`s from `Canvas`"
+"delete all `Sprite`s from `Canvas`"
 function clear!()
     lock(CANVAS[].lock) do
         empty!(CANVAS[].sprites)
@@ -122,12 +110,13 @@ function clear!()
     recomposite!()
 end
 
-"Scene management - for composing multiple sprites as a unit"
-function scene!(id::String, sprites::Vector{Pair{String, Sprite}})
-    for (sub_id, sprite) in sprites
-        put!("$(id)_$(sub_id)", sprite)
-    end
-end
+# "Scene management - for composing multiple sprites as a unit"
+# function scene!(id::String, sprites::Vector{Sprite})
+#     for sprite in sprites
+#         put!(sprite)
+
+#     end
+# end
 
 function blend(bg::Color, fg::Color)
     fg.alpha == 1 && return fg
@@ -137,20 +126,22 @@ function blend(bg::Color, fg::Color)
     Color(α * fg.r + β * bg.r, α * fg.g + β * bg.g, α * fg.b + β * bg.b, 1)
 end
 
+rel2abs_x(rel::Real) = round(Int, CANVAS[].width * rel)
+rel2abs_y(rel::Real) = round(Int, CANVAS[].height * rel)
+
 function recomposite!()
-    s = CANVAS[]
-    lock(s.lock) do
-        fill!(s.composite, WHITE)
-        sprites = sort!(collect(values(s.sprites)), by=sp -> sp.position[3])
+    canvas = CANVAS[]
+    lock(canvas.lock) do
+        fill!(canvas.composite, WHITE)
+        sprites = sort!(collect(values(canvas.sprites)), by=sp -> sp.center[3])
         for sprite in sprites
             sh, sw = size(sprite.pixels)
-            sx = rel2abs(sprite.position[1], s.width)
-            sy = rel2abs(sprite.position[2], s.height)
-            dx, dy = (1:sw)[1], (1:sh)[1]
+            cx = rel2abs_x(sprite.center[1]) - sw ÷ 2
+            cy = rel2abs_y(sprite.center[2]) - sh ÷ 2
             for dy in 1:sh, dx in 1:sw
-                cy, cx = sy + dy, sx + dx
-                (cy < 1 || cy > s.height || cx < 1 || cx > s.width) && continue
-                s.composite[cy, cx] = blend(s.composite[cy, cx], sprite.pixels[dy, dx])
+                py, px = cy + dy, cx + dx
+                (py < 1 || py > s.height || px < 1 || px > s.width) && continue
+                s.composite[py, px] = blend(s.composite[py, px], sprite.pixels[dy, dx])
             end
         end
     end
@@ -158,14 +149,14 @@ function recomposite!()
 end
 
 function computeΔ!()
-    s = CANVAS[]
+    canvas = CANVAS[]
     Δ = Tuple{Int,Int,Color}[]
-    lock(s.lock) do
-        for y in 1:s.height, x in 1:s.width
-            curr, prev = s.composite[y, x], s.previous[y, x]
+    lock(canvas.lock) do
+        for y in 1:canvas.height, x in 1:canvas.width
+            curr, prev = canvas.composite[y, x], canvas.previous[y, x]
             if curr != prev
                 push!(Δ, (x, y, curr))
-                s.previous[y, x] = curr
+                canvas.previous[y, x] = curr
             end
         end
     end
@@ -176,9 +167,9 @@ to256(x) = round(Int, x * 255)
 function broadcast_delta!()
     Δ = computeΔ!()
     isempty(Δ) && return
-    s = CANVAS[]
+    canvas = CANVAS[]
     pixels = [[x, y, to256(c.r), to256(c.g), to256(c.b), to256(c.alpha)] for (x, y, c) in Δ]
-    broadcast!(JSON3.write(Dict("width" => s.width, "height" => s.height, "pixels" => pixels)))
+    broadcast!(JSON3.write(Dict("width" => canvas.width, "height" => canvas.height, "pixels" => pixels)))
 end
 
 const message_condition = Threads.Condition()
@@ -250,9 +241,6 @@ function handle_sse(stream)
     HTTP.setheader(stream, "Content-Type" => "text/event-stream")
     HTTP.setheader(stream, "Cache-Control" => "no-cache")
     HTTP.startwrite(stream)
-
-    # safe_write(stream, "data: $(full_state_json())\n\n") || return
-    # safe_write(stream, "data: $(latest_message[])\n\n") || return
 
     while true
         lock(message_condition) do
