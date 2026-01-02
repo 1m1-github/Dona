@@ -1,60 +1,42 @@
 @install Colors
 module CanvasModule
 
-export Position, Color, Pixels, Sprite, put!, move!, delete!, clear!, CANVAS_ADVICE
+export Color, Sprite, put!, move!, delete!, clear!, CANVAS_ADVICE, CANVAS
 export @colorant_str
 
 const CANVAS_ADVICE = """
 This module allows you to do graphical presentation.
-Create a Sprite and then `add!` it. You can also `mv!` a Sprite or `rm!` it.
-`circle` and `rect` already exist, but you can create a Sprite with any Matrix of pixels.
-All positions are relative and contain first the 2d (x,y) and thirdly the z depth.
+Create a Sprite and then `put!` it to the `CANVAS[]` or `Canvas()`. You can also `move!` a Sprite or `delete!` it.
 The Canvas goes from top-left (0.0,0.0) to bottom-right (1.0,1.0).
 `@colorant_str` is exported so you can use `colorant"red"` for example if you want to.
 Use this Canvas as your main visual communications peripheral.
 """
-
-import Main.StateModule: state
-import Main: LoopOS
-import Base: put!, delete!
 
 import Main: @install
 @install HTTP, JSON3, Colors, FixedPointNumbers
 import Colors: RGBA, Colorant, @colorant_str
 import FixedPointNumbers: N0f8
 
+import Main.StateModule: state
+import Main: LoopOS, Position, HyperRectangle
+import Base: put!, delete!
+
 const Color = RGBA{N0f8}
-const Pixels = Matrix{Color}
 const WHITE = Color(1, 1, 1, 1)
 const BLACK = Color(0, 0, 0, 1)
 const CLEAR = Color(0, 0, 0, 0)
+const Position2D = Position{2}
 
-"(x,y,z) with (x,y) the top-left corner on a 2d canvas and z the depth"
-const Position = NTuple{3, Float64}
-"(x,y)::TopPosition ==  (x,y,Inf)::Position"
-const TopPosition = NTuple{2, Float64}
-top_position(pos::TopPosition)::Position = Position((pos..., Inf))
-
-color(c::Colorant) = Color(c)
-color(c::Color) = c
 
 """
-A matrix of pixels displayed on the canvas.
+A matrix of pixels displayed on the canvas, Painter's algorithm for z
 """
-mutable struct Sprite
-    id::String
-    center::Position
-    pixels::Pixels
-end
-"Constructor for highest possible depth (on top of all) Sprites"
-Sprite(id::String, pos::TopPosition, pixels::Pixels) = Sprite(id, top_position(pos), pixels)
-
+const Sprite = HyperRectangleModule.HyperRectangle{2, Color}
+white(height, width) = Sprite("w", Position2D((0.5, 0.5)), Position2D((0.5, 0.5)), fill(WHITE, height, width))
 mutable struct Canvas <: LoopOS.OutputPeripheral
     width::Int
     height::Int
     sprites::Dict{String, Sprite}
-    composite::Pixels
-    previous::Pixels
     lock::ReentrantLock
 end
 
@@ -66,19 +48,18 @@ state(::Matrix{RGBA}) = "(Matrix{RGBA} not shown in state for size reasons)"
 
 function init(width::Int, height::Int)
     CANVAS[] = Canvas(
-        width, height,
-        Dict{String,Sprite}(),
-        fill(WHITE, height, width),
-        fill(WHITE, height, width),
-        ReentrantLock()
+        width,
+        height,
+        Dict("CURRENT_COMPOSITE" => white(width, height), "PREVIOUS_COMPOSITE" => white(width, height)),
+        ReentrantLock(),
     )
     recomposite!()
 end
 
 rel2abs(rel::Real, abs::Int) = round(Int, abs * rel)
 
-"add `Sprite` to `Canvas`"
-function put!(sprite::Sprite)
+"put! `Sprite` to the `Canvas`"
+function put!(::Canvas, sprite::Sprite)
     lock(CANVAS[].lock) do
         CANVAS[].sprites[sprite.id] = sprite
     end
@@ -86,13 +67,12 @@ function put!(sprite::Sprite)
 end
 
 "move `Sprite` with `id` to `pos`"
-function move!(id::String, center::Position)
+function move!(id::String, center::Position2D)
     lock(CANVAS[].lock) do
         CANVAS[].sprites[id].center = center
     end
     recomposite!()
 end
-move!(id::String, center::TopPosition) = mv!(id, top_position(center))
 
 "delete `Sprite` with `id` from `Canvas`"
 function delete!(id::String)
@@ -110,14 +90,6 @@ function clear!()
     recomposite!()
 end
 
-# "Scene management - for composing multiple sprites as a unit"
-# function scene!(id::String, sprites::Vector{Sprite})
-#     for sprite in sprites
-#         put!(sprite)
-
-#     end
-# end
-
 function blend(bg::Color, fg::Color)
     fg.alpha == 1 && return fg
     fg.alpha == 0 && return bg
@@ -133,7 +105,7 @@ function recomposite!()
     canvas = CANVAS[]
     lock(canvas.lock) do
         fill!(canvas.composite, WHITE)
-        sprites = sort!(collect(values(canvas.sprites)), by=sp -> sp.center[3])
+        sprites = sort!(collect(values(canvas.sprites)), by=sp -> sp.center[3]) 
         for sprite in sprites
             sh, sw = size(sprite.pixels)
             cx = rel2abs_x(sprite.center[1]) - sw ÷ 2

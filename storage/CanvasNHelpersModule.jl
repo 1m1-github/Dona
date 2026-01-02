@@ -4,24 +4,22 @@ export circle, rect
 
 import Colors: Colorant
 
-import Main.CanvasModule: Position, Pixels, Sprite
+import Main.CanvasModule: Position, Pixels, Sprite, CANVAS
 
-circle(pos::Position, radius::Real, c::Colorant) = Sprite(pos, circle_pixels(radius, c))
-rect(pos::Position, w::Real, h::Real, c::Colorant) = Sprite(pos, rect_pixels(w, h, c))
+circle(center::Position, radius::Real, color::Colorant)::Sprite = Sprite(center, circle_pixels(center, radius, color))
+rect(pos::Position, width::Real, height::Real, color::Colorant)::Sprite = Sprite(pos, rect_pixels(width, height, color))
 
 "0.0 ≤ radius ≤ 1.0"
-function circle_pixels(center_pos::Position, radius::Real, c::Colorant)::Pixels
-    d = rel2abs(2 * radius, max(CANVAS[].width, CANVAS[].height))
-    d < 1 && return fill(color(c), 1, 1)
+function circle_pixels(center::Position, radius::Real, colorant::Colorant)::Pixels
+    width, height = CANVAS[].width, CANVAS[].height
+    d = rel2abs(2 * radius, max(width, height))
+    d < 1 && return fill(color(colorant), 1, 1)
     pixels = fill(CLEAR, d, d)
-    center = d / 2
-    r² = center^2
     for y in 1:d, x in 1:d
-        (x - center)^2 + (y - center)^2 <= r² && (pixels[y, x] = color(c))
+        (x - center)^2 + (y - center)^2 <= radius^2 && ( pixels[y, x] = color(colorant) )
     end
-    canvas = CANVAS[]
-    x = center_pos[1] - radius * max(canvas.width, canvas.height) / canvas.width
-    y = center_pos[2] - radius * max(canvas.width, canvas.height) / canvas.height
+    x = center[1] - radius * max(width, height) / width
+    y = center[2] - radius * max(width, height) / height
 end
 
 "0.0 ≤ width,height ≤ 1.0"

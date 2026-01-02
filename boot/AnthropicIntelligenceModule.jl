@@ -93,20 +93,18 @@ function intelligence(;
     #DEBUG
 
     t1 = time() #DEBUG
-    response = HTTP.post(url, headers, body_string)
-    # sleep(3)
+    # response = HTTP.post(url, headers, body_string)
+    sleep(1)
     t2 = time()#DEBUG
     # serialize(joinpath(LOGS, "$ts-response"), response) # DEBUG
-    response_body = String(response.body)
-    result = JSON3.parse(response_body)
-    ΔE = ΔEnery(result)
+    # response_body = String(response.body)
+    # result = JSON3.parse(response_body)
+    # ΔE = ΔEnery(result)
     # v = "v" * string(abs(rand(Int)))
-    # result = Dict("content"=>[Dict("text"=>"""
-    # ```julia
-    # $v = time()
-    # ```
+    result = Dict("content"=>[Dict("text"=>"""
+    put!("center circle",circle(Position(0.5, 0.5), 0.1, colorant"red"))
     # """)],"usage"=>"")
-    # ΔE = 0.01
+    ΔE = 0.01
     output = result["content"][1]["text"]
 
     #DEBUG
@@ -114,20 +112,20 @@ function intelligence(;
     write(joinpath(LOGS, "latest-output.jl"), o)
     write(joinpath(LOGS, "$ts-output.jl"), o)
     # cp(joinpath(LOGS, "$ts-output.jl"), joinpath(LOGS, "latest-output.jl"), force=true)
-    _now = time()
-    write(joinpath(LOGS, "stats"),
-        """
-        now: $_now
-        ts: $ts
-        Δ(now-ts): $(_now - ts)
-        ΔT: $(t2-t1)
-        ΔE: $ΔE
-        input_tokens: $(result["usage"]["input_tokens"])
-        cache_read_input_tokens: $(result["usage"]["cache_read_input_tokens"])
-        cache_creation_input_tokens: $(result["usage"]["cache_creation_input_tokens"])
-        output_tokens: $(result["usage"]["output_tokens"])
-        """
-    )
+    # _now = time()
+    # write(joinpath(LOGS, "stats"),
+    #     """
+    #     now: $_now
+    #     ts: $ts
+    #     Δ(now-ts): $(_now - ts)
+    #     ΔT: $(t2-t1)
+    #     ΔE: $ΔE
+    #     input_tokens: $(result["usage"]["input_tokens"])
+    #     cache_read_input_tokens: $(result["usage"]["cache_read_input_tokens"])
+    #     cache_creation_input_tokens: $(result["usage"]["cache_creation_input_tokens"])
+    #     output_tokens: $(result["usage"]["output_tokens"])
+    #     """
+    # )
     #DEBUG
 
     extract_julia_blocks(output), ΔE
