@@ -20,51 +20,130 @@ import FixedPointNumbers: N0f8
 import Main.StateModule: state
 import Main: LoopOS, Position, HyperRectangle
 import Base: put!, delete!
+# import Main.HyperRectangleModule: HyperRectangle
 
 const Color = RGBA{N0f8}
 const WHITE = Color(1, 1, 1, 1)
 const BLACK = Color(0, 0, 0, 1)
 const CLEAR = Color(0, 0, 0, 0)
-const Position2D = Position{2}
 
+# hypercube with 0 = bottom left, 1 = top right
+struct Sprite f::Function end
+function (s::Sprite)(x::NTuple{N,Float64} where N)::Color
+    any(x .< 0.0 .|| 1.0 .< x) && error("Sprites assume a unit hypercube")
+    s.f(x)
+end
+# hypercube with 0 = bottom left, 1 = top right
+struct Region{N}
+    center::NTuple{N, Float64}
+    radius::NTuple{N, Float64}
+end
+struct Canvas{N}
+    pixels::Array{Color, N}
+end
+function index(canvas::Canvas{N}, region::Region{M}) where {N, M}
+    N < M && error("region dims cannot exceed canvas dims")
+    # hypercube with 0 = bottom left, 1 = top right
+    sz_swapped = size(canvas.pixels)
+    sz = (sz_swapped[2], sz_swapped[1], sz_swapped[3:end]...)
+    # dim ext
+    center = ntuple(i -> i <= M ? region.center[i] : 1.0, N)
+    radius = ntuple(i -> i <= M ? region.radius[i] : 0.0, N)
+    available = ntuple(i -> 2 * radius[i] * sz[i], M)
+    scale = minimum(available ./ region.radius)
+    used = region.radius .* scale
+    center = ntuple(i -> center[i] * sz[i], M)
+    index_begin = ntuple(i -> max(round(Int, center[i] - used[i] / 2), 1), M)
+    index_end = ntuple(i -> min(round(Int, center[i] + used[i] / 2), sz[i]), M)
+    fixed_dimension = ntuple(i -> sz[M + i], N - M)
+    unit_hypercube_coordinates = NTuple{M, Float64}[]
+    hyperrectangle_index = CartesianIndex{N}[]
+    for i in CartesianIndices(UnitRange.(index_begin, index_end))
+        push!(unit_hypercube_coordinates, ntuple(M) do j
+            (i[j] - index_begin[j] + 0.5) / max(1, index_end[j] - index_begin[j] + 1)
+        end)
+        push!(hyperrectangle_index, CartesianIndex(sz[2] + 1 - i[2], i[1], i.I[3:end]..., fixed_dimension...))
+    end
+    unit_hypercube_coordinates, hyperrectangle_index
+end
+# function put!(canvas::Canvas{N}, sprite::Sprite, region::Region{M}) where {N, M}
+#     _index = index(canvas, region)
+#     [canvas.pixels[i[2]] = sprite(i[1]) for i in _index]
+#     _index
+# end
+# function composite(canvas::Canvas{4}, region::Region{2}, index::Vector)
+# delta_index = Set{Tuple{Int, Int}}()
+# for i in index(canvas, region)
+#     push!(delta_index, (i[2][1], i[2][2]))
+# end
+# N = length(size(canvas.pixels))
+# for (x, y) in delta_index
+function composite(canvas::Canvas{N}, hyperrectangle_index::CartesianIndices, composite_dimension::Int)::Canvas{M} where {N, M}
+    pixels = fill(CLEAR, ntuple(_ -> 1, M))
+    size(pixels) = length(compositing_dimensions)
+    non_constant_dimensions = [!allequal(j[i] for j in hyperrectangle_index) for i in 1:M]
+    constant_dimensions = [allequal(j[i] for j in hyperrectangle_index) for i in 1:M]
+    for i in hyperrectangle_index
+        for composite_index in 1:size(canvas.pixels, composite_dimension)
+            # fixed = ntuple(i -> sz[3 + i], 1)
+            i = CartesianIndex(x, y, z, fixed...)
+            color = blend(pixels[], canvas.pixels[i])
+            1.0 ≤ color.alpha && break
+        end
+        pixels[i] = color
+    end
+    Canvas(pixels)
+end
+function fair(a::Color, b::Color)::Color
+    total = a.alpha + b.alpha
+    total == 0 && return CLEAR
+    wa, wb = a.alpha / total, b.alpha / total
+    Color(
+        a.r * wa + b.r * wb,
+        a.g * wa + b.g * wb,
+        a.b * wa + b.b * wb,
+        a.alpha + b.alpha - a.alpha * b.alpha
+    )
+end
+import Base.∘
+∘(a::Sprite, b::Sprite) = Sprite(x -> fair(a(x), b(x)))
+
+# test
+sky = Sprite(x -> BLUE)
+circle(c, r, color) = Sprite(x -> hypot((x .- c)...) < r ? color : CLEAR)
+cloud = circle((0.5, 0.8), 0.1, WHITE)
+sun = circle((0.5, 0.8), 0.1, YELLOW)
+scene = sun ∘ cloud ∘ sky  # sun on top of cloud on top of sky
+sprite = circle((0.5, 0.5), 0.5)
+region = Region((0.7, 0.9), (0.1, 0.1))
+put!(canvas, sprite, region)
+
+
+canvas = Canvas(fill(WHITE, (1000,2000,100,10))) # x, y, z, t
+unit_hypercube_coordinates, hyperrectangle_index = index(canvas, region)
+i = put!(canvas, sprite, region)
+plot(canvas.pixels[:,:,end,end])
+using Plots
 
 """
 A matrix of pixels displayed on the canvas, Painter's algorithm for z
 """
-const Sprite = HyperRectangleModule.HyperRectangle{2, Color}
-white(height, width) = Sprite("w", Position2D((0.5, 0.5)), Position2D((0.5, 0.5)), fill(WHITE, height, width))
-mutable struct Canvas <: LoopOS.OutputPeripheral
-    width::Int
-    height::Int
-    sprites::Dict{String, Sprite}
-    lock::ReentrantLock
+struct Sprite{N}
+    id::String
+    region::HyperRectangle{N}
+    value::Array{Color,N}
 end
-
-const CANVAS = Ref{Canvas}()
-
-state(::Canvas) = "width=$(CANVAS[].width),height=$(CANVAS[].height),sprites=[$(join(state.(sort(collect(keys(CANVAS[].sprites)))),','))]"
-state(s::Sprite) = "id=$(s.id),center=$(s.center)"
-state(::Matrix{RGBA}) = "(Matrix{RGBA} not shown in state for size reasons)"
-
-function init(width::Int, height::Int)
-    CANVAS[] = Canvas(
-        width,
-        height,
-        Dict("CURRENT_COMPOSITE" => white(width, height), "PREVIOUS_COMPOSITE" => white(width, height)),
-        ReentrantLock(),
-    )
-    recomposite!()
-end
-
-rel2abs(rel::Real, abs::Int) = round(Int, abs * rel)
+state(s::Sprite) = "id=$(s.id),region=$(state(s.region))"
+Canvas(width, height) = Sprite{4}(
+    "CANVAS",
+    HyperRectangle(
+        "CANVAS",
+        (0.5, 0.5, 0.5, 0.5),
+        (0.5, 0.5, 0.5, 0.5)),
+    fill(WHITE, (width, height, 100, 100))) # width, height, depth, time
 
 "put! `Sprite` to the `Canvas`"
-function put!(::Canvas, sprite::Sprite)
-    lock(CANVAS[].lock) do
-        CANVAS[].sprites[sprite.id] = sprite
-    end
-    recomposite!()
-end
+put!(old::Sprite, new::Sprite) = setindex!(old.value, new.value, index(old.region, size(new.value)))
 
 "move `Sprite` with `id` to `pos`"
 function move!(id::String, center::Position2D)
@@ -90,12 +169,12 @@ function clear!()
     recomposite!()
 end
 
-function blend(bg::Color, fg::Color)
-    fg.alpha == 1 && return fg
-    fg.alpha == 0 && return bg
-    α = Float64(fg.alpha)
+function blend(a::Color, b::Color)
+    b.alpha == 1 && return b
+    b.alpha == 0 && return a
+    α = Float64(b.alpha)
     β = 1 - α
-    Color(α * fg.r + β * bg.r, α * fg.g + β * bg.g, α * fg.b + β * bg.b, 1)
+    Color(α * b.r + β * a.r, α * b.g + β * a.g, α * b.b + β * a.b, 1)
 end
 
 rel2abs_x(rel::Real) = round(Int, CANVAS[].width * rel)
@@ -105,7 +184,7 @@ function recomposite!()
     canvas = CANVAS[]
     lock(canvas.lock) do
         fill!(canvas.composite, WHITE)
-        sprites = sort!(collect(values(canvas.sprites)), by=sp -> sp.center[3]) 
+        sprites = sort!(collect(values(canvas.sprites)), by=sp -> sp.center[3])
         for sprite in sprites
             sh, sw = size(sprite.pixels)
             cx = rel2abs_x(sprite.center[1]) - sw ÷ 2
@@ -241,7 +320,8 @@ function serve(port)
     end
 end
 
-init(3056, 3152)
-const ServerTask = @async serve(8080)
+const CANVAS = Ref(Canvas(3056, 3152)) # todo test half and double
+recomposite!()
+const ServerTask = @async serve(8080) # todo move to own module
 
 end
