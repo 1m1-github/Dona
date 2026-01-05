@@ -50,6 +50,18 @@ end
 Region(id::String, center::Vector, radius::Vector) = Region(id, SVector{length(center)}(center), SVector{length(center)}(radius))
 Region(id::String, center::NTuple, radius::NTuple) = Region(id, SVector(center...), SVector(radius...))
 
+function pad!(region::Region{M}, N)::Region{N} where M
+    center = SVector{N}(i ≤ M ? region.center[i] : 1.0 for i in 1:N)
+    radius = SVector{N}(i ≤ M ? region.radius[i] : 0.0 for i in 1:N)
+    Region(region.id, center, radius)
+end
+
+struct Sprite{N,M}
+    id::String
+    drawing::Drawing{N}
+    region::Region{M}
+end
+
 struct Canvas{N} <: LoopOS.OutputPeripheral
     id::String
     pixels::Array{Color,N}
@@ -69,21 +81,8 @@ function index(canvas::Canvas{N}, region::Region{N})::CartesianIndices{N} where 
     end_index = min.(end_index, canvas_size)
     CartesianIndices(Tuple(UnitRange.(start_index, end_index)))
 end
-index(canvas::Canvas{N}, region::Region)::CartesianIndices{N} where N = index(canvas, pad!(region, N))
-function pad!(region::Region{M}, N)::Region{M} where M
-    center = SVector{N}(i <= M ? region.center[i] : 1.0 for i in 1:N)
-    radius = SVector{N}(i <= M ? region.radius[i] : 0.0 for i in 1:N)
-    Region(region.id, center, radius)
-end
-# function remove_dimension!(canvas::Canvas{N}, dimension) # todo
-#     Canvas(canvas.id, canvas.pixels[])
-# end
+index(canvas::Canvas{N}, region::Region) where N = index(canvas, pad!(region, N))
 
-struct Sprite{N,M}
-    id::String
-    drawing::Drawing{N}
-    region::Region{M}
-end
 import Base: put!
 function put!(canvas::Canvas{N}, sprite::Sprite)::Vector{CartesianIndex{N}} where N
     hyperrectangle_index = index(canvas, sprite.region)
@@ -93,7 +92,7 @@ function put!(canvas::Canvas{N}, sprite::Sprite)::Vector{CartesianIndex{N}} wher
     coordinate_dimension = (!iszero).(radius)
     Δ = CartesianIndex[]
     for i in hyperrectangle_index
-        coordinates = (SVector(i.I) .- start_index + 0.5) ./ radius
+        coordinates = (SVector(i.I) .- start_index .+ 0.5) ./ radius
         new_color = sprite.drawing(coordinates[coordinate_dimension])
         old_color = canvas.pixels[i]
         old_color == new_color && continue
@@ -103,21 +102,21 @@ function put!(canvas::Canvas{N}, sprite::Sprite)::Vector{CartesianIndex{N}} wher
     Δ
 end
 
-function put!(new_canvas::Canvas{N}, old_canvas::Canvas{N}, Δ_index::Vector{CartesianIndex{N}}) where N
+function put!(new::Canvas{N}, old::Canvas{N}, Δ_index::Vector{CartesianIndex{N}}) where N
     for i in Δ_index
-        old_color = old_canvas.pixels[i]
-        new_color = new_canvas.pixels[i]
+        old_color = old.pixels[i]
+        new_color = new.pixels[i]
         old_color == new_color && continue
-        new_canvas[i] = new_color
+        new[i] = new_color
     end
 end
 
-function collapse(canvas::Canvas{N}, Δ_index::Vector{CartesianIndex}, combine::Function) where N
+function collapse(canvas::Canvas{N}, Δ_index::Vector{CartesianIndex{N}}, combine::Function) where N
     canvas_size = size(canvas.pixels)
     composite_size = (canvas_size[1:end-1]..., 1)
     pixels = fill(CLEAR, composite_size)
     for i in Δ_index, composite_index in canvas_size[end]:-1:1
-        î = i[1:end-1]
+        î = i.I[1:N-1]
         canvas_i = CartesianIndex((î..., composite_index))
         canvas_composite = CartesianIndex((î..., 1))
         pixels[canvas_composite] = combine(pixels[canvas_composite], canvas.pixels[canvas_i])

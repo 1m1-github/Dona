@@ -15,6 +15,7 @@ module BroadcastBrowserCanvasModule
 # import Main.StateModule: state
 import Main: LoopOS
 import Main: GraphicsModule
+import Main.GraphicsModule: CLEAR, Color, Region, Drawing, Sprite
 import Main: BroadcastBrowserModule
 import Main.BroadcastBrowserModule: BroadcastBrowser
 import Base: put!, delete!
@@ -24,50 +25,48 @@ struct BroadcastBrowserCanvas <: LoopOS.OutputPeripheral
 end
 function put!(::Type{BroadcastBrowserCanvas}, sprite)
     Δ_index = put!(BROADCASTBROWSERCANVAS.canvas, sprite)
-    cache = collapse(BROADCASTBROWSERCANVAS.CANVAS, Δ_index)
-    Δ_pixels = Δ(cache, CACHE[])
-    # todo remove/slice time dim
-    js = "pixels=" * JSON3.write(Δ_pixels) * "\n" * setPixels_JS
+    cache = GraphicsModule.collapse(BROADCASTBROWSERCANVAS.canvas, Δ_index, GraphicsModule.blend)
+    cache = Canvas("CACHE", cache.pixels[:, :, end, end])
+    δ = Δ(cache, CACHE[])
+    CACHE[] = cache
+    js = "pixels=" * write(δ) * "\n" * setPixels_JS
     put!(BroadcastBrowser, js)
 end
 function Δ(old, new)
-    pixels = Dict{CartesianIndex,Color}()
+    pixels = fill(CLEAR, size(new))
     for i in eachindex(new)
         old[i] == new[i] && continue
         pixels[i] = new[i]
     end
     Canvas(new.id, pixels)
 end
+const CACHE = Ref(GraphicsModule.Canvas{2}("CACHE", fill(CLEAR, size(BROADCASTBROWSERCANVAS.canvas))))
+const BROADCASTBROWSERCANVASTASK = Threads.@spawn BroadcastBrowserModule.start(root)
 const BROADCASTBROWSERCANVAS = BroadcastBrowserCanvas(
-    Threads.spawn(BroadcastBrowserModule.start(root)),
+    BROADCASTBROWSERCANVASTASK,
     GraphicsModule.Canvas{4}(
         "BroadcastBrowserCanvas",
-        fill(CLEAR, (1000, 2000, 100, 10)))) # width, height, depth, time
+        fill(CLEAR, (3056, 3152, 100, 10)))) # width, height, depth, time # todo test half and double
 
 function single(pixels)
-    depthdim = 3, timedim = 4
-    depthsize = size(pixels, depthdim), timesize = size(pixels, timedim)
+    depthdim = 3 ; timedim = 4
+    depthsize = size(pixels, depthdim) ; timesize = size(pixels, timedim)
     [i for i in CartesianIndices(pixels) if i[depthdim] == depthsize && i[timedim] == timesize]
 end
 function root(port, bb)
     @info "BroadcastBrowserCanvas HTTP port $port $(bb.stream)"
-    pixels = BROADCASTBROWSERCANVAS.CANVAS.pixels
-    Δ_index = single(pixels)
-    CACHE[] = collapse(BROADCASTBROWSERCANVAS.CANVAS, Δ_index)
-    Δ_pixels = Dict{CartesianIndex,Color}()
-    for i in Δ_index
-        Δ_pixels[i] = pixels[i]
-    end
-    # todo remove/slice time dim
-    js = "let pixels=" * JSON3.write(Δ_pixels) * "\n" * JS * "\n" * setPixels_JS
+    δ = Δ(Canvas("root", fill(WHITE, size(CACHE[].pixels))), CACHE[])
+    js = "pixels=" * write(δ) * "\n" * setPixels_JS
     put!(BroadcastBrowser, js)
 end
 
+write(canvas::Canvas) = JSON3.write(canvas.pixels)
+
 const WHITE = Color(1.0, 1.0, 1.0, 1.0)
-const FULL_BOTTOM_LAYER = Region("full", [0.5, 0.5, 0.0, :], [0.5])
-const WHITE_DRAWING = Drawing("white", _ -> WHITE)
-const SPRITE_0 = Sprite("0", WHITE_DRAWING, FULL_BOTTOM_LAYER)
-put!(BroadcastBrowserCanvas, SPRITE_0)
+const FULL_BOTTOM_LAYER = Region("full", [0.5, 0.5], [0.5, 0.5])
+const WHITE_DRAWING = Drawing{2}("white", _ -> WHITE)
+const WHITE_SPRITE = Sprite("WHITE_SPRITE", WHITE_DRAWING, FULL_BOTTOM_LAYER)
+put!(BroadcastBrowserCanvas, WHITE_SPRITE)
 
 const JS = raw"""
 document.body.appendChild(document.createElement('canvas'))
@@ -129,78 +128,5 @@ ctx.putImageData(imageData, 0, 0)
 # using Plots
 # plot(composite_canvas.pixels[:,:,end,end])
 # plot(canvas.pixels[:,:,end,end])
-
-# "move `Sprite` with `id` to `pos`"
-# function move!(id::String, center::Position2D)
-#     lock(CANVAS[].lock) do
-#         CANVAS[].sprites[id].center = center
-#     end
-#     recomposite!()
-# end
-# s=Sprite("",Drawing("",x->CLEAR),Region("",SA[0.5],SA[0.1]))
-# "delete `Sprite` with `id` from `Canvas`"
-# function delete!(id::String)
-#     lock(CANVAS[].lock) do
-#         Base.delete!(CANVAS[].sprites, id)
-#     end
-#     recomposite!()
-# end
-
-# "delete all `Sprite`s from `Canvas`"
-# function clear!()
-#     lock(CANVAS[].lock) do
-#         empty!(CANVAS[].sprites)
-#     end
-#     recomposite!()
-# end
-
-# rel2abs_x(rel::Real) = round(Int, CANVAS[].width * rel)
-# rel2abs_y(rel::Real) = round(Int, CANVAS[].height * rel)
-
-# function recomposite!()
-#     canvas = CANVAS[]
-#     lock(canvas.lock) do
-#         fill!(canvas.composite, WHITE)
-#         sprites = sort!(collect(values(canvas.sprites)), by=sp -> sp.center[3])
-#         for sprite in sprites
-#             sh, sw = size(sprite.pixels)
-#             cx = rel2abs_x(sprite.center[1]) - sw ÷ 2
-#             cy = rel2abs_y(sprite.center[2]) - sh ÷ 2
-#             for dy in 1:sh, dx in 1:sw
-#                 py, px = cy + dy, cx + dx
-#                 (py < 1 || py > s.height || px < 1 || px > s.width) && continue
-#                 s.composite[py, px] = blend(s.composite[py, px], sprite.pixels[dy, dx])
-#             end
-#         end
-#     end
-#     broadcast_delta!()
-# end
-
-# function computeΔ!()
-#     canvas = CANVAS[]
-#     Δ = Tuple{Int,Int,Color}[]
-#     lock(canvas.lock) do
-#         for y in 1:canvas.height, x in 1:canvas.width
-#             curr, prev = canvas.composite[y, x], canvas.previous[y, x]
-#             if curr != prev
-#                 push!(Δ, (x, y, curr))
-#                 canvas.previous[y, x] = curr
-#             end
-#         end
-#     end
-#     Δ
-# end
-
-# to256(x) = round(Int, x * 255)
-# function broadcast_delta!()
-#     Δ = computeΔ!()
-#     isempty(Δ) && return
-#     canvas = CANVAS[]
-#     pixels = [[x, y, to256(c.r), to256(c.g), to256(c.b), to256(c.alpha)] for (x, y, c) in Δ]
-#     broadcast!(JSON3.write(Dict("width" => canvas.width, "height" => canvas.height, "pixels" => pixels)))
-# end
-
-# const CANVAS = Ref(Canvas(3056, 3152)) # todo test half and double
-# recomposite!()
 
 end
