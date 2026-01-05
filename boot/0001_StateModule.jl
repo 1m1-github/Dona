@@ -15,9 +15,8 @@ for (i, action) in enumerate(HISTORY)
     end
 end
 push!(volatile, TrackedSymbol(LoopOS, :LOOP, LOOP, Inf))
-INPUT = join(StateModule.state.(INPUTS), '\n')
 cached_sections = [STATE_PRE, SELF, state("LoopOS.jvm()", cached)]
-volatile_section = [state("LoopOS.HISTORY[] ∪ LoopOS.jvm()", volatile), state("INPUTS", INPUT), STATE_POST]
+volatile_section = [state("LoopOS.HISTORY[] ∪ LoopOS.jvm()", volatile), state("OUTPUT_PERIPHERALS", OUTPUT_PERIPHERALS), state("INPUTS", INPUT), STATE_POST]
 join(cached_sections, "\n\n"), join(volatile_section, "\n\n")
 """
 
@@ -38,24 +37,25 @@ function state(
     STATE_PRE::String,
     SELF::String,
     HISTORY::Vector{Action},
-    JVM::Vector{TrackedSymbol},
-    INPUTS::Dict{InputPeripheral, Vector{Input}},
-    OUTPUTS::Vector{OutputPeripheral},
+    LONG_MEMORY::Vector{String},
+    SHORT_MEMORY::Vector{TrackedSymbol},
+    INPUT::Vector{Input},
+    OUTPUT_PERIPHERAL::Vector{OutputPeripheral},
     LOOP::Loop,
     STATE_POST::String,
 )
-    cached, volatile = Main.CachingModule.cache!(JVM)
+    cached, volatile = Main.CachingModule.cache!(SHORT_MEMORY)
     cached = filter(c -> !(c.m === Main && c.sym == :Main && c.value === Main), cached)
     for (i, action) in enumerate(HISTORY)
-        push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].inputs"), action.inputs, action.ts))
+        push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].input"), action.input, action.ts))
         if istaskfailed(action.task)
             push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].task"), action.task, action.ts))
             push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].output"), action.output, action.ts))
         end
     end
     push!(volatile, TrackedSymbol(LoopOS, :LOOP, LOOP, Inf))
-    cached_sections = [STATE_PRE, SELF, state("LoopOS.jvm()", cached)]
-    volatile_section = [state("LoopOS.HISTORY[] ∪ LoopOS.jvm()", volatile), state("OUTPUTS", OUTPUTS), state("INPUTS", INPUTS), STATE_POST]
+    cached_sections = [STATE_PRE, SELF, state("SHORT MEMORY", cached)]
+    volatile_section = [state("LONG_MEMORY", LONG_MEMORY), state("HISTORY ∪ SHORT MEMORY", volatile), state("OUTPUT PERIPHERALS", OUTPUT_PERIPHERAL), state("INPUTS", INPUT), STATE_POST]
     join(cached_sections, "\n\n"), join(volatile_section, "\n\n")
 end
 state(x) = string(x) # Use `dump` if you need to see more of anything but careful, it could be a lot
@@ -84,7 +84,9 @@ state(i::InputPeripheral) = state(typeof(i))
 state(o::OutputPeripheral) = state(typeof(o))
 function state(a::Action)
     _state = "inputs=$(state(a.inputs))"
-    istaskfailed(a.task) && ( _state *= "\noutput=$(a.output)$(state(a.task))" )
+    # istaskfailed(a.task) && ( _state *= "\noutput=$(a.output)$(state(a.task))" )
+    _state *= "\n$(state(a.task))"
+    istaskfailed(a.task) && ( _state *= "\noutput=$(a.output)" )
     _state
 end
 state(::Loop) = "LoopOS.LOOP"

@@ -1,6 +1,6 @@
 module ActionUtilsModule
 
-# export stop_action
+export stop_action
 
 # "will cause an InterruptException in the `task` given the `input_summary` of an `Action`"
 #  function stop_action(input_summary::String)
@@ -9,11 +9,11 @@ module ActionUtilsModule
 #     stop_action(action.ts)
 # end
 
-# "will cause an InterruptException for the `task` given the `ts` of an `Action`"
-#  function stop_action(ts::Float64)
-#     !haskey(HISTORY, ts) && return
-#     schedule(HISTORY[ts].task, InterruptException(), error=true)
-# end
+"will cause an InterruptException for the `task` given the `ts` of an `Action`"
+ function stop_action(ts::Float64)
+    !haskey(HISTORY, ts) && return
+    schedule(HISTORY[ts].task, InterruptException(), error=true)
+end
 
 # "will find the `Action` given `input_summary`, `nothing` if not existing"
 #  function find_action(input_summary::String)

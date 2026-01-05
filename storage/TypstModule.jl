@@ -36,6 +36,15 @@ function load_png(path::String)::Pixels
     pixels
 end
 
+
+source = """#set page(width: auto, height: auto, margin: 5pt)\n\$ x^2 \$"""
+function typst_to_png(source)
+    cmd = `typst compile - --format png -`
+    pipeline(IOBuffer(source), cmd) |> read |> IOBuffer |> PNGFiles.load
+end
+typst_to_png(source)
+
+
 "compiles Typst code and returns a Sprite"
 typst_sprite(id::String, pos::Position, code::String)::Sprite = Sprite(id, pos, typst_pixels(code))
 function typst_pixels(code::String)::Pixels
