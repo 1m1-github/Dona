@@ -1,47 +1,21 @@
 module GraphicsModule
 
-export Color, Drawing, ∘, Region, put!
+export Sprite, Region
 
 import Main: @install
-@install Colors, FixedPointNumbers, StaticArrays
-import Colors: RGBA
-import FixedPointNumbers: N0f8
+@install StaticArrays
 import StaticArrays: SVector
+import DrawingModule: Drawing
+import Main.ColorModule: Color, CLEAR
 
 import Main.StateModule: state
 import Main: LoopOS
 
-const Color = RGBA{N0f8}
-const CLEAR = Color(0.0, 0.0, 0.0, 0.0)
-function average(a::Color, b::Color)
-    total = 0.5 * a.alpha + 0.5 * b.alpha
-    total == 0.0 && return CLEAR
-    wa, wb = 0.5 * a.alpha / total, 0.5 * b.alpha / total
-    Color(
-        a.r * wa + b.r * wb,
-        a.g * wa + b.g * wb,
-        a.b * wa + b.b * wb,
-        a.alpha + b.alpha - a.alpha * b.alpha
-    )
-end
-function blend(a::Color, b::Color)
-    b.alpha == 1.0 && return b
-    b.alpha == 0.0 && return a
-    α = Float64(b.alpha)
-    β = 1.0 - α
-    Color(α * b.r + β * a.r, α * b.g + β * a.g, α * b.b + β * a.b, 1.0)
-end
-
-struct Drawing{N}
-    id::String
-    f::Function # N-dim hypercube vector -> Color
-end
-(d::Drawing)(x::SVector) = d.f(x)
-(d::Drawing)(x::Vector) = d.f(SVector{length(x)}(x))
-(d::Drawing)(x::NTuple) = d.f(SVector(x...))
-import Base.∘
-∘(a::Drawing, b::Drawing) = Drawing(a.id * b.id, x -> average(a(x), b(x)))
-
+"""
+A hyperrectangular area inside a unit hypercube, 0.0=bottom-left, 1.0=top-right.
+`Region`s are typically used in a `Sprite`.
+E.g.: `bullseye = Region("center one percent", [0.5, 0.5], [0.05, 0.05])`
+"""
 struct Region{N}
     id::String
     center::SVector{N,Float64}
@@ -50,12 +24,19 @@ end
 Region(id::String, center::Vector, radius::Vector) = Region(id, SVector{length(center)}(center), SVector{length(center)}(radius))
 Region(id::String, center::NTuple, radius::NTuple) = Region(id, SVector(center...), SVector(radius...))
 
-function pad!(region::Region{M}, N)::Region{N} where M
+function pad(region::Region{M}, N)::Region{N} where M
     center = SVector{N}(i ≤ M ? region.center[i] : 1.0 for i in 1:N)
     radius = SVector{N}(i ≤ M ? region.radius[i] : 0.0 for i in 1:N)
     Region(region.id, center, radius)
 end
 
+
+"""
+Imagine everything inside a unit hypercube, 0.0=bottom-left, 1.0=top-right.
+Define the function mapping from coordinates to a Color (`Drawing`) and a hyrectangular `Region`.
+The Sprite lives in the perfectly precise digital world, yet can simply be `put!` onto a `Canvas` for actual display.
+E.g.: `put!(BroadcastBrowserCanvas, sky_sprite)`
+"""
 struct Sprite{N,M}
     id::String
     drawing::Drawing{N}
@@ -66,8 +47,6 @@ struct Canvas{N} <: LoopOS.OutputPeripheral
     id::String
     pixels::Array{Color,N}
 end
-import Base.size
-size(c::Canvas) = size(c.pixels)
 
 function index(canvas::Canvas{N}, region::Region{N})::CartesianIndices{N} where N
     canvas_size = size(canvas.pixels)
@@ -78,10 +57,10 @@ function index(canvas::Canvas{N}, region::Region{N})::CartesianIndices{N} where 
     start_index = round.(Int, center .- used ./ 2)
     end_index = round.(Int, center .+ used ./ 2)
     start_index = max.(start_index, 1)
-    end_index = min.(end_index, canvas_size)
+    end_index = max.(start_index, min.(end_index, canvas_size))
     CartesianIndices(Tuple(UnitRange.(start_index, end_index)))
 end
-index(canvas::Canvas{N}, region::Region) where N = index(canvas, pad!(region, N))
+index(canvas::Canvas{N}, region::Region) where N = index(canvas, pad(region, N))
 
 import Base: put!
 function put!(canvas::Canvas{N}, sprite::Sprite)::Vector{CartesianIndex{N}} where N
@@ -101,13 +80,12 @@ function put!(canvas::Canvas{N}, sprite::Sprite)::Vector{CartesianIndex{N}} wher
     end
     Δ
 end
-
 function put!(new::Canvas{N}, old::Canvas{N}, Δ_index::Vector{CartesianIndex{N}}) where N
     for i in Δ_index
         old_color = old.pixels[i]
         new_color = new.pixels[i]
         old_color == new_color && continue
-        new[i] = new_color
+        new.pixels[i] = new_color
     end
 end
 
@@ -126,4 +104,3 @@ function collapse(canvas::Canvas{N}, Δ_index::Vector{CartesianIndex{N}}, combin
 end
 
 end # todo use views?
-using .GraphicsModule

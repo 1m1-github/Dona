@@ -8,7 +8,6 @@ import Main.StateModule: state
 import Main.Base: take!, put!
 import Main.PkgModule: @install
 @install PortAudio, SampledSignals, ZMQ, Serialization
-import Main.LoggingModule: LOGS # DEBUG
 
 "Be aware that the transcription via Whisper can contain mistakes"
 struct AudioInput <: LoopOS.InputPeripheral
@@ -33,7 +32,7 @@ mutable struct AudioData
     speaker::String
     buffer::Union{SampleBuf{Float32,2}, Nothing}
     value::String
-    ts::Float64
+    timestamp::Float64
 end
 
 function get_audios_from_zmq(socket)
@@ -46,7 +45,6 @@ function start_listening()
     @async while AUDIO_LISTENING[]
         yield()
         audios_data = get_audios_from_zmq(ZMQ_SOCKET)
-        # serialize(joinpath(LOGS,"$(time())-audios_data"), audios_data) # DEBUG
         @sync for (_, audio_data) in audios_data
             isnothing(audio_data.buffer) && continue
             @async audio_data.value = TranscriptionModule.transcribe(audio_data.buffer.data)
@@ -57,12 +55,11 @@ function start_listening()
             value = TranscriptionModule.clean_whisper_text(audio_data.value)
             isempty(value) && continue
             speaker = audio_data.speaker
-            push!(turn, "$(StateModule.os_time(audio_data.ts))$speaker>$value")
+            push!(turn, "$(StateModule.os_time(audio_data.timestamp))$speaker>$value")
         end
         isempty(turn) && continue
         conversation = join(turn, '\n')
         if AUDIO_CALLING_INTELLIGENCE[]
-            # @info "got conversation", conversation
             @async put!(AUDIO_INPUT, conversation)
         end
     end
