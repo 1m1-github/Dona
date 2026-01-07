@@ -6,8 +6,10 @@ const Color = RGBA{N0f8}
 export Color
 
 const CLEAR = Color(0.0, 0.0, 0.0, 0.0)
-const WHITE = Color(1.0, 1.0, 1.0, 1.0)
+const WHITE = Color(1, 1, 1, 1)
 const BLACK = Color(0, 0, 0, 1)
+const RED = Color(1, 0, 0, 1)
+const GREEN = Color(0, 1, 0, 1)
 const BLUE = Color(0, 0, 1, 1)
 const YELLOW = Color(1, 1, 0, 1)
 
@@ -31,3 +33,4 @@ function blend(a::Color, b::Color)
 end
 
 end
+using .ColorModule

@@ -1,5 +1,7 @@
 logs/*
 transcription/*.bin
+long/*
+tmp/*
 
 !*.gitkeep
 

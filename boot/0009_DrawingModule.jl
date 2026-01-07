@@ -26,9 +26,9 @@ import Base.∘
 ∘(a::Drawing, b::Drawing) = Drawing(a.id * b.id, x -> average(a(x), b(x)))
 export ∘
 
-"""`circle_drawing::Drawing = circle("sun", [0.5, 0.5], 0.5, Color.YELLOW)`"""
-circle(id, c, r, color) = Drawing(id, x -> hypot((x .- c)...) < r ? color : CLEAR)
 export circle
+"""`circle_drawing::Drawing = circle("sun", [0.5, 0.5], 0.5, Color.YELLOW)`"""
+circle(id, c, r, color) = Drawing{length(c)}(id, x -> hypot((x .- c)...) < r ? color : CLEAR)
 
 # cloud = circle("cloud", (0.5, 0.8), 0.1, WHITE)
 # sun = circle("sun", (0.5, 0.5), 0.5, YELLOW)
@@ -62,3 +62,4 @@ export circle
 # """
 
 end
+using .DrawingModule

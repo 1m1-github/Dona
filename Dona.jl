@@ -3,9 +3,9 @@
 # todo: too many input tokens => state too big => recover
 
 const ROOT = @__DIR__
-const LONGMEMORY = joinpath(ROOT, "long")
+const LONG_MEMORY = joinpath(ROOT, "long")
 const BOOT_KNOWLEDGE = joinpath(ROOT, "boot")
-cd(LONGMEMORY)
+cd(LONG_MEMORY)
 
 include("/Users/1m1/Documents/LoopOS.jl/src/LoopOS.jl")
 using .LoopOS

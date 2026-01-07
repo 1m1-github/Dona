@@ -11,8 +11,7 @@ import Base.put!
 struct BroadcastBrowser <: LoopOS.OutputPeripheral
     stream::HTTP.Streams.Stream
     processor::BatchProcessor{String}
-    x::String
-    BroadcastBrowser(stream, x="") = new(stream, BatchProcessor{String}(), x)
+    BroadcastBrowser(stream) = new(stream, BatchProcessor{String}())
 end
 const CLIENTS = Ref(Set{BroadcastBrowser}())
 "`put!(BroadcastBrowser, js)` runs the js on all connected browsers"
@@ -23,16 +22,12 @@ const HTML = raw"""
 <html>
 <body>
 <script>
-let x
-let url = `/events`
-if(x) { url *= `?x=${x}` }
-const sse = new EventSource(url)
-sse.onmessage = (e) => eval(JSON.parse(e.data))
+const sse = new EventSource('/events')
+sse.onmessage = (e) => eval(e.data)
 </script>
 </body>
 </html>
 """
-const JS = """document.body.appendChild(Object.assign(document.createElement("div"), {textContent: "LoopOS"}))"""
 
 function safe_write(stream, js)
     try
@@ -52,6 +47,7 @@ function handle_sse(a)
     HTTP.startwrite(a.stream)
     start!(a.processor) do input
         for js in input
+            js = replace(js, "\n"=>";")
             safe_write(a.stream, "data: $js\n\n") || return
         end
     end
@@ -73,8 +69,7 @@ function start(root::Function, port = freeport(8888))
             HTTP.startwrite(stream)
             write(stream, HTML)
         elseif target == "/events"
-            query = HTTP.URIs.queryparams(a.stream.message.target)
-            bb = BroadcastBrowser(stream, query["x"])
+            bb = BroadcastBrowser(stream)
             push!(CLIENTS[], bb)
             root(port, bb)
             handle_sse(bb)
@@ -83,8 +78,8 @@ function start(root::Function, port = freeport(8888))
             HTTP.setstatus(stream, 404)
             HTTP.startwrite(stream)
         end
-        bb
     end
 end
 
 end
+

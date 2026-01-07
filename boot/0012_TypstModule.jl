@@ -1,7 +1,8 @@
 module TypstModule
 
 import Main: @install
-@install PNGFiles
+@install PNGFiles, StaticArrays
+import StaticArrays: SVector
 import Main: GraphicsModule
 import Main.GraphicsModule: Canvas, Region, Sprite
 
@@ -29,7 +30,7 @@ end
 typst_region = Region("full", [0.5, 0.5], [0.5, 0.5])
 typst_sprite(typst_code) = Sprite(
     typst_code,
-    (x, y) -> typst_drawing(typst_code, x, y),
+    coordinates -> typst_drawing(typst_code, coordinates),
     typst_region)
 typst(canvas, typst_code) = put!(canvas, typst_sprite(typst_code))
 
