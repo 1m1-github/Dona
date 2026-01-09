@@ -1,16 +1,16 @@
-# module BroadcastBrowserCanvasModule
+module BroadcastBrowserCanvasModule
 
 import Main: @install
 @install StaticArrays
 import StaticArrays: SA
 
-import Main.StateModule: state
-import Main: LoopOS
-
 import Main.ColorModule: Color, blend, CLEAR, WHITE, BLACK, RED, GREEN, BLUE, YELLOW
 import Main.DrawingModule: Drawing, circle
-import Main.GraphicsModule: Rectangle, Sprite, Canvas, collapse, Δ
+import Main.RectangleModule: Rectangle
+import Main.SpriteModule: Sprite
+import Main.CanvasModule: Canvas, collapse, Δ
 
+import Main: LoopOS
 struct BroadcastBrowserCanvas <: LoopOS.OutputPeripheral
     broadcastbrowser_task::Task
     canvas::Canvas
@@ -24,15 +24,10 @@ function root(port, bb)
     put!(bb.processor, js)
 end
 
-function write(canvas::Canvas{2})
-    h = size(canvas.pixels, 2)
+function write(δ::Vector{Tuple{CartesianIndex{N}, Color}}) where N
     result = []
-    for i = CartesianIndices(canvas.pixels)
-        p = canvas.pixels[i]
-        p == CLEAR && continue
-        push!(result, (i[1]-1, h-i[2], 
-            reinterpret(UInt8, p.r), reinterpret(UInt8, p.g),
-            reinterpret(UInt8, p.b), reinterpret(UInt8, p.alpha)))
+    for (i,color) = δ
+        push!(result, (i[1]-1, i[2]-1, 255 * round.(UInt8, color)...))
     end
     bracket(x) = "["*x*"]"
     bracket(join(map(r -> bracket(join(r, ',')), result), ','))
@@ -94,31 +89,31 @@ export BROADCASTBROWSERCANVAS
 
 # BROADCASTBROWSERCANVAS[].canvas.pixels .= CLEAR
 # BROADCASTBROWSERCANVAS[].canvas.pixels
-using Plots
-plot(BROADCASTBROWSERCANVAS[].canvas.pixels[:,:,end,end])
-info(pixels)=for c = [CLEAR, WHITE, BLACK, RED, GREEN, BLUE, YELLOW]
-@info "is", c, count(==(c),pixels)
-@info "is not", c, count(≠(c),pixels)
-end
-info(BROADCASTBROWSERCANVAS[].canvas.pixels)
-info(cache.pixels)
-d=Drawing{2}("d",_->Color(1,0,0,0.5))
-d2=Drawing{2}("d",_->Color(0,1,0,0.5))
-r=Rectangle("r",[0.5,0.5],[0.2,0.2])
-r2=Rectangle("r",[0.5,0.5,1.0,0.5],[0.1,0.3,0.0,0.0])
-sprite=Sprite("s",d, r)
-sprite2=Sprite("s",d2, r2)
-put!(sprite2)
-sprite=sprite2
-canvas=BROADCASTBROWSERCANVAS[].canvas
-rectangle=r2
-# stretch=false
-# stretch=true
-all_clear = Sprite("",Drawing{2}("",_->CLEAR),Rectangle("",[0.5,0.5,0.5,0.5],[0.5,0.5,0.5,0.5]))
-sprite=all_clear
-sprite=WHITE_SPRITE
-put!()
-put!(WHITE_SPRITE)
+# using Plots
+# plot(BROADCASTBROWSERCANVAS[].canvas.pixels[:,:,end,end])
+# info(pixels)=for c = [CLEAR, WHITE, BLACK, RED, GREEN, BLUE, YELLOW]
+# @info "is", c, count(==(c),pixels)
+# @info "is not", c, count(≠(c),pixels)
+# end
+# info(BROADCASTBROWSERCANVAS[].canvas.pixels)
+# info(cache.pixels)
+# d=Drawing{2}("d",_->Color(1,0,0,0.5))
+# d2=Drawing{2}("d",_->Color(0,1,0,0.5))
+# r=Rectangle("r",[0.5,0.5],[0.2,0.2])
+# r2=Rectangle("r",[0.5,0.5,1.0,0.5],[0.1,0.3,0.0,0.0])
+# sprite=Sprite("s",d, r)
+# sprite2=Sprite("s",d2, r2)
+# put!(sprite2)
+# sprite=sprite2
+# canvas=BROADCASTBROWSERCANVAS[].canvas
+# rectangle=r2
+# # stretch=false
+# # stretch=true
+# all_clear = Sprite("",Drawing{2}("",_->CLEAR),Rectangle("",[0.5,0.5,0.5,0.5],[0.5,0.5,0.5,0.5]))
+# sprite=all_clear
+# sprite=WHITE_SPRITE
+# put!()
+# put!(WHITE_SPRITE)
 # rectangle = tests[10][1]
 # f(canvas, rectangle)
 # f(canvas, rectangle) = begin
@@ -159,7 +154,7 @@ put!(WHITE_SPRITE)
 # size(cache.pixels)
 # info(cache.pixels)
 # cache.pixels
-plot(cache.pixels[:,:,end,end])
+# plot(cache.pixels[:,:,end,end])
 # put!(s)
 # methods(collapse)
 # drawing = circle("circle", [0.5, 0.5], 0.5, Color(1,0,0,1))
@@ -173,12 +168,14 @@ function put!(sprite::Sprite)
 # @info "put!(sprite::Sprite)"
     # Δ_index = put!(canvas, sprite, true)
     δ = Δ(BROADCASTBROWSERCANVAS[].canvas, sprite)
+    isempty(δ) && return
     put!(BROADCASTBROWSERCANVAS[].canvas, δ)
     @info "put!(sprite::Sprite)", length(δ)
     cache = collapse(BROADCASTBROWSERCANVAS[].canvas, δ, blend)
     # cache = collapse(canvas, Δ_index, blend)
     cache = Canvas("CACHE", cache.pixels[:, :, end, end], cache.proportional_dimensions)
     δcache = Δ(CACHE[], cache)
+    isempty(δcache) && return
     CACHE[] = cache
     js = "pixels=" * write(δcache) * "\n" * SET_PIXELS_JS
     @info "l", length(js)
@@ -258,7 +255,15 @@ end
 const FULL_BOTTOM_LAYER = Rectangle("full", SA[0.5, 0.5, 0.0, 0.0], SA[0.5, 0.5, 0.0, 0.0])
 const WHITE_DRAWING = Drawing{2}("white", _ -> RED)
 const WHITE_SPRITE = Sprite("WHITE_SPRITE", WHITE_DRAWING, FULL_BOTTOM_LAYER)
-# put!(WHITE_SPRITE)
+put!(WHITE_SPRITE)
+# Drawing
+# DrawingModule.Drawing
+# Main.DrawingModule.Drawing
+# Main.DrawingModule.Drawing==Drawing
+# Main.SpriteModule.Sprite{2,4}("WHITE_SPRITE", Main.DrawingModule.Drawing{2}("white", _ -> RED), Main.RectangleModule.Rectangle{4}("full", SA[0.5, 0.5, 0.0, 0.0], SA[0.5, 0.5, 0.0, 0.0]))
+# import Main.DrawingModule: Drawing, circle
+# import Main.RectangleModule: Rectangle
+# import Main.SpriteModule: Sprite
 
 import Main.TypstModule: typst
 raw"""
@@ -268,4 +273,4 @@ E.g.: `typst(raw"$ x^2 $")`.
 typst(typst_code::String)::Sprite = TypstModule.typst(BROADCASTBROWSERCANVAS[].canvas, typst_code)
 export typst
 
-# end
+end

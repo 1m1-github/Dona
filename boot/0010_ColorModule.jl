@@ -1,6 +1,11 @@
 module ColorModule
 
+export Color
+
+import Main: @install
+@install StaticArrays
 import StaticArrays: SVector
+
 struct Color <: AbstractVector{Float64}
     data::SVector{4,Float64}
 end
@@ -12,8 +17,6 @@ opacity(c::Color) = c[4]
 import Base: size, getindex
 Base.size(::Color) = (4,)
 Base.getindex(c::Color, i::Int) = c.data[i]
-# Base.IndexStyle(::Type{Color}) = IndexLinear()
-export Color
 
 const BLACK = Color(0)
 const CLEAR = clear(BLACK)
@@ -24,9 +27,11 @@ const RED = Color(1, 0, 0)
 const PINK = Color(1, 0, 1)
 const YELLOW = Color(1, 1, 0)
 const WHITE = Color(1)
+export BLACK,CLEAR,BLUE,GREEN,TURQUOISE,RED,PINK,YELLOW,WHITE
 
+import Base.∘
 "Fair information theoretic mixture"
-function average(a::Color, b::Color)
+function ∘(a::Color, b::Color)
     α = opacity(a)
     β = opacity(b)
     total = 0.5 * α + 0.5 * β
@@ -36,13 +41,6 @@ function average(a::Color, b::Color)
 end
 
 "`b` dominates in opacity"
-# function blend(bottom::Color, top::Color)
-#     α = opacity(top)
-#     α == 1.0 && return top
-#     α == 0.0 && return bottom
-#     β = 1.0 - α
-#     Color((α * top + β * bottom)[1:3]..., α + β - α * β) # todo check new opacity
-# end
 function blend(bottom::Color, top::Color)
     α = opacity(top)
     1.0 ≤ α && return top
@@ -66,7 +64,7 @@ tests = [
     (Color(1,0,0,0.5), Color(0,1,0,0.5)) => Color(0.5,0.5,0,0.75),
 ]
 for test in tests
-    @test average(test[1]...) ≈ test[2]
+    @test ∘(test[1]...) ≈ test[2]
 end
 end
 
