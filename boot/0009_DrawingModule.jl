@@ -9,7 +9,7 @@ Draw inside a unit hypercube, 0.0=bottom-left, 1.0=top-right.
 `Drawing`s are typically used in a `Sprite`.
 E.g.:
 sky = Drawing("sky", coordinates -> Color(0.0, 0.0, 1.0, 1.0))
-upper_half = Region("upper half", [0.5, 0.75], [0.5, 0.25])
+upper_half = Rectangle("upper half", [0.5, 0.75], [0.5, 0.25])
 sky_sprite = Sprite("sky in upper half", sky, upper_half)
 put!(BroadcastBrowserCanvas, sky_sprite)
 """
@@ -34,15 +34,15 @@ circle(id, c, r, color) = Drawing{length(c)}(id, x -> hypot((x .- c)...) < r ? c
 # sun = circle("sun", (0.5, 0.5), 0.5, YELLOW)
 # scene = sun ∘ cloud ∘ sky  # sun on top of cloud on top of sky
 # drawing = sun
-# region = Region("tr", (0.6, 0.5), (0.2, 0.2))
-# sprite = Sprite("s1", drawing, region)
+# rectangle = Rectangle("tr", (0.6, 0.5), (0.2, 0.2))
+# sprite = Sprite("s1", drawing, rectangle)
 # canvas = Canvas(fill(CLEAR, (10,20,10,2))) # x, y, z, t
 # Δ_index = put!(canvas, sprite)
 # composite_dimension = 3
 # new_composite_canvas = composite(canvas, Δ_index, composite_dimension)
 # new_composite_canvas = Canvas(new_composite_canvas.pixels[:,:,end,end])
 # composite_canvas = Canvas(fill(CLEAR, (size(canvas.pixels, 1), size(canvas.pixels, 2))))
-# composite_Δ_index = [CartesianIndex((i[1], i[2])) for i in Δ_index]
+# composite_Δ_index = [CartesianIndex((i[1], i[2])) for i = Δ_index]
 # GraphicsModule.put!(composite_canvas, new_composite_canvas, composite_Δ_index)
 # size(composite_canvas.pixels)
 # size(new_composite_canvas.pixels)
@@ -62,4 +62,3 @@ circle(id, c, r, color) = Drawing{length(c)}(id, x -> hypot((x .- c)...) < r ? c
 # """
 
 end
-using .DrawingModule

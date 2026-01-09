@@ -4,7 +4,7 @@ import Main: @install
 @install PNGFiles, StaticArrays
 import StaticArrays: SVector
 import Main: GraphicsModule
-import Main.GraphicsModule: Canvas, Region, Sprite
+import Main.GraphicsModule: Canvas, Rectangle, Sprite
 
 const DPI = 300
 const TEMPLATE(content) = """
@@ -27,11 +27,11 @@ function typst_drawing(typst_code::String, coordinates::SVector{2,Float64})
     y = clamp(round(Int, coordinates[2] * h), 1, h)
     canvas.pixels[x, y]
 end
-typst_region = Region("full", [0.5, 0.5], [0.5, 0.5])
+typst_rectangle = Rectangle("full", [0.5, 0.5], [0.5, 0.5])
 typst_sprite(typst_code) = Sprite(
     typst_code,
     coordinates -> typst_drawing(typst_code, coordinates),
-    typst_region)
+    typst_rectangle)
 typst(canvas, typst_code) = put!(canvas, typst_sprite(typst_code))
 
 end

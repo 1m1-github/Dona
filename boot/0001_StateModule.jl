@@ -7,7 +7,7 @@ The following is how state is made:
 state(description::String, value::Any) = description * " === BEGIN" * "\n\n" * state(value) *  "\n\n" * description * " === END"
 # `Method`s `state` as `os_time` * `docstring` * signature
 cached, volatile = Main.CachingModule.cache!(SHORT_MEMORY)
-for (i, action) in enumerate(HISTORY)
+for (i, action) = enumerate(HISTORY)
     push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].input"), action.input, action.timestamp))
     if istaskfailed(action.task)
         push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].task"), action.task, action.timestamp))
@@ -46,7 +46,7 @@ function state(
 )
     cached, volatile = Main.CachingModule.cache!(SHORT_MEMORY)
     cached = filter(c -> !(c.m === Main && c.sym == :Main && c.value === Main), cached)
-    for (i, action) in enumerate(HISTORY)
+    for (i, action) = enumerate(HISTORY)
         push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].input"), action.input, action.timestamp))
         if istaskfailed(action.task)
             push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].task"), action.task, action.timestamp))
@@ -69,7 +69,7 @@ function state(timestamp::Float64, m::Module)
         return os_time(timestamp) * name * "::Module (`export`ed symbols not shown, use `add_module_to_state` if you need to)"
     end
     _state = String[]
-    for name in names(m)
+    for name = names(m)
         f = getfield(m, name)
         f isa Module && continue
         push!(_state, state(TrackedSymbol(m, name, f, timestamp)))
@@ -90,7 +90,7 @@ function state(a::Action)
 end
 state(::Loop) = "LoopOS.LOOP"
 function state(t::Task)
-    _state = ["$(repr(f)):$(f(t))" for f in [istaskstarted, istaskdone, istaskfailed]]
+    _state = ["$(repr(f)):$(f(t))" for f = [istaskstarted, istaskdone, istaskfailed]]
     exception = istaskfailed(t) ? ",exception:$(state(t.exception))" : ""
     "Task(" * join(_state, ",") * exception * ")"
 end
@@ -123,7 +123,7 @@ function state(v::TrackedSymbol)
         T = typeof(value)
     end
     if T <: Function
-        return join(state.([TrackedSymbol(v.m, v.sym, method, v.timestamp) for method in methods(value, v.m)]), '\n')
+        return join(state.([TrackedSymbol(v.m, v.sym, method, v.timestamp) for method = methods(value, v.m)]), '\n')
     elseif T <: Method
         return os_time(v.timestamp) * state(value)
     end
@@ -148,4 +148,3 @@ function state(_state::Vector{TrackedSymbol})
 end
 
 end
-using .StateModule

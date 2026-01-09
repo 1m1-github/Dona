@@ -24,9 +24,8 @@ macro install(pkgs...)
     not_installed = filter(pkg -> string(pkg) ∉ installed, new_pkgs)
     Pkg.add.(string.(not_installed))
     
-    usings = [:(using $pkg) for pkg in new_pkgs]
+    usings = [:(using $pkg) for pkg = new_pkgs]
     esc(Expr(:block, usings...))
 end
 
 end
-using .PkgModule

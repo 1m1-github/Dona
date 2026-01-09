@@ -105,7 +105,7 @@ function intelligence(;
     # v = "v" * string(abs(rand(Int)))
     result = Dict("content" => [Dict("text" => """
         d = circle("circle", [0.5, 0.5], 0.2, Color(1,0,0,1))
-        r = Region("center", [0.5, 0.5], [0.2, 0.2])
+        r = Rectangle("center", [0.5, 0.5], [0.2, 0.2])
         put!(Sprite("circle in the center", d, r))
         """)], "usage" => "")
     ΔE = 0.01
@@ -153,7 +153,7 @@ function extract_julia_blocks(text::String)
     result = String[]
     block = blocks[1]
     !isempty(block) && push!(result, comment(block))
-    for i in 2:length(blocks)
+    for i = 2:length(blocks)
         block = blocks[i]
         semi_blocks = split(block, JULIA_POSTPEND)
         @assert length(semi_blocks) == 2
@@ -182,7 +182,7 @@ end
 #    """a=1```julia\nx=1\n```b=1\nd=1```julia\ny=1\n```c=1""" =>  """#a=1\nx=1\n#b=1\n#d=1\ny=1\n#c=1""",
 #    """\na=1\ne=1\n```julia\n\nx=1\n```\nb=1\nd=1\n```julia\ny=1\n```\nc=1\nf=1\n""" =>  """#a=1\n#e=1\nx=1\n#b=1\n#d=1\ny=1\n#c=1\n#f=1""",
 # ]
-# for i in eachindex(tests)
+# for i = eachindex(tests)
 #     test = tests[i]
 #     @show i, test
 #     @test extract_julia_blocks(test[1]) == test[2]

@@ -33,4 +33,3 @@ function blend(a::Color, b::Color)
 end
 
 end
-using .ColorModule

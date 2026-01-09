@@ -6,7 +6,7 @@ const CACHED = TrackedSymbol[]
 const VOLATILE = TrackedSymbol[]
 
 function first_copy(_state::Vector{TrackedSymbol})
-    for s in _state
+    for s = _state
         if s.m == Main.LoopOS && s.sym ≠ :BOOT
             push!(VOLATILE, s)
         else
@@ -17,7 +17,7 @@ function first_copy(_state::Vector{TrackedSymbol})
 end
 
 function same_found!(s::TrackedSymbol, _state::Vector{TrackedSymbol})
-    for i in length(_state):-1:1
+    for i = length(_state):-1:1
         _s = _state[i]
         value = s.value isa Ref ? s.value[] : s.value
         _value = _s.value isa Ref ? _s.value[] : _s.value
@@ -31,12 +31,12 @@ end
 
 function cache!(_state::Vector{TrackedSymbol})
     isempty(CACHED) && return first_copy(_state)
-    for i in length(CACHED):-1:1
+    for i = length(CACHED):-1:1
         s = CACHED[i]
         same_found!(s, _state) && continue
         deleteat!(CACHED, i)
     end
-    for i in length(VOLATILE):-1:1
+    for i = length(VOLATILE):-1:1
         s = VOLATILE[i]
         same_found!(s, _state) && continue
         deleteat!(VOLATILE, i)
@@ -55,8 +55,8 @@ end
 
 # const CACHED_INDEX = 0
 # _cached_index = CACHED_INDEX
-#     for _s in jvm()
-#         for i in length(_STATE):-1:1
+#     for _s = jvm()
+#         for i = length(_STATE):-1:1
 #             s = _STATE[i]
 #             _s.m ≠ s.m || _s.sym ≠ s.sym && continue
 #             _s.hash == s.hash && continue

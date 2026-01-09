@@ -4,10 +4,10 @@ import Main.PkgModule: @install
 @install Whisper, Suppressor
 
 const SILENCE_THRESHOLD = 1e-6
-# const WHISPER_FILENAME = "transcription/ggml-large-v3.bin"
-const WHISPER_FILENAME = "transcription/ggml-base.en.bin"
-# WHISPER_FILENAME = "transcription/ggml-small.en.bin"
-# WHISPER_FILENAME = "transcription/ggml-tiny.en.bin"
+# const WHISPER_FILENAME = "transcription_dictionaries/ggml-large-v3.bin"
+const WHISPER_FILENAME = "transcription_dictionaries/ggml-base.en.bin"
+# WHISPER_FILENAME = "transcription_dictionaries/ggml-small.en.bin"
+# WHISPER_FILENAME = "transcription_dictionaries/ggml-tiny.en.bin"
 const WHISPER_CONTEXT = @suppress Whisper.whisper_init_from_file(WHISPER_FILENAME)
 const WHISPER_PARAMS = @suppress Whisper.whisper_full_default_params(Whisper.LibWhisper.WHISPER_SAMPLING_GREEDY)
 const RM_WHISPER_COMMENTS_PATTERN = r"\[.*?\]|\(.*?\)"

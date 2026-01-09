@@ -10,7 +10,7 @@ cd(LONG_MEMORY)
 include("/Users/1m1/Documents/LoopOS.jl/src/LoopOS.jl")
 using .LoopOS
 
-for f in sort(readdir(BOOT_KNOWLEDGE, join=true))
+for f = sort(readdir(BOOT_KNOWLEDGE, join=true))
     m = include(f)
     if m isa Module
         name = nameof(m)

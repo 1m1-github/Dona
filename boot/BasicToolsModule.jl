@@ -15,7 +15,7 @@ function web_search(query; num_results=10)
     get_inner(x, result) = text(only(eachmatch(Selector(".result__$x"), result)))
     results = []
     result = collect(eachmatch(Selector(".result.results_links.results_links_deep.web-result"), doc.root))[1]
-    for result in eachmatch(Selector(".result.results_links.results_links_deep.web-result"), doc.root)
+    for result = eachmatch(Selector(".result.results_links.results_links_deep.web-result"), doc.root)
         push!(results, Dict(
             :title => get_inner("a", result),
             :snippet => get_inner("snippet", result),

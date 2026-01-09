@@ -15,7 +15,7 @@ struct BroadcastBrowser <: LoopOS.OutputPeripheral
 end
 const CLIENTS = Ref(Set{BroadcastBrowser}())
 "`put!(BroadcastBrowser, js)` runs the js on all connected browsers"
-put!(::Type{BroadcastBrowser}, js) = [put!(client.processor, js) for client in CLIENTS[]]
+put!(::Type{BroadcastBrowser}, js) = [put!(client.processor, js) for client = CLIENTS[]]
 
 const HTML = raw"""
 <!DOCTYPE html>
@@ -32,6 +32,7 @@ sse.onmessage = (e) => eval(e.data)
 function safe_write(stream, js)
     try
         write(stream, js)
+        @show "safe_write", js
         flush(stream)
         true
     catch e
@@ -46,7 +47,7 @@ function handle_sse(a)
     HTTP.setheader(a.stream, "Cache-Control" => "no-cache")
     HTTP.startwrite(a.stream)
     start!(a.processor) do input
-        for js in input
+        for js = input
             js = replace(js, "\n"=>";")
             safe_write(a.stream, "data: $js\n\n") || return
         end
@@ -82,4 +83,3 @@ function start(root::Function, port = freeport(8888))
 end
 
 end
-
