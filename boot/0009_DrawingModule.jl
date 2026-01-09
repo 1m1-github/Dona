@@ -2,13 +2,13 @@ module DrawingModule
 
 import StaticArrays: SVector
 
-import Main.ColorModule: Color, average, CLEAR
+# import Main.ColorModule: Color, average, CLEAR
 
 """
-Draw inside a unit hypercube, 0.0=bottom-left, 1.0=top-right.
+Draw inside an N dimensional unit square, 0=bottom-left.
 `Drawing`s are typically used in a `Sprite`.
 E.g.:
-sky = Drawing("sky", coordinates -> Color(0.0, 0.0, 1.0, 1.0))
+sky = Drawing("sky", coordinates -> Color(0.1, 0, 1))
 upper_half = Rectangle("upper half", [0.5, 0.75], [0.5, 0.25])
 sky_sprite = Sprite("sky in upper half", sky, upper_half)
 put!(BroadcastBrowserCanvas, sky_sprite)
