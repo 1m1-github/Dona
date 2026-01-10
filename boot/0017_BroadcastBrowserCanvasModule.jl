@@ -23,6 +23,7 @@ function root(port, bb)
     @info "BroadcastBrowserCanvas HTTP port $port $(bb.stream)"
     put!(bb.processor, JS)
     δ = Δ(newcache(), CACHE)
+    @show "root", length(δ)
     js = "pixels=" * write(δ) * "\n" * SET_PIXELS_JS
     put!(bb.processor, js)
 end
@@ -58,11 +59,11 @@ ctx.putImageData(imageData, 0, 0)
 """
 
 import Main.BroadcastBrowserModule: BroadcastBrowser, start
-const BROADCASTBROWSERCANVAS_WIDTH = 2000
-const BROADCASTBROWSERCANVAS_HEIGHT = 2000
+const BROADCASTBROWSERCANVAS_WIDTH = 1000
+const BROADCASTBROWSERCANVAS_HEIGHT = 1000
 # const BROADCASTBROWSERCANVAS_WIDTH = 3056 # todo test half and double
 # const BROADCASTBROWSERCANVAS_HEIGHT = 3152 # todo test half and double
-const BROADCASTBROWSERCANVAS_DEPTH = 1
+const BROADCASTBROWSERCANVAS_DEPTH = 10
 const BROADCASTBROWSERCANVAS_TIME = 1
 const BROADCASTBROWSERCANVAS = BroadcastBrowserCanvas(
     (Threads.@spawn start(root)),
@@ -80,13 +81,13 @@ newcache() = Canvas{3}(
 const CACHE = newcache()
 export BROADCASTBROWSERCANVAS
 
-function advance_time!()
-    timesize = size(BROADCASTBROWSERCANVAS.canvas.pixels, 4)
-    # old_head = canvas.timehead
-    BROADCASTBROWSERCANVAS.timehead = mod1(BROADCASTBROWSERCANVAS.timehead + 1, timesize)
-    # Copy current "now" (index 1) to ring position before it becomes history
-    @views BROADCASTBROWSERCANVAS.canvas.pixels[:, :, :, BROADCASTBROWSERCANVAS.timehead] .= BROADCASTBROWSERCANVAS.canvas.pixels[:, :, :, 1]
-end
+# function advance_time!()
+#     timesize = size(BROADCASTBROWSERCANVAS.canvas.pixels, 4)
+#     # old_head = canvas.timehead
+#     BROADCASTBROWSERCANVAS.timehead = mod1(BROADCASTBROWSERCANVAS.timehead + 1, timesize)
+#     # Copy current "now" (index 1) to ring position before it becomes history
+#     @views BROADCASTBROWSERCANVAS.canvas.pixels[:, :, :, BROADCASTBROWSERCANVAS.timehead] .= BROADCASTBROWSERCANVAS.canvas.pixels[:, :, :, 1]
+# end
 function current_3d_canvas(canvas::Canvas)::Canvas{3}
     # Sprites write to time index 1, so "now" is always physical index 1
     Canvas{3}(
@@ -99,18 +100,67 @@ put!(sprite::Sprite{2,2}) = put!(sprite, 0.0)
 "Use this mainly and simply to display any `Sprite` on all browsers, depth=1.0 is highest"
 put!(sprite::Sprite{2,2}, depth::Float64) = put!(Sprite{2,3}(sprite.drawing, Rectangle{3}(SVector{3}(sprite.rectangle.center...,depth),SVector{3}(sprite.rectangle.radius...,0.0))))
 function put!(sprite::Sprite{2,3})
-    # @show "put!"
     canvas_3d = current_3d_canvas(BROADCASTBROWSERCANVAS.canvas)
     δ = put!(canvas_3d, sprite)
-    # @show size(δ)
+    @show "put!", length(δ)
     isempty(δ) && return
-    # @show "tttt"
-    # advance_time!()
     δ̂ = collapse!(CACHE, canvas_3d, δ, blend, 3)
-    # @show size(δ̂)
+    @show "put!2", length(δ̂)
     isempty(δ̂) && return
     js = "pixels=" * write(δ̂) * "\n" * SET_PIXELS_JS
     put!(BroadcastBrowser, js)
 end
-
+fill!(BROADCASTBROWSERCANVAS.canvas.pixels,CLEAR)
+for z in 1:size(BROADCASTBROWSERCANVAS.canvas.pixels,3)
+    println("z=$z")
+    info(BROADCASTBROWSERCANVAS.canvas.pixels[:,:,z,1])
+end
+canvas_3d = current_3d_canvas(BROADCASTBROWSERCANVAS.canvas)
+for z in 1:size(canvas_3d.pixels,3)
+    println("z=$z")
+    info(canvas_3d.pixels[:,:,z])
+end
+sprite=Sprite(Drawing{2}(x->Color(1,0,0,0.5)), Rectangle([0.4,0.5],[0.3,0.1]))
+depth=0.4
+sprite=Sprite{2,3}(sprite.drawing, Rectangle{3}(SVector{3}(sprite.rectangle.center...,depth),SVector{3}(sprite.rectangle.radius...,0.0)))
+δ = put!(canvas_3d, sprite)
+for z in 1:size(canvas_3d.pixels,3)
+    println("z=$z")
+    info(canvas_3d.pixels[:,:,z])
+end
+for z in 1:size(CACHE.pixels,3)
+    println("z=$z")
+    info(CACHE.pixels[:,:,z])
+end
+δ̂ = collapse!(CACHE, canvas_3d, δ, blend, 3)
+collapsed=CACHE
+canvas=canvas_3d
+δ
+combine=Main.ColorModule.blend
+collapse_dimension=3
+    collapse_dimension_size = size(canvas.pixels, collapse_dimension)
+    δ̂ = Tuple{CartesianIndex{N}, Color}[]
+    non_collapse_dimensions = setdiff(1:N, collapse_dimension)
+    non_collapse_index = unique(i.I[non_collapse_dimensions] for (i, _) in δ)
+    for i = non_collapse_index
+        pixel = CLEAR
+        for collapse_index = collapse_dimension_size:-1:1
+            canvas_i = CartesianIndex{N}(ntuple(j -> j < collapse_dimension ? i[j] : (j == collapse_dimension ? collapse_index : i[j-1]), N))
+            pixel = combine(canvas.pixels[canvas_i], pixel)
+            1.0 ≤ opacity(pixel) && break
+        end
+        î = CartesianIndex{N}((i..., 1))
+        collapsed.pixels[î] == pixel && continue
+        collapsed.pixels[î] = pixel
+        push!(δ̂, (î, pixel))
+    end
+for z in 1:size(CACHE.pixels,3)
+    println("z=$z")
+    info(CACHE.pixels[:,:,z])
+end
+info(pixels)=begin 
+    println("CLEAR=", count(p->p==CLEAR,pixels))
+    for c in [WHITE, BLACK, RED, GREEN, BLUE, YELLOW]
+        println(c, "=",count(p->p[1:3]==c[1:3],pixels))
+    end end
 end
