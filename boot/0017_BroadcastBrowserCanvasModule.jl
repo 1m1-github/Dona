@@ -113,12 +113,4 @@ function put!(sprite::Sprite{2,3})
     put!(BroadcastBrowser, js)
 end
 
-# import Main.TypstModule: typst
-# raw"""
-# Only needs the inner small Typst code.
-# E.g.: `typst(raw"\"\"$ x^2 $\"\"")`.
-# """
-# typst(typst_code::String) = Main.TypstModule.typst(BROADCASTBROWSERCANVAS.canvas, typst_code)
-# export typst
-
 end
