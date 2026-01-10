@@ -110,7 +110,7 @@ function put!(sprite::Sprite)
     put!(BroadcastBrowser, js)
 end
 
-const WHITE_DRAWING = Drawing{2}("white", _ -> RED)
+const WHITE_DRAWING = Drawing{2}("white", _ -> WHITE)
 const FULL_BOTTOM_LAYER = Rectangle("full", SA[0.5, 0.5], SA[0.5, 0.5])
 const WHITE_SPRITE = Sprite("WHITE_SPRITE", WHITE_DRAWING, FULL_BOTTOM_LAYER)
 put!(WHITE_SPRITE)
@@ -120,7 +120,7 @@ raw"""
 Only needs the inner small Typst code.
 E.g.: `typst(raw"$ x^2 $")`.
 """
-typst(typst_code::String)::Sprite = TypstModule.typst(BROADCASTBROWSERCANVAS[].canvas, typst_code)
+typst(typst_code::String)::Sprite = TypstModule.typst(BROADCASTBROWSERCANVAS.canvas, typst_code)
 export typst
 
 end
@@ -130,3 +130,7 @@ sun = circle("sun", [0.75, 0.75], 0.3, YELLOW)
 cloud = square("cloud", [0.25, 0.75], 0.2, WHITE)
 scene = cloud ∘ sun ∘ sky # cloud ontop of the sun ontop of the sky
 put!(Sprite("scene",scene,Rectangle("center",[0.5,0.5,1.0],[0.1,0.1,0.0])))
+
+put!(Sprite("",Drawing{2}("",_->RED),Rectangle("",[0.5,0.5,0.0],[0.5,0.5,0.0])))
+put!(Sprite("",circle("",[0.5,0.5],[0.2],YELLOW),Rectangle("",[0.5,0.5,1.0],[0.5,0.5,0.0])))
+put!(Sprite("",Drawing{2}("",_->rand()<0.5 ? BLACK : WHITE),Rectangle("",[0.5,0.5,0.5],[0.5,0.5,0.0])))
