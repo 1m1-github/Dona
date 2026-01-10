@@ -29,4 +29,3 @@ macro install(pkgs...)
 end
 
 end
-using .PkgModule

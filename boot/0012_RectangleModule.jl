@@ -20,7 +20,7 @@ Rectangle(id::String, center::Vector, radius::Vector) = Rectangle(id, SVector{le
 Rectangle(id::String, center::NTuple{N,Float64}, radius::NTuple{N,Float64}) where N = Rectangle(id, SVector{N}(center...), SVector{N}(radius...))
 
 function pad(rectangle::Rectangle{M}, N)::Rectangle{N} where M
-    center = SVector{N}(i ≤ M ? rectangle.center[i] : 1.0 for i = 1:N)
+    center = SVector{N}(i ≤ M ? rectangle.center[i] : 0.0 for i = 1:N)
     radius = SVector{N}(i ≤ M ? rectangle.radius[i] : 0.0 for i = 1:N)
     Rectangle(rectangle.id, center, radius)
 end

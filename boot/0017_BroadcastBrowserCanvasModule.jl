@@ -8,18 +8,39 @@ import Main.ColorModule: Color, blend, CLEAR, WHITE, BLACK, RED, GREEN, BLUE, YE
 import Main.DrawingModule: Drawing, circle
 import Main.RectangleModule: Rectangle
 import Main.SpriteModule: Sprite
-import Main.CanvasModule: Canvas, collapse, Δ
+import Main.CanvasModule: Canvas, collapse!, Δ
+import Base.put!
 
 import Main: LoopOS
+mutable struct TemporalCanvas
+    canvas::Canvas{4}
+    time_head::Int
+    TemporalCanvas(canvas) = new(canvas, 1)
+end
+function advance_time!(tc::TemporalCanvas)
+    time_size = size(tc.canvas.pixels, 4)
+    # old_head = tc.time_head
+    tc.time_head = mod1(tc.time_head + 1, time_size)
+    # Copy current "now" (index 1) to ring position before it becomes history
+    @views tc.canvas.pixels[:, :, :, tc.time_head] .= tc.canvas.pixels[:, :, :, 1]
+end
+function current_3d_canvas(tc::TemporalCanvas)::Canvas{3}
+    # Sprites write to time index 1, so "now" is always physical index 1
+    Canvas{3}(
+        tc.canvas.id,
+        @view(tc.canvas.pixels[:, :, :, 1]),
+        tc.canvas.proportional_dimensions
+    )
+end
 struct BroadcastBrowserCanvas <: LoopOS.OutputPeripheral
     broadcastbrowser_task::Task
-    canvas::Canvas
+    canvas::TemporalCanvas
 end
 
 function root(port, bb)
     @info "BroadcastBrowserCanvas HTTP port $port $(bb.stream)"
     put!(bb.processor, JS)
-    δ = Δ(Canvas("root", fill(WHITE, size(CACHE[].pixels)), CACHE[].proportional_dimensions), CACHE[])
+    δ = Δ(newcache(), CACHE)
     js = "pixels=" * write(δ) * "\n" * SET_PIXELS_JS
     put!(bb.processor, js)
 end
@@ -54,216 +75,45 @@ for (let [x,y,r,g,b,a] of pixels) setPixel(x,y,r,g,b,a)
 ctx.putImageData(imageData, 0, 0)
 """
 
-import Main: BroadcastBrowserModule
-import Main.BroadcastBrowserModule: BroadcastBrowser
+import Main.BroadcastBrowserModule: BroadcastBrowser, start
 const BROADCASTBROWSERCANVAS_WIDTH = 200
 const BROADCASTBROWSERCANVAS_HEIGHT = 100
-const BROADCASTBROWSERCANVAS_TIME = 2
 const BROADCASTBROWSERCANVAS_DEPTH = 3
+const BROADCASTBROWSERCANVAS_TIME = 2
 # const BROADCASTBROWSERCANVAS_WIDTH = 3056
 # const BROADCASTBROWSERCANVAS_HEIGHT = 3152
-const BROADCASTBROWSERCANVAS = Ref(BroadcastBrowserCanvas(
-    (Threads.@spawn BroadcastBrowserModule.start(root)),
-    Canvas{4}(
-        "BroadcastBrowserCanvas",
+const BROADCASTBROWSERCANVAS = BroadcastBrowserCanvas(
+    (Threads.@spawn start(root)),
+    TemporalCanvas(
+        Canvas("BroadcastBrowserCanvas",
         fill(CLEAR, (
             BROADCASTBROWSERCANVAS_WIDTH, 
-            BROADCASTBROWSERCANVAS_HEIGHT, 
-            BROADCASTBROWSERCANVAS_TIME, 
-            BROADCASTBROWSERCANVAS_DEPTH)),
+            BROADCASTBROWSERCANVAS_HEIGHT,
+            BROADCASTBROWSERCANVAS_DEPTH,
+            BROADCASTBROWSERCANVAS_TIME)),
         Set([1,2])))) # todo test half and double
-# BROADCASTBROWSERCANVAS=Ref(Canvas{4}(
-# "BroadcastBrowserCanvas",
-# fill(CLEAR, (BROADCASTBROWSERCANVAS_WIDTH, BROADCASTBROWSERCANVAS_HEIGHT, 100, 10))))
-const CACHE = Ref(Canvas{2}(
+newcache() = Canvas{3}(
     "CACHE", 
-    fill(WHITE, (BROADCASTBROWSERCANVAS_WIDTH, BROADCASTBROWSERCANVAS_HEIGHT)),
-    Set([1,2])))
-# BROADCASTBROWSERCANVAS[].canvas.pixels[:, :, 1, 1] = CACHE[].pixels
-# CACHE[].pixels[1,1,1,1]=ColorModule.BLACK
-# CACHE[].pixels[1,2,1,1]=ColorModule.BLACK
-# δ = Δ(Canvas("root", fill(WHITE, size(CACHE[].pixels))), CACHE[])
-# write(δ)
-# BROADCASTBROWSERCANVAS[].canvas.pixels[:, :, 1, 1] = CACHE[].pixels
+    fill(CLEAR, (BROADCASTBROWSERCANVAS_WIDTH, BROADCASTBROWSERCANVAS_HEIGHT,1)),
+    Set([1,2]))
+const CACHE = newcache()
 export BROADCASTBROWSERCANVAS
 
-# BROADCASTBROWSERCANVAS[].canvas.pixels .= CLEAR
-# BROADCASTBROWSERCANVAS[].canvas.pixels
-# using Plots
-# plot(BROADCASTBROWSERCANVAS[].canvas.pixels[:,:,end,end])
-# info(pixels)=for c = [CLEAR, WHITE, BLACK, RED, GREEN, BLUE, YELLOW]
-# @info "is", c, count(==(c),pixels)
-# @info "is not", c, count(≠(c),pixels)
-# end
-# info(BROADCASTBROWSERCANVAS[].canvas.pixels)
-# info(cache.pixels)
-# d=Drawing{2}("d",_->Color(1,0,0,0.5))
-# d2=Drawing{2}("d",_->Color(0,1,0,0.5))
-# r=Rectangle("r",[0.5,0.5],[0.2,0.2])
-# r2=Rectangle("r",[0.5,0.5,1.0,0.5],[0.1,0.3,0.0,0.0])
-# sprite=Sprite("s",d, r)
-# sprite2=Sprite("s",d2, r2)
-# put!(sprite2)
-# sprite=sprite2
-# canvas=BROADCASTBROWSERCANVAS[].canvas
-# rectangle=r2
-# # stretch=false
-# # stretch=true
-# all_clear = Sprite("",Drawing{2}("",_->CLEAR),Rectangle("",[0.5,0.5,0.5,0.5],[0.5,0.5,0.5,0.5]))
-# sprite=all_clear
-# sprite=WHITE_SPRITE
-# put!()
-# put!(WHITE_SPRITE)
-# rectangle = tests[10][1]
-# f(canvas, rectangle)
-# f(canvas, rectangle) = begin
-#     canvas_size = size(canvas.pixels)
-#     # max_pixels = 0 ; min_pixels = typemax(Int)
-#     # for i=1:N
-#     #     pixels = ceil(Int, canvas_size[i] * rectangle.width[i])
-#     #     if max_pixels < pixels
-#     #         max_pixels = pixels
-#     #     elseif pixels < min_pixels
-#     #         min_pixels = pixels
-#     #     end
-#     # end
-#     # for i = 1:N
-#     #     np = size(canvas.pixels, i) - 1
-#     #     start_index = floor(rectangle.center[i] * np + 0.5) + 1
-#     #     end_index = ceil((rectangle.center[i] + rectangle.width[i]) * np + 0.5)
-#     # end
-#     start_index = floor.(rectangle.center .* canvas_size .+ 0.5) .+ 1
-#     end_index = ceil.((rectangle.center .+ rectangle.radius) .* canvas_size .+ 0.5) .+ 1
-#     # available = rectangle.width * max_pixels
-#     # center = rectangle.center .* canvas_size
-#     # start_index = max.(ceil.(Int, center), 1)
-#     # end_index = ceil.(Int, center .+ available)
-#     # @assert all(end_index .≤ canvas_size)
-#     CartesianIndices(Tuple(UnitRange.(start_index, end_index)))
-# end
-# hyperrectangle_index = GraphicsModule.index(canvas, sprite.rectangle, stretch)
-# hyperrectangle_index = GraphicsModule.index(canvas, sprite2.rectangle, stretch)
-# start_index = SVector{N}([hyperrectangle_index[1][i] for i = 1:N])
-# end_index = SVector{N}([hyperrectangle_index[end][i] for i = 1:N])
-# width = end_index .- start_index .+ 1
-# δ = Δ(BROADCASTBROWSERCANVAS[].canvas, sprite)
-# put!(BROADCASTBROWSERCANVAS[].canvas, δ)
-# δ = Δ(BROADCASTBROWSERCANVAS[].canvas, sprite2)
-# put!(BROADCASTBROWSERCANVAS[].canvas, δ)
-# cache = collapse(BROADCASTBROWSERCANVAS[].canvas, δ, blend)
-# size(cache.pixels)
-# info(cache.pixels)
-# cache.pixels
-# plot(cache.pixels[:,:,end,end])
-# put!(s)
-# methods(collapse)
-# drawing = circle("circle", [0.5, 0.5], 0.5, Color(1,0,0,1))
-# # d = Drawing{2}("fill", _ -> Color(1,0,0,1))
-# rectangle = Rectangle("center", [0.5, 0.5], [0.5, 0.5])
-# sprite=Sprite("circle in the center", drawing, rectangle)
-# canvas=Canvas{4}("BroadcastBrowserCanvas",fill(CLEAR, (BROADCASTBROWSERCANVAS_WIDTH, BROADCASTBROWSERCANVAS_HEIGHT, BROADCASTBROWSERCANVAS_TIME, BROADCASTBROWSERCANVAS_DEPTH)))
-import Base: put!
 "Use this mainly and simply to display any `Sprite` on all browsers"
 function put!(sprite::Sprite)
-# @info "put!(sprite::Sprite)"
-    # Δ_index = put!(canvas, sprite, true)
-    δ = Δ(BROADCASTBROWSERCANVAS[].canvas, sprite)
+    canvas_3d = current_3d_canvas(BROADCASTBROWSERCANVAS.canvas)
+    δ = put!(canvas_3d, sprite)
     isempty(δ) && return
-    put!(BROADCASTBROWSERCANVAS[].canvas, δ)
-    @info "put!(sprite::Sprite)", length(δ)
-    cache = collapse(BROADCASTBROWSERCANVAS[].canvas, δ, blend)
-    # cache = collapse(canvas, Δ_index, blend)
-    cache = Canvas("CACHE", cache.pixels[:, :, end, end], cache.proportional_dimensions)
-    δcache = Δ(CACHE[], cache)
-    isempty(δcache) && return
-    CACHE[] = cache
-    js = "pixels=" * write(δcache) * "\n" * SET_PIXELS_JS
-    @info "l", length(js)
+    δ̂ = collapse!(CACHE,canvas_3d, δ, blend,3)
+    isempty(δ̂) && return
+    js = "pixels=" * write(δ̂) * "\n" * SET_PIXELS_JS
     put!(BroadcastBrowser, js)
 end
-# old,new=cache, CACHE[]
-# pixels = fill(CLEAR, size(new.pixels))
-# for i = eachindex(new.pixels)
-#     old.pixels[i] == new.pixels[i] && continue
-#     pixels[i] = new.pixels[i]
-# end
-# Canvas(new.id, pixels)
-# plot(old.pixels[:, :, end, end])
-# filter(c -> c == CLEAR, old.pixels)
-# filter(c -> c == ColorModule.RED, old.pixels)
-# filter(c -> c == ColorModule.WHITE, old.pixels)
-# plot(new.pixels[:, :, end, end])
-# filter(c -> c == CLEAR, new.pixels)
-# filter(c -> c == ColorModule.RED, new.pixels)
-# filter(c -> c == ColorModule.WHITE, new.pixels)
 
-# # δ.pixels
-# # filter(c->c ≠ CLEAR, δ.pixels)
-# w=write(δ)
-# δ
-# split(w,"],[")
-# plot(δ.pixels)
-# 200*100
-# filter(c->c ≠ CLEAR, cache.pixels)
-# canvas=BROADCASTBROWSERCANVAS[].canvas
-# combine=blend
-# canvas_size = size(canvas.pixels)
-# composite_size = (canvas_size[1:end-1]..., 1)
-# pixels = fill(CLEAR, composite_size)
-# i = Δ_index[2]
-# composite_index = (canvas_size[end]:-1:1)[1]
-# N=length(size(canvas.pixels))
-# for i = Δ_index, composite_index = canvas_size[end]:-1:1
-# î = i.I[1:N-1]
-# canvas_i = CartesianIndex((î..., composite_index))
-# canvas_composite = CartesianIndex((î..., 1))
-# # pixels[canvas_composite], canvas.pixels[canvas_i]
-# pixels[canvas_composite] = combine(pixels[canvas_composite], canvas.pixels[canvas_i])
-# 1.0 ≤ pixels[canvas_composite].alpha && break
-# end
-# Canvas(canvas.id, pixels)
-# using Plots
-# plot(BROADCASTBROWSERCANVAS[].canvas.pixels[:,:,end,end])
-# plot(canvas.pixels[:, :, end, end])
-# plot(cache.pixels[:, :, end, end])
-# plot(CACHE[].pixels[:, :, end, end])
-# plot(pixels[:, :, end, end])
-# # size(pixels[:, :, end, end])
-# # size(canvas.pixels[:, :, end, end])
-# size(pixels[:, :, end, end])
-# size(δ.pixels)
-# plot(canvas.pixels[:, :, end, end])
-# filter(c -> c == CLEAR, δ.pixels)
-# filter(c -> c == ColorModule.RED, δ.pixels)
-# filter(c -> c == ColorModule.WHITE, δ.pixels)
-# size(cache.pixels[:, :, end, end])
-# size(CACHE[].pixels[:, :, end, end])
-# filter(c -> c == CLEAR, pixels)
-# filter(c -> c == ColorModule.RED, pixels)
-# filter(c -> c == ColorModule.RED, pixels[:,:,end,end])
-# filter(c -> c == CLEAR, canvas.pixels)
-# filter(c -> c == ColorModule.RED, canvas.pixels)
-# filter(c -> c == ColorModule.RED, canvas.pixels[:,:,end,end])
-# size(canvas.pixels[:,:,end,end])
-# filter(c -> c == CLEAR, cache.pixels)
-# filter(c -> c == ColorModule.RED, cache.pixels)
-# filter(c -> c == CLEAR, CACHE[].pixels)
-# filter(c -> c == ColorModule.RED, CACHE[].pixels)
-# CACHE[].pixels
-# pixels[:, :, end, end]
-# plot(BROADCASTBROWSERCANVAS[].canvas.pixels[:, :, end, end])
-const FULL_BOTTOM_LAYER = Rectangle("full", SA[0.5, 0.5, 0.0, 0.0], SA[0.5, 0.5, 0.0, 0.0])
 const WHITE_DRAWING = Drawing{2}("white", _ -> RED)
+const FULL_BOTTOM_LAYER = Rectangle("full", SA[0.5, 0.5], SA[0.5, 0.5])
 const WHITE_SPRITE = Sprite("WHITE_SPRITE", WHITE_DRAWING, FULL_BOTTOM_LAYER)
 put!(WHITE_SPRITE)
-# Drawing
-# DrawingModule.Drawing
-# Main.DrawingModule.Drawing
-# Main.DrawingModule.Drawing==Drawing
-# Main.SpriteModule.Sprite{2,4}("WHITE_SPRITE", Main.DrawingModule.Drawing{2}("white", _ -> RED), Main.RectangleModule.Rectangle{4}("full", SA[0.5, 0.5, 0.0, 0.0], SA[0.5, 0.5, 0.0, 0.0]))
-# import Main.DrawingModule: Drawing, circle
-# import Main.RectangleModule: Rectangle
-# import Main.SpriteModule: Sprite
 
 import Main.TypstModule: typst
 raw"""
@@ -274,3 +124,9 @@ typst(typst_code::String)::Sprite = TypstModule.typst(BROADCASTBROWSERCANVAS[].c
 export typst
 
 end
+
+sky = rect("half rect", [0.7, 0.75], [0.25, 0.5], TURQUOISE)
+sun = circle("sun", [0.75, 0.75], 0.3, YELLOW)
+cloud = square("cloud", [0.25, 0.75], 0.2, WHITE)
+scene = cloud ∘ sun ∘ sky # cloud ontop of the sun ontop of the sky
+put!(Sprite("scene",scene,Rectangle("center",[0.5,0.5,1.0],[0.1,0.1,0.0])))

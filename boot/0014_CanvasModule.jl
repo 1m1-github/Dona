@@ -12,7 +12,7 @@ import Main.SpriteModule: Sprite
 
 struct Canvas{N} <: OutputPeripheral
     id::String
-    pixels::Array{Color,N}
+    pixels::AbstractArray{Color,N}
     proportional_dimensions::Set{Int}
 end
 
@@ -33,6 +33,33 @@ function index(canvas::Canvas{N}, rectangle::Rectangle{N})::CartesianIndices{N} 
 end
 index(canvas::Canvas{N}, rectangle::Rectangle) where N = index(canvas, pad(rectangle, N))
 
+import Base.put!
+function put!(canvas::Canvas{N}, sprite::Sprite{M,K})::Vector{Tuple{CartesianIndex{N}, Color}} where {N,M,K}
+    δ = Tuple{CartesianIndex{N}, Color}[]
+    hyperrectangle_index::CartesianIndices{N} = index(canvas, sprite.rectangle)
+    isempty(hyperrectangle_index) && return δ
+    start_index = SVector{N}([hyperrectangle_index[1][i] for i = 1:N])
+    end_index = SVector{N}([hyperrectangle_index[end][i] for i = 1:N])
+    index_length = end_index .- start_index .+ 1
+    for i = hyperrectangle_index
+        coordinates = (SVector(i.I) .- start_index .+ 0.5) ./ index_length
+        new_color = sprite.drawing(coordinates[1:M]) # first M dim
+        old_color = canvas.pixels[i]
+        old_color == new_color && continue
+        canvas.pixels[i] = new_color
+        push!(δ, (i, new_color))
+    end
+    δ
+end
+# function Δ(old::Canvas{N}, new::Canvas{N}, δ::Vector{Tuple{CartesianIndex{N}, Color}})::Vector{Tuple{CartesianIndex{N}, Color}} where N
+#     δ̂ = Tuple{CartesianIndex{N}, Color}[]
+#     for (i,_) = δ
+#         new_color = new.pixels[i]
+#         old.pixels[i] == new_color && continue
+#         push!(δ̂, (i, new_color))
+#     end
+#     δ̂
+# end
 function Δ(old::Canvas{N}, new::Canvas{N})::Vector{Tuple{CartesianIndex{N}, Color}} where N
     δ = Tuple{CartesianIndex{N}, Color}[]
     for i = CartesianIndices(new.pixels)
@@ -42,85 +69,61 @@ function Δ(old::Canvas{N}, new::Canvas{N})::Vector{Tuple{CartesianIndex{N}, Col
     end
     δ
 end
-function Δ(canvas::Canvas{N}, sprite::Sprite)::Vector{Tuple{CartesianIndex{N}, Color}} where N
-    hyperrectangle_index = index(canvas, sprite.rectangle)
-    start_index = SVector{N}([hyperrectangle_index[1][i] for i = 1:N])
-    end_index = SVector{N}([hyperrectangle_index[end][i] for i = 1:N])
-    index_length = end_index .- start_index .+ 1
-    coordinate_dimension = (!isone).(index_length)
-    δ = Tuple{CartesianIndex{N}, Color}[]
-    for i = hyperrectangle_index
-        coordinates = (SVector(i.I) .- start_index .+ 0.5) ./ index_length
-        new_color = sprite.drawing(coordinates[coordinate_dimension])
-        old_color = canvas.pixels[i]
-        old_color == new_color && continue
-        push!(δ, (i, new_color))
-    end
-    δ
-end
 
-import Base: put!
-function put!(canvas::Canvas{N}, δ::Vector{Tuple{CartesianIndex{N}, Color}}) where N
-    for (i,color) = δ canvas.pixels[i] = color end
-end
-# function put!(canvas::Canvas{N}, sprite::Sprite, stretch::Bool=false)::Vector{CartesianIndex{N}} where N
-#     δ = Δ(canvas, sprite, stretch)
-#     for i = δ#         canvas.pixels[i[1]] = i[2]
-#     end
-# end
-# function put!(new::Canvas{N}, old::Canvas{N}, Δ_index::Vector{CartesianIndex{N}}) where N
-#     for i = Δ_index
-#         old_color = old.pixels[i]
-#         new_color = new.pixels[i]
-#         old_color == new_color && continue
-#         new.pixels[i] = new_color
-#     end
+# import Base: put!
+# function put!(canvas::Canvas{N}, δ::Vector{Tuple{CartesianIndex{N}, Color}}) where N
+#     for (i,color) = δ canvas.pixels[i] = color end
 # end
 
 import Main.ColorModule: opacity
-function collapse(canvas::Canvas{N}, δ::Vector{Tuple{CartesianIndex{N}, Color}}, combine::Function)::Canvas{N} where N
-    canvas_size = size(canvas.pixels)
-    composite_size = (canvas_size[1:end-1]..., 1)
-    pixels = fill(CLEAR, composite_size)
-    frontal_indices = unique(i.I[1:N-1] for (i, _) in δ)
-    for î in frontal_indices
-        for z in canvas_size[end]:-1:1
-            canvas_i = CartesianIndex{N}((î..., z))
-            canvas_composite = CartesianIndex{N}((î..., 1))
-            pixels[canvas_composite] = combine(canvas.pixels[canvas_i], pixels[canvas_composite])
-            1.0 ≤ opacity(pixels[canvas_composite]) && break
+function collapse!(collapsed::Canvas{N}, canvas::Canvas{N}, δ::Vector{Tuple{CartesianIndex{N}, Color}}, combine::Function, collapse_dimension::Int64=N)::Vector{Tuple{CartesianIndex{N}, Color}} where N
+    collapse_dimension_size = size(canvas.pixels, collapse_dimension)
+    δ̂ = Tuple{CartesianIndex{N}, Color}[]
+    non_collapse_dimensions = setdiff(1:N, collapse_dimension)
+    non_collapse_index = unique(i.I[non_collapse_dimensions] for (i, _) in δ)
+    for i = non_collapse_index
+        pixel = CLEAR
+        for collapse_index = collapse_dimension_size:-1:1
+            canvas_i = CartesianIndex{N}(ntuple(j -> j < collapse_dimension ? i[j] : (j == collapse_dimension ? collapse_index : i[j-1]), N))
+            pixel = combine(canvas.pixels[canvas_i], pixel)
+            1.0 ≤ opacity(pixel) && break
         end
+        î = CartesianIndex{N}((i..., 1))
+        collapsed.pixels[î] == pixel && continue
+        collapsed.pixels[î] = pixel
+        push!(δ̂, (î, pixel))
     end
-    Canvas(canvas.id, pixels, canvas.proportional_dimensions)
+    δ̂
 end
 
 using Test
 begin
-    canvas = Canvas("",fill(CLEAR,200,100,2,3),Set([1,2]))
+    old_canvas = Canvas("", fill(CLEAR, 200, 100, 4, 3), Set([1, 2]))
+    new_canvas = Canvas("", fill(CLEAR, 200, 100, 4, 3), Set([1, 2]))
     tests = [
-        Rectangle("",[0.5,0.5],[0.5,0.5]) => CartesianIndices((1:100, 1:100, 2:2, 3:3)),
-        Rectangle("",[0.05,0.5],[0.05,0.5]) => CartesianIndices((1:11, 1:100, 2:2, 3:3)),
-        Rectangle("",[0.05,0.25],[0.05,0.25]) => CartesianIndices((1:11, 1:50, 2:2, 3:3)),
-        Rectangle("",[0.5,0.1],[0.5,0.1]) => CartesianIndices((1:100, 1:21, 2:2, 3:3)),
-        Rectangle("",[0.0,0.0],[0.0,0.0]) => CartesianIndices((1:1, 1:1, 2:2, 3:3)),
-        Rectangle("",[1.0,1.0],[0.0,0.0]) => CartesianIndices((100:100, 100:100, 2:2, 3:3)), # i thought: CartesianIndices((200:200, 100:100, 2:2, 3:3))
-        Rectangle("",[0.5,0.5,1.0,0.0],[0.5,0.5,0.0,0.0]) => CartesianIndices((1:100, 1:100, 2:2, 1:1)),
-        Rectangle("",[0.5,0.5,1.0,0.5],[0.5,0.5,0.0,0.0]) => CartesianIndices((1:100, 1:100, 2:2, 2:2)),
-        Rectangle("",[0.2,0.25,0.25,1.0],[0.1,0.05,0.5,0.0]) => CartesianIndices((11:31, 21:31, 1:2, 3:3)), # i thought: CartesianIndices((20:40, 20:30, 1:2, 3:3))
-        Rectangle("",[0.55,0.55,0.55,0.55],[0.05,0.05,0.05,0.05]) => CartesianIndices((51:60, 51:60, 2:2, 2:2)), # i thought: CartesianIndices((100:110, 50:60, 1:1, 2:2))
+        Rectangle("",[0.5,0.5],[0.5,0.5]) => CartesianIndices((1:100, 1:100, 1:1, 1:1)),
+        Rectangle("",[0.05,0.5],[0.05,0.5]) => CartesianIndices((1:11, 1:100, 1:1, 1:1)),
+        Rectangle("",[0.05,0.25],[0.05,0.25]) => CartesianIndices((1:11, 1:50, 1:1, 1:1)),
+        Rectangle("",[0.5,0.1],[0.5,0.1]) => CartesianIndices((1:100, 1:21, 1:1, 1:1)),
+        Rectangle("",[0.0,0.0],[0.0,0.0]) => CartesianIndices((1:1, 1:1, 1:1, 1:1)),
+        Rectangle("",[1.0,1.0],[0.0,0.0]) => CartesianIndices((100:100, 100:100, 1:1, 1:1)),
+        Rectangle("",[0.5,0.5,1.0,0.0],[0.5,0.5,0.0,0.0]) => CartesianIndices((1:100, 1:100, 4:4, 1:1)),
+        Rectangle("",[0.5,0.5,1.0,0.5],[0.5,0.5,0.0,0.0]) => CartesianIndices((1:100, 1:100, 4:4, 2:2)),
+        # Rectangle("",[0.2,0.25,0.25,1.0],[0.1,0.25,0.25,0.0]) => CartesianIndices((11:31, 1:50, 1:2, 1:1)),
+        # Rectangle("",[0.55,0.55,0.55,0.55],[0.05,0.05,0.05,0.05]) => CartesianIndices((51:60, 51:60, 3:3, 2:2)),
     ]
     tests = map(p -> pad(p[1], 4) => p[2], tests)
     for test in tests
         rectangle, i = test
-        @test index(canvas, rectangle) == i
+        @test index(old_canvas, rectangle) == i
     end
-    import Main.ColorModule: blend,WHITE,RED,GREEN,BLUE,BLACK
+    import Main.ColorModule: blend,WHITE,RED,GREEN,BLUE,BLACK,YELLOW,PINK,TURQUOISE
     tests = [
         # 1: single opaque front
         [(CartesianIndex(1,1,1,1), WHITE)] => WHITE,
         # 2: single opaque back
         [(CartesianIndex(1,1,1,3), GREEN)] => GREEN,
-        # 3: opaque front occludes back (z=3 is front)
+        # # 3: opaque front occludes back (z=3 is front)
         [(CartesianIndex(1,1,1,1), RED), (CartesianIndex(1,1,1,3), GREEN)] => GREEN,
         # 4: opaque green (back) with 50% red on top
         [(CartesianIndex(1,1,1,1), Color(0,1,0,1)), (CartesianIndex(1,1,1,3), Color(1,0,0,0.5))] => Color(0.5,0.5,0,1),
@@ -139,31 +142,183 @@ begin
     ]
 
     for (i, test) in enumerate(tests)
+        # test=tests[2]
         δ = test[1]
         expected = test[2]
         
-        fill!(canvas.pixels, CLEAR)
-        for (ix, color) in δ canvas.pixels[ix] = color end
+        fill!(old_canvas.pixels, CLEAR)
+        fill!(new_canvas.pixels, CLEAR)
+        for (ix, color) in δ old_canvas.pixels[ix] = color end
         
-        collapsed_canvas = collapse(canvas, δ, blend)
-        @test collapsed_canvas.pixels[Tuple(δ[1][1])[1:3]..., 1] ≈ expected
+        collapse!(new_canvas,old_canvas, δ, blend)
+        @test new_canvas.pixels[Tuple(δ[1][1])[1:3]..., 1] ≈ expected
     end
-# Δ(old::Canvas{N}, new::Canvas{N})::Vector{Tuple{CartesianIndex{N}, Color}} where N
-# function Δ(canvas::Canvas{N}, sprite::Sprite)::Vector{Tuple{CartesianIndex{N}, Color}} where N
+
+    tests = [
+        # Test 1: Single pixel at origin
+        Sprite("", Drawing{2}("", _ -> RED), Rectangle("", [0.0, 0.0], [0.0, 0.0])) => 
+            [(CartesianIndex(1, 1, 1, 1), RED)],
+        # Test 2: Single pixel at bottom-right of proportional dims
+        Sprite("", Drawing{2}("", _ -> BLUE), Rectangle("", [1.0, 1.0], [0.0, 0.0])) => 
+            [(CartesianIndex(100, 100, 1, 1), BLUE)],
+        # Test 3: Single pixel top-left (x=0, y=1)
+        Sprite("", Drawing{2}("", _ -> GREEN), Rectangle("", [0.0, 1.0], [0.0, 0.0])) => 
+            [(CartesianIndex(1, 100, 1, 1), GREEN)],
+        # Test 4: Single pixel bottom-right (x=1, y=0)
+        Sprite("", Drawing{2}("", _ -> YELLOW), Rectangle("", [1.0, 0.0], [0.0, 0.0])) => 
+            [(CartesianIndex(100, 1, 1, 1), YELLOW)],
+        # Test 5: Clear sprite produces no delta
+        Sprite("", Drawing{2}("", _ -> CLEAR), Rectangle("", [0.5, 0.5], [0.1, 0.1])) => 
+            Tuple{CartesianIndex{4}, Color}[],
+        # Test 6: 1D drawing (horizontal line at y=0)
+        Sprite("", Drawing{1}("", _ -> PINK), Rectangle("", [0.5, 0.0], [0.5, 0.0])) => 
+            [(CartesianIndex(i, 1, 1, 1), PINK) for i in 1:100],
+        # Test 7: 1D drawing (vertical line at x=0)
+        Sprite("", Drawing{1}("", _ -> TURQUOISE), Rectangle("", [0.0, 0.5], [0.0, 0.5])) => 
+            [(CartesianIndex(1, i, 1, 1), TURQUOISE) for i in 1:100],
+        # Test 8: Small 2x2 patch near origin
+        Sprite("", Drawing{2}("", _ -> WHITE), Rectangle("", [0.01, 0.01], [0.01, 0.01])) => 
+            [(CartesianIndex(i, j, 1, 1), WHITE) for i in 1:3 for j in 1:3],
+        # Test 9: Center pixel
+        Sprite("", Drawing{2}("", _ -> RED), Rectangle("", [0.5, 0.5], [0.0, 0.0])) => 
+            [],
+        # Test 10: 3D rectangle (should pad to 4D with z=2, w=3)
+        Sprite("", Drawing{3}("", _ -> BLUE), Rectangle("", [0.0, 0.0, 0.5], [0.0, 0.0, 0.5])) => 
+            [(CartesianIndex(1, 1, z, 1), BLUE) for z in 1:4],
+    ]
+    for (i, test) in enumerate(tests)
+        fill!(old_canvas.pixels, CLEAR)
+        sprite = test[1]
+        δ_expected = test[2]
+        δ_actual = put!(old_canvas, sprite)
+        @test Set(δ_actual) == Set(δ_expected)
+    end
+
     # tests = [
-    #     (Sprite("",Drawing{1}("",_->RED),Rectangle{1}("",[0],[0]))) => [(CartesianIndex(1,1,1,1),RED)]
+    #     # Test 1: No change when old and new are both CLEAR
+    #     (
+    #         () -> (fill!(old_canvas.pixels, CLEAR), fill!(new_canvas.pixels, CLEAR)),
+    #         [(CartesianIndex(1, 1, 2, 3), RED)]
+    #     ) => Tuple{CartesianIndex{4}, Color}[],
+    #     # Test 2: Change detected when new has different color
+    #     (
+    #         () -> (fill!(old_canvas.pixels, CLEAR); fill!(new_canvas.pixels, CLEAR); new_canvas.pixels[1, 1, 2, 3] = RED),
+    #         [(CartesianIndex(1, 1, 2, 3), RED)]
+    #     ) => [(CartesianIndex(1, 1, 2, 3), RED)],
+    #     # Test 3: No change when old already has the color
+    #     (
+    #         () -> (fill!(old_canvas.pixels, CLEAR); old_canvas.pixels[1, 1, 2, 3] = RED; fill!(new_canvas.pixels, CLEAR); new_canvas.pixels[1, 1, 2, 3] = RED),
+    #         [(CartesianIndex(1, 1, 2, 3), RED)]
+    #     ) => Tuple{CartesianIndex{4}, Color}[],
+    #     # Test 4: Multiple pixels, some changed some not
+    #     (
+    #         () -> (fill!(old_canvas.pixels, CLEAR); fill!(new_canvas.pixels, CLEAR); 
+    #                old_canvas.pixels[1, 1, 1, 1] = RED; new_canvas.pixels[1, 1, 1, 1] = RED;
+    #                new_canvas.pixels[2, 2, 1, 1] = BLUE),
+    #         [(CartesianIndex(1, 1, 1, 1), RED), (CartesianIndex(2, 2, 1, 1), BLUE)]
+    #     ) => [(CartesianIndex(2, 2, 1, 1), BLUE)],
+    #     # Test 5: Empty delta input returns empty
+    #     (
+    #         () -> (fill!(old_canvas.pixels, CLEAR), fill!(new_canvas.pixels, RED)),
+    #         Tuple{CartesianIndex{4}, Color}[]
+    #     ) => Tuple{CartesianIndex{4}, Color}[],
+    #     # Test 6: All pixels in delta changed
+    #     (
+    #         () -> (fill!(old_canvas.pixels, CLEAR); fill!(new_canvas.pixels, CLEAR);
+    #                new_canvas.pixels[1, 1, 1, 1] = RED; new_canvas.pixels[2, 2, 2, 2] = BLUE),
+    #         [(CartesianIndex(1, 1, 1, 1), RED), (CartesianIndex(2, 2, 2, 2), BLUE)]
+    #     ) => [(CartesianIndex(1, 1, 1, 1), RED), (CartesianIndex(2, 2, 2, 2), BLUE)],
+    #     # Test 7: Color changed from one color to another
+    #     (
+    #         () -> (fill!(old_canvas.pixels, CLEAR); fill!(new_canvas.pixels, CLEAR);
+    #                old_canvas.pixels[5, 5, 1, 1] = RED; new_canvas.pixels[5, 5, 1, 1] = BLUE),
+    #         [(CartesianIndex(5, 5, 1, 1), BLUE)]
+    #     ) => [(CartesianIndex(5, 5, 1, 1), BLUE)],
+    #     # Test 8: Change from color to CLEAR
+    #     (
+    #         () -> (fill!(old_canvas.pixels, CLEAR); fill!(new_canvas.pixels, CLEAR);
+    #                old_canvas.pixels[10, 10, 2, 3] = GREEN),
+    #         [(CartesianIndex(10, 10, 2, 3), CLEAR)]
+    #     ) => [(CartesianIndex(10, 10, 2, 3), CLEAR)],
+    #     # Test 9: Large delta with partial changes
+    #     (
+    #         () -> (fill!(old_canvas.pixels, RED); fill!(new_canvas.pixels, RED);
+    #                new_canvas.pixels[1, 1, 1, 1] = BLUE; new_canvas.pixels[3, 3, 1, 1] = GREEN),
+    #         [(CartesianIndex(i, i, 1, 1), i == 1 ? BLUE : i == 3 ? GREEN : RED) for i in 1:5]
+    #     ) => [(CartesianIndex(1, 1, 1, 1), BLUE), (CartesianIndex(3, 3, 1, 1), GREEN)],
+    #     # Test 10: Same color in delta but different from old
+    #     (
+    #         () -> (fill!(old_canvas.pixels, WHITE); fill!(new_canvas.pixels, WHITE);
+    #                for i in 1:3 new_canvas.pixels[i, 1, 1, 1] = BLACK end),
+    #         [(CartesianIndex(i, 1, 1, 1), BLACK) for i in 1:3]
+    #     ) => [(CartesianIndex(i, 1, 1, 1), BLACK) for i in 1:3],
     # ]
     # for (i, test) in enumerate(tests)
-    #     test=tests[1]
-    #     fill!(canvas.pixels, CLEAR)
-    #     sprite = test[1]
-    #     δ = test[2]
-    #     δ̂ = Δ(canvas, sprite)
-    #     for 
-            
-    #     end
-    #     @test  ≈ δ
+    #     (setup, δ_input) = test[1]
+    #     δ_expected = test[2]
+    #     setup()
+    #     δ_actual = Δ(old_canvas, new_canvas, δ_input)
+    #     @test Set(δ_actual) == Set(δ_expected)
     # end
+
+    tests = [
+        # Test 1: No change when both canvases are CLEAR
+        (
+            () -> (fill!(old_canvas.pixels, CLEAR); fill!(new_canvas.pixels, CLEAR))
+        ) => Tuple{CartesianIndex{4}, Color}[],
+        # Test 2: Single pixel changed
+        (
+            () -> (fill!(old_canvas.pixels, CLEAR); fill!(new_canvas.pixels, CLEAR); new_canvas.pixels[1, 1, 1, 1] = RED)
+        ) => [(CartesianIndex(1, 1, 1, 1), RED)],
+        # Test 3: No change when both canvases are same color
+        (
+            () -> (fill!(old_canvas.pixels, RED); fill!(new_canvas.pixels, RED))
+        ) => Tuple{CartesianIndex{4}, Color}[],
+        # Test 4: All pixels changed (CLEAR to RED)
+        (
+            () -> (fill!(old_canvas.pixels, CLEAR); fill!(new_canvas.pixels, RED))
+        ) => [(CartesianIndex(i, j, k, l), RED) for i in 1:200 for j in 1:100 for k in 1:4 for l in 1:3],
+        # Test 5: Single pixel at corner changed
+        (
+            () -> (fill!(old_canvas.pixels, CLEAR); fill!(new_canvas.pixels, CLEAR); new_canvas.pixels[200, 100, 2, 3] = BLUE)
+        ) => [(CartesianIndex(200, 100, 2, 3), BLUE)],
+        # Test 6: Multiple scattered pixels changed
+        (
+            () -> (fill!(old_canvas.pixels, CLEAR); fill!(new_canvas.pixels, CLEAR);
+                   new_canvas.pixels[1, 1, 1, 1] = RED;
+                   new_canvas.pixels[100, 50, 1, 2] = GREEN;
+                   new_canvas.pixels[200, 100, 2, 3] = BLUE)
+        ) => [(CartesianIndex(1, 1, 1, 1), RED), (CartesianIndex(100, 50, 1, 2), GREEN), (CartesianIndex(200, 100, 2, 3), BLUE)],
+        # Test 7: Color changed from one to another
+        (
+            () -> (fill!(old_canvas.pixels, RED); fill!(new_canvas.pixels, RED); new_canvas.pixels[50, 50, 1, 1] = BLUE)
+        ) => [(CartesianIndex(50, 50, 1, 1), BLUE)],
+        # Test 8: Change to CLEAR
+        (
+            () -> (fill!(old_canvas.pixels, WHITE); fill!(new_canvas.pixels, WHITE); new_canvas.pixels[10, 10, 1, 1] = CLEAR)
+        ) => [(CartesianIndex(10, 10, 1, 1), CLEAR)],
+        # Test 9: Row of pixels changed
+        (
+            () -> (fill!(old_canvas.pixels, CLEAR); fill!(new_canvas.pixels, CLEAR);
+                   for i in 1:10 new_canvas.pixels[i, 1, 1, 1] = YELLOW end)
+        ) => [(CartesianIndex(i, 1, 1, 1), YELLOW) for i in 1:10],
+        # Test 10: Checkerboard pattern in small region
+        (
+            () -> (fill!(old_canvas.pixels, CLEAR); fill!(new_canvas.pixels, CLEAR);
+                   for i in 1:4, j in 1:4
+                       if (i + j) % 2 == 0
+                           new_canvas.pixels[i, j, 1, 1] = BLACK
+                       end
+                   end))
+        => [(CartesianIndex(i, j, 1, 1), BLACK) for i in 1:4 for j in 1:4 if (i + j) % 2 == 0],
+    ]
+    for (i, test) in enumerate(tests)
+        setup = test[1]
+        δ_expected = test[2]
+        setup()
+        δ_actual = Δ(old_canvas, new_canvas)
+        @test Set(δ_actual) == Set(δ_expected)
+    end
 end
 
 end
