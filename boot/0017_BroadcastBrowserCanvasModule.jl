@@ -12,29 +12,11 @@ import Main.CanvasModule: Canvas, collapse!, Δ
 import Base.put!
 
 import Main: LoopOS
-mutable struct TemporalCanvas
-    canvas::Canvas{4}
-    time_head::Int
-    TemporalCanvas(canvas) = new(canvas, 1)
-end
-function advance_time!(tc::TemporalCanvas)
-    time_size = size(tc.canvas.pixels, 4)
-    # old_head = tc.time_head
-    tc.time_head = mod1(tc.time_head + 1, time_size)
-    # Copy current "now" (index 1) to ring position before it becomes history
-    @views tc.canvas.pixels[:, :, :, tc.time_head] .= tc.canvas.pixels[:, :, :, 1]
-end
-function current_3d_canvas(tc::TemporalCanvas)::Canvas{3}
-    # Sprites write to time index 1, so "now" is always physical index 1
-    Canvas{3}(
-        tc.canvas.id,
-        @view(tc.canvas.pixels[:, :, :, 1]),
-        tc.canvas.proportional_dimensions
-    )
-end
-struct BroadcastBrowserCanvas <: LoopOS.OutputPeripheral
+
+mutable struct BroadcastBrowserCanvas <: LoopOS.OutputPeripheral
     broadcastbrowser_task::Task
-    canvas::TemporalCanvas
+    canvas::Canvas
+    timehead::Int
 end
 
 function root(port, bb)
@@ -45,12 +27,12 @@ function root(port, bb)
     put!(bb.processor, js)
 end
 
-function write(δ::Vector{Tuple{CartesianIndex{N}, Color}}) where N
+function write(δ::Vector{Tuple{CartesianIndex{N},Color}}) where N
     result = []
-    for (i,color) = δ
-        push!(result, (i[1]-1, i[2]-1, 255 * round.(UInt8, color)...))
+    for (i, color) = δ
+        push!(result, (i[1] - 1, i[2] - 1, 255 * round.(UInt8, color)...))
     end
-    bracket(x) = "["*x*"]"
+    bracket(x) = "[" * x * "]"
     bracket(join(map(r -> bracket(join(r, ',')), result), ','))
 end
 
@@ -76,61 +58,67 @@ ctx.putImageData(imageData, 0, 0)
 """
 
 import Main.BroadcastBrowserModule: BroadcastBrowser, start
-const BROADCASTBROWSERCANVAS_WIDTH = 200
-const BROADCASTBROWSERCANVAS_HEIGHT = 100
-const BROADCASTBROWSERCANVAS_DEPTH = 3
-const BROADCASTBROWSERCANVAS_TIME = 2
-# const BROADCASTBROWSERCANVAS_WIDTH = 3056
-# const BROADCASTBROWSERCANVAS_HEIGHT = 3152
+const BROADCASTBROWSERCANVAS_WIDTH = 2000
+const BROADCASTBROWSERCANVAS_HEIGHT = 2000
+# const BROADCASTBROWSERCANVAS_WIDTH = 3056 # todo test half and double
+# const BROADCASTBROWSERCANVAS_HEIGHT = 3152 # todo test half and double
+const BROADCASTBROWSERCANVAS_DEPTH = 1
+const BROADCASTBROWSERCANVAS_TIME = 1
 const BROADCASTBROWSERCANVAS = BroadcastBrowserCanvas(
     (Threads.@spawn start(root)),
-    TemporalCanvas(
-        Canvas("BroadcastBrowserCanvas",
-        fill(CLEAR, (
-            BROADCASTBROWSERCANVAS_WIDTH, 
-            BROADCASTBROWSERCANVAS_HEIGHT,
-            BROADCASTBROWSERCANVAS_DEPTH,
-            BROADCASTBROWSERCANVAS_TIME)),
-        Set([1,2])))) # todo test half and double
+    Canvas(
+            fill(CLEAR, (
+                BROADCASTBROWSERCANVAS_WIDTH,
+                BROADCASTBROWSERCANVAS_HEIGHT,
+                BROADCASTBROWSERCANVAS_DEPTH,
+                BROADCASTBROWSERCANVAS_TIME)),
+            Set([1, 2])),
+    1)
 newcache() = Canvas{3}(
-    "CACHE", 
-    fill(CLEAR, (BROADCASTBROWSERCANVAS_WIDTH, BROADCASTBROWSERCANVAS_HEIGHT,1)),
-    Set([1,2]))
+    fill(CLEAR, (BROADCASTBROWSERCANVAS_WIDTH, BROADCASTBROWSERCANVAS_HEIGHT, 1)),
+    Set([1, 2]))
 const CACHE = newcache()
 export BROADCASTBROWSERCANVAS
 
-"Use this mainly and simply to display any `Sprite` on all browsers"
-function put!(sprite::Sprite)
+function advance_time!()
+    timesize = size(BROADCASTBROWSERCANVAS.canvas.pixels, 4)
+    # old_head = canvas.timehead
+    BROADCASTBROWSERCANVAS.timehead = mod1(BROADCASTBROWSERCANVAS.timehead + 1, timesize)
+    # Copy current "now" (index 1) to ring position before it becomes history
+    @views BROADCASTBROWSERCANVAS.canvas.pixels[:, :, :, BROADCASTBROWSERCANVAS.timehead] .= BROADCASTBROWSERCANVAS.canvas.pixels[:, :, :, 1]
+end
+function current_3d_canvas(canvas::Canvas)::Canvas{3}
+    # Sprites write to time index 1, so "now" is always physical index 1
+    Canvas{3}(
+        @view(canvas.pixels[:, :, :, 1]),
+        canvas.proportional_dimensions
+    )
+end
+
+put!(sprite::Sprite{2,2}) = put!(sprite, 0.0)
+"Use this mainly and simply to display any `Sprite` on all browsers, depth=1.0 is highest"
+put!(sprite::Sprite{2,2}, depth::Float64) = put!(Sprite{2,3}(sprite.drawing, Rectangle{3}(SVector{3}(sprite.rectangle.center...,depth),SVector{3}(sprite.rectangle.radius...,0.0))))
+function put!(sprite::Sprite{2,3})
+    # @show "put!"
     canvas_3d = current_3d_canvas(BROADCASTBROWSERCANVAS.canvas)
     δ = put!(canvas_3d, sprite)
+    # @show size(δ)
     isempty(δ) && return
-    δ̂ = collapse!(CACHE,canvas_3d, δ, blend,3)
+    # @show "tttt"
+    # advance_time!()
+    δ̂ = collapse!(CACHE, canvas_3d, δ, blend, 3)
+    # @show size(δ̂)
     isempty(δ̂) && return
     js = "pixels=" * write(δ̂) * "\n" * SET_PIXELS_JS
     put!(BroadcastBrowser, js)
 end
 
-const WHITE_DRAWING = Drawing{2}("white", _ -> WHITE)
-const FULL_BOTTOM_LAYER = Rectangle("full", SA[0.5, 0.5], SA[0.5, 0.5])
-const WHITE_SPRITE = Sprite("WHITE_SPRITE", WHITE_DRAWING, FULL_BOTTOM_LAYER)
-put!(WHITE_SPRITE)
-
-import Main.TypstModule: typst
-raw"""
-Only needs the inner small Typst code.
-E.g.: `typst(raw"$ x^2 $")`.
-"""
-typst(typst_code::String)::Sprite = TypstModule.typst(BROADCASTBROWSERCANVAS.canvas, typst_code)
-export typst
+# import Main.TypstModule: typst
+# raw"""
+# Only needs the inner small Typst code.
+# E.g.: `typst(raw"\"\"$ x^2 $\"\"")`.
+# """
+# typst(typst_code::String) = Main.TypstModule.typst(BROADCASTBROWSERCANVAS.canvas, typst_code)
+# export typst
 
 end
-
-sky = rect("half rect", [0.7, 0.75], [0.25, 0.5], TURQUOISE)
-sun = circle("sun", [0.75, 0.75], 0.3, YELLOW)
-cloud = square("cloud", [0.25, 0.75], 0.2, WHITE)
-scene = cloud ∘ sun ∘ sky # cloud ontop of the sun ontop of the sky
-put!(Sprite("scene",scene,Rectangle("center",[0.5,0.5,1.0],[0.1,0.1,0.0])))
-
-put!(Sprite("",Drawing{2}("",_->RED),Rectangle("",[0.5,0.5,0.0],[0.5,0.5,0.0])))
-put!(Sprite("",circle("",[0.5,0.5],[0.2],YELLOW),Rectangle("",[0.5,0.5,1.0],[0.5,0.5,0.0])))
-put!(Sprite("",Drawing{2}("",_->rand()<0.5 ? BLACK : WHITE),Rectangle("",[0.5,0.5,0.5],[0.5,0.5,0.0])))

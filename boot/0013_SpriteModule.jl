@@ -12,7 +12,6 @@ The `Sprite` lives in the perfectly precise digital world, yet can simply be `pu
 E.g.: `put!(BroadcastBrowserCanvas, sky_sprite)` or `put!(BroadcastBrowserCanvas, sky_sprite)`
 """
 struct Sprite{N,M}
-    id::String
     drawing::Drawing{N}
     rectangle::Rectangle{M}
 end

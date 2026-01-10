@@ -1,9 +1,11 @@
 module TypstModule
 
 import Main: @install
-@install PNGFiles, StaticArrays, StaticArrays
+@install PNGFiles, StaticArrays
 import StaticArrays: SVector
 
+import Main.ColorModule: Color, WHITE, CLEAR
+import Main.DrawingModule: Drawing
 import Main.RectangleModule: Rectangle
 import Main.SpriteModule: Sprite
 import Main.CanvasModule: Canvas
@@ -15,26 +17,32 @@ const TEMPLATE(content) = """
 $content
 """
 
-const CACHE = Ref(Dict{String,Canvas}())
+const CACHE = Dict{String,Canvas}()
 function Canvas(typst_code::String)
     cmd = `typst compile - --format png -`
-    pixels = pipeline(IOBuffer(typst_code), cmd) |> read |> IOBuffer |> PNGFiles.load
-    GraphicsModule.Canvas(typst_code, pixels)
+    rgba_pixels = pipeline(IOBuffer(typst_code), cmd) |> read |> IOBuffer |> PNGFiles.load
+    pixels = map(rgba_pixels) do p
+        Color(SVector{4,Float64}(
+            Float64(p.r),
+            Float64(p.g),
+            Float64(p.b),
+            Float64(p.alpha)))
+    end
+    pixels[pixels .== Ref(WHITE)] .= Ref(CLEAR)
+    Canvas(pixels, Set([1,2]))
 end
 function typst_drawing(typst_code::String, coordinates::SVector{2,Float64})
-    !haskey(CACHE[], typst_code) && (CACHE[][typst_code] = Canvas(typst_code))
-    canvas = CACHE[][typst_code]
+    !haskey(CACHE, typst_code) && (CACHE[typst_code] = Canvas(typst_code))
+    canvas = CACHE[typst_code]
     w, h = size(canvas.pixels)
     x = clamp(round(Int, coordinates[1] * w), 1, w)
     y = clamp(round(Int, coordinates[2] * h), 1, h)
     canvas.pixels[x, y]
 end
-typst_rectangle = Rectangle("full", [0.5, 0.5], [0.5, 0.5])
-typst_sprite(typst_code) = Sprite(
-    typst_code,
-    coordinates -> typst_drawing(typst_code, coordinates),
-    typst_rectangle)
-typst(canvas, typst_code) = put!(canvas, typst_sprite(typst_code))
+# typst_sprite(typst_code) = Sprite(
+#     Drawing{2}(coordinates -> typst_drawing(typst_code, coordinates)),
+#     Rectangle([0.5, 0.5], [0.5, 0.5]))
+# typst(canvas, typst_code) = put!(canvas, typst_sprite(typst_code))
 
 # using Test
 # begin
