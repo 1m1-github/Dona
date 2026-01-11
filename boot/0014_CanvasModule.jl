@@ -15,7 +15,8 @@ struct Canvas{N} <: OutputPeripheral
     proportional_dimensions::Set{Int}
 end
 
-clear!(canvas::Canvas, sprite::Sprite) = put!(canvas, Sprite(_->CLEAR,sprite.rectangle))
+clear!(canvas::Canvas{N}, rectangle::Rectangle) where N = put!(canvas, Sprite(Drawing{N}(_->CLEAR),rectangle))
+clear!(canvas::Canvas, sprite::Sprite) = clear!(canvas, sprite.rectangle)
 function move!(canvas::Canvas, sprite::Sprite, new_center)
     clear!(canvas, sprite)
     put!(canvas, Sprite(sprite.drawing, Rectangle(new_center, sprite.rectangle.radius)))
