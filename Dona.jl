@@ -22,5 +22,15 @@ end
 LoopOS.awaken(startswith(@__FILE__, "REPL") ? "/Users/1m1/Documents/Dona/Dona.jl" : @__FILE__)
 
 
+# subtitles_size::Float64=0.5
+# center = SA[0.5, 0.1]
+# speech="l"
+# sprite = typst_sprite(speech, center, subtitles_size)
+# put!(Sprite(sprite.drawing, sprite.rectangle), 1.0)
+# put!(Sprite(opacue ∘ black ∘ invert ∘ sprite.drawing, sprite.rectangle), 1.0)
+put!(Speaker,"l")
 
-put!(Speaker,"hi")
+# sprite
+# sprite.rectangle
+# canvas=TypstModule.CACHE[speech]
+# size(canvas)

@@ -1,7 +1,5 @@
 module SpriteModule
 
-export Sprite
-
 import Main.DrawingModule: Drawing
 import Main.RectangleModule: Rectangle
 
@@ -16,5 +14,6 @@ struct Sprite{N,M}
     rectangle::Rectangle{M}
 end
 (s::Sprite)(x) = s.drawing(x)
+export Sprite
 
 end

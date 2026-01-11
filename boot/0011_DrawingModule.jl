@@ -1,7 +1,5 @@
 module DrawingModule
 
-export Drawing
-
 import StaticArrays: SVector
 
 """
@@ -19,6 +17,7 @@ end
 (d::Drawing)(x::SVector) = d.f(x)
 (d::Drawing)(x::AbstractVector) = d.f(SVector{length(x)}(x))
 (d::Drawing)(x::NTuple) = d.f(SVector(x...))
+export Drawing
 
 import Base.∘
 """
@@ -30,8 +29,7 @@ cloud = square("cloud", [0.25, 0.75], 0.2, WHITE)
 scene = cloud ∘ sun ∘ sky # cloud ontop of the sun ontop of the sky
 """
 ∘(a::Drawing{N}, b::Drawing{N}) where N = Drawing{N}(x -> a(x) ∘ b(x))
-∘(f::Function, d::Drawing{N}) where N = begin @show "∘(f::Function, d::Drawing{N})" ; Drawing{N}(f ∘ d) end
-export ∘
+∘(f::Function, d::Drawing{N}) where N = Drawing{N}(f ∘ d.f)
 
 import Main.ColorModule: CLEAR
 export circle, rect, square
