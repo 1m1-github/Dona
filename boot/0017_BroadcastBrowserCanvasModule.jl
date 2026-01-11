@@ -1,13 +1,12 @@
 module BroadcastBrowserCanvasModule
 
-import StaticArrays: SA
+import StaticArrays: SVector, SA
 
 import Main.ColorModule: Color, blend, CLEAR, WHITE, BLACK, RED, GREEN, BLUE, YELLOW
 import Main.DrawingModule: Drawing, circle
 import Main.RectangleModule: Rectangle
 import Main.SpriteModule: Sprite
 import Main.CanvasModule: Canvas, collapse!, Δ
-import Base.put!
 
 import Main: LoopOS
 
@@ -28,7 +27,7 @@ end
 function write(δ::Vector{Tuple{CartesianIndex{N},Color}}) where N
     result = []
     for (i, color) = δ
-        push!(result, (i[1] - 1, BROADCASTBROWSERCANVAS_HEIGHT - 1 - (i[2] - 1), round.(UInt8, 255 * color)...))
+        push!(result, (i[1] - 1, BROADCASTBROWSERCANVAS_HEIGHT - 1 - (i[2] - 1), round.(UInt8, typemax(UInt8) * color)...))
     end
     bracket(x) = "[" * x * "]"
     bracket(join(map(r -> bracket(join(r, ',')), result), ','))
@@ -104,8 +103,9 @@ end
 add_depth(rectangle::Rectangle{2}, depth) = Rectangle{3}(SVector{3}(rectangle.center...,depth),SVector{3}(rectangle.radius...,0.0))
 add_depth(sprite::Sprite{2,2}, depth) = Sprite{2,3}(sprite.drawing, add_depth(sprite.rectangle, depth))
 
+import Base.put!
 put!(sprite::Sprite{2,2}) = put!(sprite, 0.0)
-"Use this mainly and simply to display any `Sprite` on all browsers, depth=1.0 is highest"
+"Use this mainly and simply to display any `Sprite` on your face (your visual representation to the world), depth goes from 0 (bottom) to 1 (top)."
 put!(sprite::Sprite{2,2}, depth) = put!(add_depth(sprite, depth))
 function put!(sprite::Sprite{2,3})
     canvas_3d = current_3d_canvas(BROADCASTBROWSERCANVAS.canvas)

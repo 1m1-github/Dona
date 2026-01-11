@@ -40,7 +40,7 @@ function state(
     LONG_MEMORY::Vector{String},
     SHORT_MEMORY::Vector{TrackedSymbol},
     INPUT::Vector{Input},
-    OUTPUT_PERIPHERAL::Vector{OutputPeripheral},
+    OUTPUT_PERIPHERAL::Vector{Type{OutputPeripheral}},
     LOOP::Loop,
     STATE_POST::String,
 )
@@ -147,4 +147,4 @@ function state(_state::Vector{TrackedSymbol})
     replace(join(filter(!isempty, state.(_state)), '\n'), "Main." => "")
 end
 
-end
+end # todo add methods to functions based on execution to avoid typing in code

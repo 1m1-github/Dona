@@ -42,7 +42,7 @@ function put!(canvas::Canvas{N}, sprite::Sprite{M,K})::Vector{Tuple{CartesianInd
     index_length = end_index .- start_index .+ 1
     for i = hyperrectangle_index
         coordinates = (SVector(i.I) .- start_index .+ 0.5) ./ index_length
-        new_color = sprite.drawing(coordinates[1:M]) # first M dim
+        new_color = sprite(coordinates[1:M]) # first M dim
         old_color = canvas.pixels[i]
         old_color == new_color && continue
         canvas.pixels[i] = new_color

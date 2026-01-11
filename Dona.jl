@@ -20,3 +20,7 @@ for f = sort(readdir(BOOT_KNOWLEDGE, join=true))
 end
 
 LoopOS.awaken(startswith(@__FILE__, "REPL") ? "/Users/1m1/Documents/Dona/Dona.jl" : @__FILE__)
+
+
+
+put!(Speaker,"hi")

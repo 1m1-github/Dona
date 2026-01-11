@@ -44,7 +44,7 @@ function intelligence(;
     LONG_MEMORY::Vector{String},
     SHORT_MEMORY::Vector{TrackedSymbol},
     INPUT::Vector{Input},
-    OUTPUT_PERIPHERAL::Vector{OutputPeripheral},
+    OUTPUT_PERIPHERAL::Vector{Type{OutputPeripheral}},
     LOOP::Loop,
     STATE_POST::String,
     COMPLEXITY=DEFAULT_COMPLEXITY_INTELLIGENCE,
@@ -110,21 +110,8 @@ function intelligence(;
     # ΔE = ΔEnery(result)
     # v = "v" * string(abs(rand(Int)))
     result = Dict("content" => [Dict("text" => raw"""
-        sun = circle([0.5, 0.5], 0.2, YELLOW)
-        upper_half = Rectangle([0.5, 0.75], [0.5, 0.25])
-        put!(Sprite(sun, upper_half))
-        put!(typst($x^2$))
+        put!(Speaker,"hi")
         """)], "usage" => "")
-
-# sky = rect("half rect", [0.7, 0.75], [0.25, 0.5], TURQUOISE)
-# sun = circle("sun", [0.75, 0.75], 0.3, YELLOW)
-# cloud = square("cloud", [0.25, 0.75], 0.2, WHITE)
-# scene = cloud ∘ sun ∘ sky # cloud ontop of the sun ontop of the sky
-# put!(Sprite("scene",scene,Rectangle("center",[0.5,0.5,1.0],[0.1,0.1,0.0])))
-
-# put!(Sprite("",Drawing{2}("",_->RED),Rectangle("",[0.5,0.5,0.0],[0.5,0.5,0.0])))
-# put!(Sprite("",circle("",[0.5,0.5],[0.2],YELLOW),Rectangle("",[0.5,0.5,1.0],[0.5,0.5,0.0])))
-# put!(Sprite("",Drawing{2}("",_->rand()<0.5 ? BLACK : WHITE),Rectangle("",[0.5,0.5,0.5],[0.5,0.5,0.0])))
 
     ΔE = 0.01
     output = result["content"][1]["text"]

@@ -1,7 +1,7 @@
 module BroadcastBrowserModule
 
 import Main: @install
-@install HTTP
+@install HTTP, URIs
 
 import Main: LoopOS
 import Main.LoopOS: BatchProcessor, start!
@@ -24,7 +24,6 @@ const HTML = raw"""
 <html>
 <body>
 <script>
-const sse = new EventSource('/events')
 const sse = new EventSource(`/events?width=${window.innerWidth}&height=${window.innerHeight}`)
 sse.onmessage = (e) => eval(e.data)
 </script>

@@ -21,7 +21,6 @@ end
 (d::Drawing)(x::NTuple) = d.f(SVector(x...))
 
 import Base.∘
-import Main.ColorModule: ∘
 """
 Drawing composition using fair information theoretic color composition.
 E.g.:
@@ -31,6 +30,7 @@ cloud = square("cloud", [0.25, 0.75], 0.2, WHITE)
 scene = cloud ∘ sun ∘ sky # cloud ontop of the sun ontop of the sky
 """
 ∘(a::Drawing{N}, b::Drawing{N}) where N = Drawing{N}(x -> a(x) ∘ b(x))
+∘(f::Function, d::Drawing{N}) where N = begin @show "∘(f::Function, d::Drawing{N})" ; Drawing{N}(f ∘ d) end
 export ∘
 
 import Main.ColorModule: CLEAR
@@ -66,5 +66,3 @@ begin
 end
 
 end
-import Main.DrawingModule: Drawing as _Drawing
-const Drawing = _Drawing{2}

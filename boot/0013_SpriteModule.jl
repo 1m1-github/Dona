@@ -15,5 +15,6 @@ struct Sprite{N,M}
     drawing::Drawing{N}
     rectangle::Rectangle{M}
 end
+(s::Sprite)(x) = s.drawing(x)
 
 end
