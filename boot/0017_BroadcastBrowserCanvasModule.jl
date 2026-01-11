@@ -1,14 +1,12 @@
 module BroadcastBrowserCanvasModule
 
-import Main: @install
-@install StaticArrays
 import StaticArrays: SA
 
 import Main.ColorModule: Color, blend, CLEAR, WHITE, BLACK, RED, GREEN, BLUE, YELLOW
 import Main.DrawingModule: Drawing, circle
 import Main.RectangleModule: Rectangle
 import Main.SpriteModule: Sprite
-import Main.CanvasModule: Canvas, collapse!, Δ, clear!, move!
+import Main.CanvasModule: Canvas, collapse!, Δ#, clear!, move!
 import Base.put!
 
 import Main: LoopOS
@@ -23,7 +21,6 @@ function root(port, bb)
     @info "BroadcastBrowserCanvas HTTP port $port $(bb.stream)"
     put!(bb.processor, JS)
     δ = Δ(newcache(), CACHE)
-    # @show "root", length(δ)
     js = "pixels=" * write(δ) * "\n" * SET_PIXELS_JS
     put!(bb.processor, js)
 end
@@ -38,10 +35,12 @@ function write(δ::Vector{Tuple{CartesianIndex{N},Color}}) where N
 end
 
 import Main.BroadcastBrowserModule: BroadcastBrowser, start
-const BROADCASTBROWSERCANVAS_WIDTH = 100
-const BROADCASTBROWSERCANVAS_HEIGHT = 100
-# const BROADCASTBROWSERCANVAS_WIDTH = 3056 # todo test half and double
-# const BROADCASTBROWSERCANVAS_HEIGHT = 3152 # todo test half and double
+const BROADCASTBROWSERCANVAS_WIDTH_720p = 1280
+const BROADCASTBROWSERCANVAS_HEIGHT_720p = 720
+const BROADCASTBROWSERCANVAS_WIDTH_1080p = 1920
+const BROADCASTBROWSERCANVAS_HEIGHT_1080p = 1080
+const BROADCASTBROWSERCANVAS_WIDTH = BROADCASTBROWSERCANVAS_WIDTH_1080p
+const BROADCASTBROWSERCANVAS_HEIGHT = BROADCASTBROWSERCANVAS_HEIGHT_1080p
 const BROADCASTBROWSERCANVAS_DEPTH = 10
 const BROADCASTBROWSERCANVAS_TIME = 1
 const BROADCASTBROWSERCANVAS = BroadcastBrowserCanvas(
@@ -103,49 +102,40 @@ put!(sprite::Sprite{2,2}) = put!(sprite, 0.0)
 "Use this mainly and simply to display any `Sprite` on all browsers, depth=1.0 is highest"
 put!(sprite::Sprite{2,2}, depth) = put!(add_depth(sprite, depth))
 function put!(sprite::Sprite{2,3})
-    @show "put!"
     canvas_3d = current_3d_canvas(BROADCASTBROWSERCANVAS.canvas)
-    @show "put!", info(canvas_3d.pixels)
     δ = put!(canvas_3d, sprite)
-    @show "put!", info(canvas_3d.pixels), length(δ)
     isempty(δ) && return
-    @show "put!", info(CACHE.pixels)
     δ̂ = collapse!(CACHE, canvas_3d, δ, blend, 3)
-    @show "put!", info(CACHE.pixels), length(δ̂)
     isempty(δ̂) && return
     js = "pixels=" * write(δ̂) * "\n" * SET_PIXELS_JS
     put!(BroadcastBrowser, js)
 end
 
-# rectangle=Rectangle([0.5,0.5],[0.5,0.5])
-# rectangle=add_depth(rectangle, 0.0)
-# sprite=Sprite(Drawing{2}(_->CLEAR),rectangle)
-# put!(sprite,1.0)
-
 clear!(rectangle::Rectangle{2}, depth = 0.0) = clear!(add_depth(rectangle, depth))
-clear!(rectangle::Rectangle{3}) = clear!(BROADCASTBROWSERCANVAS.canvas, rectangle)
+clear!(rectangle::Rectangle{3}) = put!(Sprite(Drawing{2}(_->CLEAR),rectangle))
 clear!(sprite::Sprite) = clear!(sprite.rectangle)
-move!(sprite::Sprite{2,2}, new_center, depth = 0.0) = move!(add_depth(sprite, depth), new_center)
-move!(sprite::Sprite{2,3}, new_center) = move!(BROADCASTBROWSERCANVAS.canvas, sprite, new_center)
-colors(pixels) = for c in [WHITE, BLACK, RED, GREEN, BLUE, YELLOW]
-    println(c, "=",count(p->p[1:3]==c[1:3],pixels))
-end 
-info(pixels::AbstractArray{Color,4})=begin
-    println("size=", size(pixels), prod(size(pixels)))
-    println("CLEAR=", count(p->p==CLEAR,pixels))
-    for z in 1:size(pixels,3)
-        println("z=$z")
-        colors(pixels[:,:,z,1])
-    end
-end
-info(pixels::AbstractArray{Color,3})=begin
-    println("size=", size(pixels), prod(size(pixels)))
-    println("CLEAR=", count(p->p==CLEAR,pixels))
-    for z in 1:size(pixels,3)
-        println("z=$z")
-        colors(pixels[:,:,z])
-    end
-end
+export clear!
+# move!(sprite::Sprite{2,2}, new_center, depth = 0.0) = move!(add_depth(sprite, depth), new_center)
+# move!(sprite::Sprite{2,3}, new_center) = move!(BROADCASTBROWSERCANVAS.canvas, sprite, new_center)
+# colors(pixels) = for c in [WHITE, BLACK, RED, GREEN, BLUE, YELLOW]
+#     println(c, "=",count(p->p[1:3]==c[1:3],pixels))
+# end 
+# info(pixels::AbstractArray{Color,4})=begin
+#     println("size=", size(pixels), prod(size(pixels)))
+#     println("CLEAR=", count(p->p==CLEAR,pixels))
+#     for z in 1:size(pixels,3)
+#         println("z=$z")
+#         colors(pixels[:,:,z,1])
+#     end
+# end
+# info(pixels::AbstractArray{Color,3})=begin
+#     println("size=", size(pixels), prod(size(pixels)))
+#     println("CLEAR=", count(p->p==CLEAR,pixels))
+#     for z in 1:size(pixels,3)
+#         println("z=$z")
+#         colors(pixels[:,:,z])
+#     end
+# end
 # # fill!(BROADCASTBROWSERCANVAS.canvas.pixels,CLEAR)
 # # fill!(CACHE.pixels,CLEAR)
 # info(BROADCASTBROWSERCANVAS.canvas.pixels)

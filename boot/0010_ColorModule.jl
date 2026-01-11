@@ -1,26 +1,21 @@
+@install StaticArrays
+import StaticArrays: SVector,SA
 module ColorModule
 
 export Color
 
-import Main: @install
-@install StaticArrays
 import StaticArrays: SVector
 
 struct Color <: AbstractVector{Float64}
     data::SVector{4,Float64}
 end
-# Base.broadcastable(c::Color) = Ref(c)
-# d=SVector{4,Float64}(1.0,1.0,1.0,1.0)
-# Color(d)==Color(d)
 Color(r,g,b,a=1.0) = Color(SVector{4,Float64}(float([r,g,b,a])...))
 Color(x) = Color(x,x,x)
 Color(c::Color, α) = Color(c[1], c[2], c[3], α)
 clear(c::Color) = Color(c, 0)
 opacity(c::Color) = c[4]
-# import Base: size, getindex, ==
 Base.size(::Color) = (4,)
 Base.getindex(c::Color, i::Int) = c.data[i]
-# Base.:(==)(a::Color, b::Color) = a.data == b.data
 
 const BLACK = Color(0)
 const CLEAR = clear(BLACK)
