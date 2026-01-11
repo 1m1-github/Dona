@@ -2,8 +2,6 @@ module RectangleModule
 
 export Rectangle
 
-import Main: @install
-@install StaticArrays
 import StaticArrays: SVector
 
 """

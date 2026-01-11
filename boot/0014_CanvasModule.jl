@@ -1,7 +1,5 @@
 module CanvasModule
 
-import Main: @install
-@install StaticArrays
 import StaticArrays: SVector
 
 import Main.LoopOS: OutputPeripheral
@@ -16,14 +14,6 @@ struct Canvas{N} <: OutputPeripheral
 end
 import Base.size
 size(c::Canvas) = size(c.pixels)
-
-# clear!(canvas::Canvas{N}, rectangle::Rectangle) where N = begin @show "clear!N"; put!(canvas, Sprite(Drawing{N}(_->CLEAR),rectangle)) end
-# clear!(canvas::Canvas, sprite::Sprite) = clear!(canvas, sprite.rectangle)
-# function move!(canvas::Canvas, sprite::Sprite, new_center)
-#     clear!(canvas, sprite)
-#     put!(canvas, Sprite(sprite.drawing, Rectangle(new_center, sprite.rectangle.radius)))
-# end
-export clear!#, move!
 
 function index(canvas::Canvas{N}, rectangle::Rectangle{N})::CartesianIndices{N} where N
     bottom_left = rectangle.center .- rectangle.radius

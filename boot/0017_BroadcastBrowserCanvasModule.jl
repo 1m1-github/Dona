@@ -6,7 +6,7 @@ import Main.ColorModule: Color, blend, CLEAR, WHITE, BLACK, RED, GREEN, BLUE, YE
 import Main.DrawingModule: Drawing, circle
 import Main.RectangleModule: Rectangle
 import Main.SpriteModule: Sprite
-import Main.CanvasModule: Canvas, collapse!, Δ#, clear!, move!
+import Main.CanvasModule: Canvas, collapse!, Δ
 import Base.put!
 
 import Main: LoopOS
@@ -14,7 +14,7 @@ import Main: LoopOS
 mutable struct BroadcastBrowserCanvas <: LoopOS.OutputPeripheral
     broadcastbrowser_task::Task
     canvas::Canvas
-    timehead::Int
+    # timehead::Int
 end
 
 function root(port, bb)
@@ -42,7 +42,7 @@ const BROADCASTBROWSERCANVAS_HEIGHT_1080p = 1080
 const BROADCASTBROWSERCANVAS_WIDTH = BROADCASTBROWSERCANVAS_WIDTH_1080p
 const BROADCASTBROWSERCANVAS_HEIGHT = BROADCASTBROWSERCANVAS_HEIGHT_1080p
 const BROADCASTBROWSERCANVAS_DEPTH = 10
-const BROADCASTBROWSERCANVAS_TIME = 1
+const BROADCASTBROWSERCANVAS_TIME = 1 # todo
 const BROADCASTBROWSERCANVAS = BroadcastBrowserCanvas(
     (Threads.@spawn start(root)),
     Canvas(
@@ -51,8 +51,7 @@ const BROADCASTBROWSERCANVAS = BroadcastBrowserCanvas(
                 BROADCASTBROWSERCANVAS_HEIGHT,
                 BROADCASTBROWSERCANVAS_DEPTH,
                 BROADCASTBROWSERCANVAS_TIME)),
-            Set([1, 2])),
-    1)
+            Set([1, 2])))
 newcache() = Canvas{3}(
     fill(CLEAR, (BROADCASTBROWSERCANVAS_WIDTH, BROADCASTBROWSERCANVAS_HEIGHT, 1)),
     Set([1, 2]))
@@ -112,85 +111,8 @@ function put!(sprite::Sprite{2,3})
 end
 
 clear!(rectangle::Rectangle{2}, depth = 0.0) = clear!(add_depth(rectangle, depth))
-clear!(rectangle::Rectangle{3}) = put!(Sprite(Drawing{2}(_->CLEAR),rectangle))
+clear!(rectangle::Rectangle{3}) = put!(Sprite(Drawing(_->CLEAR),rectangle))
 clear!(sprite::Sprite) = clear!(sprite.rectangle)
 export clear!
-# move!(sprite::Sprite{2,2}, new_center, depth = 0.0) = move!(add_depth(sprite, depth), new_center)
-# move!(sprite::Sprite{2,3}, new_center) = move!(BROADCASTBROWSERCANVAS.canvas, sprite, new_center)
-# colors(pixels) = for c in [WHITE, BLACK, RED, GREEN, BLUE, YELLOW]
-#     println(c, "=",count(p->p[1:3]==c[1:3],pixels))
-# end 
-# info(pixels::AbstractArray{Color,4})=begin
-#     println("size=", size(pixels), prod(size(pixels)))
-#     println("CLEAR=", count(p->p==CLEAR,pixels))
-#     for z in 1:size(pixels,3)
-#         println("z=$z")
-#         colors(pixels[:,:,z,1])
-#     end
-# end
-# info(pixels::AbstractArray{Color,3})=begin
-#     println("size=", size(pixels), prod(size(pixels)))
-#     println("CLEAR=", count(p->p==CLEAR,pixels))
-#     for z in 1:size(pixels,3)
-#         println("z=$z")
-#         colors(pixels[:,:,z])
-#     end
-# end
-# # fill!(BROADCASTBROWSERCANVAS.canvas.pixels,CLEAR)
-# # fill!(CACHE.pixels,CLEAR)
-# info(BROADCASTBROWSERCANVAS.canvas.pixels)
-# info(CACHE.pixels)
-# canvas_3d = current_3d_canvas(BROADCASTBROWSERCANVAS.canvas)
-# info(canvas_3d.pixels)
-# # sprite=Sprite(Drawing{2}(x->Color(1,0,0,0.5)), Rectangle([0.4,0.5],[0.3,0.1]))
-# # depth=0.4
-# # sprite=Sprite{2,3}(sprite.drawing, Rectangle{3}(SVector{3}(sprite.rectangle.center...,depth),SVector{3}(sprite.rectangle.radius...,0.0)))
-# sprite = Sprite(Drawing{3}(_->CLEAR),Rectangle([0.5,0.5],[0.5,0.5]))
-# δ = put!(canvas_3d, sprite)
-# # info(canvas_3d.pixels)
-# # info(BROADCASTBROWSERCANVAS.canvas.pixels)
-# # info(CACHE.pixels)
-# δ=Tuple{CartesianIndex{3}, Color}[]
-# for i=1:100,j=1:100,z=1:10
-#     push!(δ, (CartesianIndex(i,j,z),CLEAR))
-# end
-# δ̂ = Main.CanvasModule.collapse!(CACHE, canvas_3d, δ, blend, 3)
-
-# info(CACHE.pixels)
-# info(canvas_3d.pixels)
-# info(BROADCASTBROWSERCANVAS.canvas.pixels)
-
-# map(x->x[2],δ̂)
-
-# js = "pixels=" * write(δ̂) * "\n" * SET_PIXELS_JS
-# put!(BroadcastBrowser, js)
-
-
-# collapsed=CACHE
-# canvas=canvas_3d
-# δ
-# combine=Main.ColorModule.blend
-# collapse_dimension=3
-# collapse_dimension_size = size(canvas.pixels, collapse_dimension)
-# N=3
-# δ̂ = Tuple{CartesianIndex{N}, Color}[]
-# non_collapse_dimensions = setdiff(1:N, collapse_dimension)
-# non_collapse_index = unique(i.I[non_collapse_dimensions] for (i, _) in δ)
-# i = non_collapse_index[1]
-# # for i = non_collapse_index
-# pixel = CLEAR
-# collapse_index = (collapse_dimension_size:-1:1)[10]
-# # for collapse_index = collapse_dimension_size:-1:1
-# canvas_i = CartesianIndex{N}(ntuple(j -> j < collapse_dimension ? i[j] : (j == collapse_dimension ? collapse_index : i[j-1]), N))
-# canvas.pixels[canvas_i], pixel
-# pixel = combine(canvas.pixels[canvas_i], pixel)
-# 1.0 ≤ Main.ColorModule.opacity(pixel) # && break
-# # end
-# î = CartesianIndex{N}((i..., 1))
-# collapsed.pixels[î] == pixel && continue
-# collapsed.pixels[î] = pixel
-#     push!(δ̂, (î, pixel))
-# # end
-# info(collapsed.pixels)
 
 end

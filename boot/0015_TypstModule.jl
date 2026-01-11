@@ -1,7 +1,7 @@
 module TypstModule
 
 import Main: @install
-@install PNGFiles, StaticArrays
+@install PNGFiles
 import StaticArrays: SVector
 
 import Main.ColorModule: Color, WHITE, CLEAR

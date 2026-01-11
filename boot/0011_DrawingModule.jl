@@ -2,8 +2,6 @@ module DrawingModule
 
 export Drawing
 
-import Main: @install
-@install StaticArrays
 import StaticArrays: SVector
 
 """
@@ -16,7 +14,7 @@ sky_sprite = Sprite("sky in upper half", sky, upper_half)
 put!(BroadcastBrowserCanvas, sky_sprite)
 """
 struct Drawing{N}
-    f::Function # N-dim unit hypercube vector -> Color
+    f::Function # N dimensional unit square vector -> Color
 end
 (d::Drawing)(x::SVector) = d.f(x)
 (d::Drawing)(x::AbstractVector) = d.f(SVector{length(x)}(x))
@@ -68,3 +66,5 @@ begin
 end
 
 end
+import Main.DrawingModule: Drawing as _Drawing
+const Drawing = _Drawing{2}
