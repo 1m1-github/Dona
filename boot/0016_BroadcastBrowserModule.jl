@@ -10,8 +10,10 @@ import Base.put!
 "Serve and execute JavaScript on an HTTP client using SSE"
 struct BroadcastBrowser <: LoopOS.OutputPeripheral
     stream::HTTP.Streams.Stream
+    width::Int
+    height::Int
     processor::BatchProcessor{String}
-    BroadcastBrowser(stream) = new(stream, BatchProcessor{String}())
+    BroadcastBrowser(stream, width, height) = new(stream, width, height, BatchProcessor{String}())
 end
 const CLIENTS = Ref(Set{BroadcastBrowser}())
 "`put!(BroadcastBrowser, js)` runs the js on all connected browsers"
@@ -23,6 +25,7 @@ const HTML = raw"""
 <body>
 <script>
 const sse = new EventSource('/events')
+const sse = new EventSource(`/events?width=${window.innerWidth}&height=${window.innerHeight}`)
 sse.onmessage = (e) => eval(e.data)
 </script>
 </body>
@@ -47,7 +50,7 @@ function handle_sse(a)
     HTTP.startwrite(a.stream)
     start!(a.processor) do input
         for js = input
-            js = replace(js, "\n"=>";")
+            js = replace(js, "\n" => ";")
             safe_write(a.stream, "data: $js\n\n") || return
         end
     end
@@ -60,7 +63,7 @@ function freeport(hint)
     Int(port)
 end
 
-function start(root::Function, port = freeport(8888))
+function start(root::Function, port=freeport(8888))
     HTTP.serve("0.0.0.0", port; stream=true) do stream
         target = stream.message.target
         if target == "/"
@@ -68,8 +71,11 @@ function start(root::Function, port = freeport(8888))
             HTTP.setheader(stream, "Content-Type" => "text/html")
             HTTP.startwrite(stream)
             write(stream, HTML)
-        elseif target == "/events"
-            bb = BroadcastBrowser(stream)
+        elseif (uri = URI(target); uri.path == "/events")
+            params = queryparams(uri)
+            width = parse(Int, params["width"])
+            height = parse(Int, params["height"])
+            bb = BroadcastBrowser(stream, width, height)
             push!(CLIENTS[], bb)
             root(port, bb)
             handle_sse(bb)

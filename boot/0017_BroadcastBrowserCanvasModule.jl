@@ -34,6 +34,8 @@ function write(δ::Vector{Tuple{CartesianIndex{N},Color}}) where N
     bracket(join(map(r -> bracket(join(r, ',')), result), ','))
 end
 
+# todo use max(bb.width, bb.height) to start with a square containing the full view and then scaling down such that the entire square is contained in the view
+
 import Main.BroadcastBrowserModule: BroadcastBrowser, start
 const BROADCASTBROWSERCANVAS_WIDTH_720p = 1280
 const BROADCASTBROWSERCANVAS_HEIGHT_720p = 720
@@ -60,6 +62,11 @@ export BROADCASTBROWSERCANVAS
 
 # x = {w: window.innerWidth, h: window.innerHeight, dpr: window.devicePixelRatio}
 const JS = """
+document.body.style.margin = '0'
+document.body.style.display = 'flex'
+document.body.style.justifyContent = 'center'
+document.body.style.alignItems = 'center'
+document.body.style.minHeight = '100vh'
 canvas = document.createElement('canvas')
 canvas.width = $(BROADCASTBROWSERCANVAS_WIDTH)
 canvas.height = $(BROADCASTBROWSERCANVAS_HEIGHT)
