@@ -12,7 +12,9 @@ E.g.: `put!(BroadcastBrowserCanvas, sky_sprite)` or `put!(BroadcastBrowserCanvas
 struct Sprite{N,M}
     drawing::Drawing{N}
     rectangle::Rectangle{M}
+    id::String
 end
+Sprite(drawing::Drawing{N}, rectangle::Rectangle{M}, id::String="") where {N,M} = Sprite{N,M}(drawing, rectangle, id)
 (s::Sprite)(x) = s.drawing(x)
 export Sprite
 

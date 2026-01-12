@@ -1,16 +1,15 @@
 @install StaticArrays
-import StaticArrays: SVector,SA
+import StaticArrays: SVector, SA
 module ColorModule
-
-export Color
 
 import StaticArrays: SVector
 
 struct Color <: AbstractVector{Float64}
     data::SVector{4,Float64}
 end
-Color(r,g,b,a=1.0) = Color(SVector{4,Float64}(float([r,g,b,a])...))
-Color(x) = Color(x,x,x)
+export Color
+Color(r, g, b, a=1.0) = Color(SVector{4,Float64}(float([r, g, b, a])...))
+Color(x) = Color(x, x, x)
 Color(c::Color, α) = Color(c[1], c[2], c[3], α)
 clear(c::Color) = Color(c, 0)
 opacity(c::Color) = c[4]
@@ -26,7 +25,38 @@ const RED = Color(1, 0, 0)
 const PINK = Color(1, 0, 1)
 const YELLOW = Color(1, 1, 0)
 const WHITE = Color(1)
+# const COLORS = Dict(
+#     "BLACK" => Color(0),
+#     "BLUE" => Color(0, 0, 1),
+#     "GREEN" => Color(0, 1, 0),
+#     "TURQUOISE" => Color(0, 1, 1),
+#     "RED" => Color(1, 0, 0),
+#     "PINK" => Color(1, 0, 1),
+#     "YELLOW" => Color(1, 1, 0),
+#     "WHITE" => Color(1),
+# )
+# const NAMES = Dict(
+#     Color(0) => "BLACK",
+#     Color(0, 0, 1) => "BLUE",
+#     Color(0, 1, 0) => "GREEN",
+#     Color(0, 1, 1) => "TURQUOISE",
+#     Color(1, 0, 0) => "RED",
+#     Color(1, 0, 1) => "PINK",
+#     Color(1, 1, 0) => "YELLOW",
+#     Color(1) => "WHITE",
+# )
 export BLACK,CLEAR,BLUE,GREEN,TURQUOISE,RED,PINK,YELLOW,WHITE
+# name(color::Color) = NAMES[color]
+# name!(color::Color, name::String) = begin
+#     NAMES[color] = name
+#     COLORS[name] = color
+# end
+# name!(clear(COLORS["BLACK"]), "CLEAR")
+# Color(name::Symbol) = COLORS[name]
+# eval.((:(:export, name) for name = collect(keys(COLORS))))
+# invert(color::Color) = COLORS["WHITE"] - color
+invert(color::Color) = WHITE - color
+export invert
 
 import Base.∘
 "Fair information theoretic mixture"
@@ -36,7 +66,7 @@ function ∘(a::Color, b::Color)
     total = 0.5 * α + 0.5 * β
     total == 0.0 && return CLEAR
     wa, wb = 0.5 * α / total, 0.5 * β / total
-    Color((wa * a + wb * b)[1:3]..., α + β - α * β) # todo check new opacity
+    Color((wa*a+wb*b)[1:3]..., α + β - α * β) # todo check new opacity
 end
 
 "`b` dominates in opacity"
@@ -44,27 +74,27 @@ function blend(bottom::Color, top::Color)
     α = opacity(top)
     1.0 ≤ α && return top
     t = (1.0 - α) * opacity(bottom)
-    Color((top + t * bottom)[1:3]...,α + t)
+    Color((top+t*bottom)[1:3]..., α + t)
 end
 
 using Test
 begin
-tests = [
+    tests = [
     (CLEAR, WHITE) => WHITE,
     (BLACK, WHITE) => WHITE,
     (Color(1,0,0,0.5), Color(0,1,0,0.5)) => Color(0.25,1.0,0,0.75),
-]
-for test in tests
-    @test blend(test[1]...) ≈ test[2]
-end
-tests = [
+    ]
+    for test in tests
+        @test blend(test[1]...) ≈ test[2]
+    end
+    tests = [
     (CLEAR, WHITE) => Color(1,1,1,1),
     (BLACK, WHITE) => Color(0.5,0.5,0.5,1.0),
     (Color(1,0,0,0.5), Color(0,1,0,0.5)) => Color(0.5,0.5,0,0.75),
-]
-for test in tests
-    @test ∘(test[1]...) ≈ test[2]
-end
+    ]
+    for test in tests
+        @test ∘(test[1]...) ≈ test[2]
+    end
 end
 
 end

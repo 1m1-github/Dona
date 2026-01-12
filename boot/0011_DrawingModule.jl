@@ -13,10 +13,13 @@ put!(BroadcastBrowserCanvas, sky_sprite)
 """
 struct Drawing{N}
     f::Function # N dimensional unit square vector -> Color
+    id::String
+    Drawing{N}(f::Function,id::String="") where N = new(f, id)
 end
 (d::Drawing)(x::SVector) = d.f(x)
 (d::Drawing)(x::AbstractVector) = d.f(SVector{length(x)}(x))
 (d::Drawing)(x::NTuple) = d.f(SVector(x...))
+Drawing(f::Function, id::String="") = Drawing{2}(f, id)
 export Drawing
 
 import Base.∘
@@ -28,21 +31,21 @@ sun = circle("sun", [0.75, 0.75], 0.3, YELLOW)
 cloud = square("cloud", [0.25, 0.75], 0.2, WHITE)
 scene = cloud ∘ sun ∘ sky # cloud ontop of the sun ontop of the sky
 """
-∘(a::Drawing{N}, b::Drawing{N}) where N = Drawing{N}(x -> a(x) ∘ b(x))
-∘(f::Function, d::Drawing{N}) where N = Drawing{N}(f ∘ d.f)
+∘(a::Drawing{N}, b::Drawing{N}) where N = Drawing{N}(x -> a(x) ∘ b(x), a.id * b.id)
+∘(f::Function, d::Drawing{N}) where N = Drawing{N}(f ∘ d.f, d.id)
 
 import Main.ColorModule: CLEAR
 export circle, rect, square
 """
 A N dimensional ball with a metric `d`
 """
-ball(c, r, color, d) = Drawing{length(c)}(x -> all(d(x,c) .≤ r) ? color : CLEAR)
+ball(c, r, color, d, id="") = Drawing{length(c)}(x -> all(d(x, c) .≤ r) ? color : CLEAR, id)
 """`sun::Drawing = circle("sun", [0.75, 0.75], 0.1, YELLOW)`"""
-circle(c, r, color) = ball(c, r, color, (x,y) -> hypot((x .- y)...))
+circle(c, r, color, id="") = ball(c, r, color, (x, y) -> hypot((x .- y)...), id)
 """`sky::Drawing = rect("half rect", [0.5, 0.75], [0.25, 0.5], TURQUOISE)`"""
-rect(c, r, color) = ball(c, r, color, (x,y) -> abs.(x .- y))
+rect(c, r, color, id="") = ball(c, r, color, (x, y) -> abs.(x .- y), id)
 """`s::Drawing = square("full square", [0.5, 0.5], 0.5, YELLOW)`"""
-square(c, r, color) = rect(c, fill(minimum(r),length(r)), color)
+square(c, r, color, id="") = rect(c, fill(minimum(r), length(r)), color, id)
 
 using Test
 begin
