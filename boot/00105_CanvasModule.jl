@@ -2,28 +2,26 @@ module CanvasModule
 
 import StaticArrays: SVector
 
-import Main.LoopOS: OutputPeripheral
-import Main.ColorModule: Color, CLEAR
-import Main.DrawingModule: Drawing
-import Main.RectangleModule: Rectangle, pad
+import Main.ColorModule: Color
 import Main.SpriteModule: Sprite
-
-struct Canvas{N} <: OutputPeripheral
-    pixels::AbstractArray{Color,N}
+import Main.LoopOS: OutputPeripheral
+struct Canvas{T,N} <: OutputPeripheral
+    pixels::AbstractArray{Color{T},N}
     proportional_dimensions::Set{Int}
-    sprites::Vector{Sprite}
-    id::String
+    sprites::AbstractVector{Sprite}
+    id::AbstractString
+    Canvas{T,N}(pixels::AbstractArray{Color{T},N}, proportional_dimensions::Set{Int}, sprites::AbstractVector{Sprite}=Sprite[], id::AbstractString="") where {T<:Real,N} = new{T,N}(pixels, proportional_dimensions, sprites, id)
 end
-Canvas(pixels::AbstractArray{Color,N}, proportional_dimensions::Set{Int}, sprites::Vector{Sprite}, id::String="") where N = Canvas{N}(pixels, proportional_dimensions, sprites, id)
-import Base.size
-size(c::Canvas) = size(c.pixels)
+Canvas(pixels,proportional_dimensions,sprites=Sprite[],id="") = Canvas{typeof(pixels).parameters[1].parameters[1],typeof(pixels).parameters[2]}(pixels,proportional_dimensions,sprites,id)
+Base.size(c::Canvas) = size(c.pixels)
 
-function index(canvas::Canvas{N}, rectangle::Rectangle{N})::CartesianIndices{N} where N
-    bottom_left = rectangle.center .- rectangle.radius
+import Main.RectangleModule: Rectangle, pad_dimensions
+function index(canvas::Canvas{T,N}, rectangle::Rectangle{T,N}) where {T<:Real,N}
+    bottom_left = rectangle.center - rectangle.radius
     pixel_size = size(canvas.pixels) .- 1
-    proportional_dimensions_scale = minimum(pixel_size[i] for i in canvas.proportional_dimensions)
+    proportional_dimensions_scale = minimum(pixel_size[i] for i = canvas.proportional_dimensions)
     scales = ntuple(N) do i
-        if i in canvas.proportional_dimensions
+        if i ∈ canvas.proportional_dimensions
             proportional_dimensions_scale
         else
             pixel_size[i]
@@ -33,11 +31,10 @@ function index(canvas::Canvas{N}, rectangle::Rectangle{N})::CartesianIndices{N} 
     end_index = ceil.(Int, (bottom_left .+ 2 * rectangle.radius) .* scales .+ 0.5)
     CartesianIndices(Tuple(UnitRange.(start_index, end_index)))
 end
-index(canvas::Canvas{N}, rectangle::Rectangle) where N = index(canvas, pad(rectangle, N))
+index(canvas::Canvas{T,N}, rectangle::Rectangle{T,K}) where {T<:Real,N,K} = index(canvas, pad_dimensions(rectangle, Val(N)))
 
-import Base.put!
-function put!(canvas::Canvas{N}, sprite::Sprite{M,K})::Vector{Tuple{CartesianIndex{N},Color}} where {N,M,K}
-    δ = Tuple{CartesianIndex{N},Color}[]
+function Base.put!(canvas::Canvas{T,N}, sprite::Sprite{T,M,K}) where {T<:Real,N,M,K}
+    δ = Tuple{CartesianIndex{N},Color{T}}[]
     sprite ∈ canvas.sprites && return δ
     hyperrectangle_index::CartesianIndices{N} = index(canvas, sprite.rectangle)
     isempty(hyperrectangle_index) && return δ
@@ -55,8 +52,9 @@ function put!(canvas::Canvas{N}, sprite::Sprite{M,K})::Vector{Tuple{CartesianInd
     !isempty(δ) && push!(canvas.sprites, sprite)
     δ
 end
-function Δ(old::Canvas{N}, new::Canvas{N})::Vector{Tuple{CartesianIndex{N},Color}} where N
-    δ = Tuple{CartesianIndex{N},Color}[]
+
+function Δ(old::Canvas{T,N}, new::Canvas{T,N}) where {T<:Real,N}
+    δ = Tuple{CartesianIndex{N},Color{T}}[]
     for i = CartesianIndices(new.pixels)
         new_color = new.pixels[i]
         old.pixels[i] == new_color && continue
@@ -65,10 +63,10 @@ function Δ(old::Canvas{N}, new::Canvas{N})::Vector{Tuple{CartesianIndex{N},Colo
     δ
 end
 
-import Main.ColorModule: opacity
-function collapse!(collapsed::Canvas{N}, canvas::Canvas{N}, δ::Vector{Tuple{CartesianIndex{N},Color}}, combine::Function, collapse_dimension::Int64=N)::Vector{Tuple{CartesianIndex{N},Color}} where N
+import Main.ColorModule: opacity, CLEAR
+function collapse!(collapsed::Canvas{T,N}, canvas::Canvas{T,N}, δ::AbstractVector{Tuple{CartesianIndex{N},<:Color{T}}}, combine::Function, collapse_dimension::Int=N) where {T<:Real,N}
     collapse_dimension_size = size(canvas.pixels, collapse_dimension)
-    δ̂ = Tuple{CartesianIndex{N},Color}[]
+    δ̂ = Tuple{CartesianIndex{N},Color{T}}[]
     non_collapse_dimensions = setdiff(1:N, collapse_dimension)
     non_collapse_index = unique(i.I[non_collapse_dimensions] for (i, _) in δ)
     for i = non_collapse_index
@@ -76,7 +74,7 @@ function collapse!(collapsed::Canvas{N}, canvas::Canvas{N}, δ::Vector{Tuple{Car
         for collapse_index = collapse_dimension_size:-1:1
             canvas_i = CartesianIndex{N}(ntuple(j -> j < collapse_dimension ? i[j] : (j == collapse_dimension ? collapse_index : i[j-1]), N))
             pixel = combine(canvas.pixels[canvas_i], pixel)
-            1.0 ≤ opacity(pixel) && break
+            one(T) ≤ opacity(pixel) && break
         end
         î = CartesianIndex{N}((i..., 1))
         collapsed.pixels[î] == pixel && continue
@@ -85,31 +83,38 @@ function collapse!(collapsed::Canvas{N}, canvas::Canvas{N}, δ::Vector{Tuple{Car
     end
     δ̂
 end
+
+import Main.DrawingModule: Drawing
+function clear!(canvas::Canvas{T,N}, sprite::Sprite) where {T<:Real,N}
+    put!(canvas, Sprite(Drawing{N}(_ -> CLEAR), sprite.rectangle))
+    deleteat!(canvas.sprites, length(canvas.sprites))
+end
 function remove!(canvas::Canvas, sprite::Sprite)
     i = findfirst(s -> s == sprite, canvas.sprites)
     isnothing(i) && return
     deleteat!(canvas.sprites, i)
-    put!(canvas, Sprite(Drawing(_ -> CLEAR), sprite.rectangle, sprite.id))
-    deleteat!(canvas.sprites, length(canvas.sprites))
+    clear!(canvas, sprite)
 end
 function move!(canvas::Canvas, sprite::Sprite, rectangle::Rectangle)
     remove!(canvas, sprite)
-    put!(canvas, Sprite(sprite.drawing, rectangle, sprite.id))
+    put!(canvas, Sprite(sprite.drawing, rectangle, sprite.id * " moved to $rectangle"))
 end
 function scale!(canvas::Canvas, rectangle::Rectangle)
-    _canvas = Canvas(fill(CLEAR, size(canvas)), canvas.proportional_dimensions, [], canvas.id * " scaled to $rectangle")
+    _canvas = Canvas(fill(CLEAR, size(canvas)), canvas.proportional_dimensions, Sprite[], canvas.id * " scaled to $rectangle")
     for sprite = canvas.sprites
-        _rectangle = Rectangle(sprite.rectangle.center - (rectangle.center - rectangle.radius), sprite.rectangle.radius, sprite.rectangle.id)
-        _sprite = Sprite(sprite.drawing, _rectangle, sprite.id)
+        !non_empty_intersection(sprite.rectangle, rectangle) && continue
+        _rectangle = Rectangle(sprite.rectangle.center - (rectangle.center - rectangle.radius), sprite.rectangle.radius, sprite.rectangle.id * " moved to $rectangle")
+        _sprite = Sprite(sprite.drawing, _rectangle, sprite.id * " moved to $_rectangle")
         put!(_canvas, _sprite)
     end
     _canvas
 end
+export clear!, remove!, move!, scale!
 
 using Test
 begin
-    old_canvas = Canvas(fill(CLEAR, 200, 100, 4, 3), Set([1, 2]), Sprite[])
-    new_canvas = Canvas(fill(CLEAR, 200, 100, 4, 3), Set([1, 2]), Sprite[])
+    old_canvas = Canvas(fill(CLEAR, 200, 100, 4, 3), Set([1, 2]))
+    new_canvas = Canvas(fill(CLEAR, 200, 100, 4, 3), Set([1, 2]))
     tests = [
         Rectangle([0.5, 0.5], [0.5, 0.5]) => CartesianIndices((1:100, 1:100, 1:1, 1:1)),
         Rectangle([0.05, 0.5], [0.05, 0.5]) => CartesianIndices((1:11, 1:100, 1:1, 1:1)),
@@ -122,7 +127,6 @@ begin
         Rectangle([0.2, 0.25, 0.25, 1.0], [0.1, 0.25, 0.25, 0.0]) => CartesianIndices((11:31, 1:50, 1:2, 3:3)),
         Rectangle([0.55, 0.55, 0.55, 0.55], [0.05, 0.05, 0.05, 0.05]) => CartesianIndices((51:60, 51:60, 3:3, 2:2)),
     ]
-    tests = map(p -> pad(p[1], 4) => p[2], tests)
     for test in tests
         rectangle, i = test
         @test index(old_canvas, rectangle) == i
@@ -136,23 +140,22 @@ begin
         # # 3: opaque front occludes back (z=3 is front)
         [(CartesianIndex(1, 1, 1, 1), RED), (CartesianIndex(1, 1, 1, 3), GREEN)] => GREEN,
         # 4: opaque green (back) with 50% red on top
-        [(CartesianIndex(1, 1, 1, 1), Color(0, 1, 0, 1)), (CartesianIndex(1, 1, 1, 3), Color(1, 0, 0, 0.5))] => Color(0.5, 0.5, 0, 1),
+        [(CartesianIndex(1, 1, 1, 1), Color(0.0, 1, 0, 1)), (CartesianIndex(1, 1, 1, 3), Color(1, 0, 0, 0.5))] => Color(0.125, 0.5, 0, 1),
         # 5: opaque blue (back) with transparent on top
         [(CartesianIndex(1, 1, 1, 1), BLUE), (CartesianIndex(1, 1, 1, 3), CLEAR)] => BLUE,
         # 6: opaque blue (z=1), 50% green (z=2), 50% red (z=3 front)
-        [(CartesianIndex(1, 1, 1, 1), Color(0, 0, 1, 1)), (CartesianIndex(1, 1, 1, 2), Color(0, 1, 0, 0.5)), (CartesianIndex(1, 1, 1, 3), Color(1, 0, 0, 0.5))] => Color(0.5, 0.25, 0.25, 1),
-        # 7: all clear
+        [(CartesianIndex(1, 1, 1, 1), Color(0.0, 0, 1, 1)), (CartesianIndex(1, 1, 1, 2), Color(0, 1, 0, 0.5)), (CartesianIndex(1, 1, 1, 3), Color(1, 0, 0, 0.5))] => Color(0.1875, 0.1875, 0.25, 1),
+        # # 7: all clear
         [(CartesianIndex(1, 1, 1, 1), CLEAR)] => CLEAR,
-        # 8: opaque black (back) with 25% white on top
-        [(CartesianIndex(1, 1, 1, 1), BLACK), (CartesianIndex(1, 1, 1, 3), Color(1, 1, 1, 0.25))] => Color(0.25, 0.25, 0.25, 1),
-        # 9: 50% blue (z=1 back), 50% red (z=2 front), no opaque back
-        [(CartesianIndex(1, 1, 1, 1), Color(0, 0, 1, 0.5)), (CartesianIndex(1, 1, 1, 2), Color(1, 0, 0, 0.5))] => Color(0.5, 0, 0.25, 0.75),
-        # 10: opaque white (back) with opaque black on top
+        # # 8: opaque black (back) with 25% white on top
+        [(CartesianIndex(1, 1, 1, 1), BLACK), (CartesianIndex(1, 1, 1, 3), Color(1, 1, 1, 0.25))] => Color(0.015625, 0.015625, 0.015625, 1),
+        # # 9: 50% blue (z=1 back), 50% red (z=2 front), no opaque back
+        [(CartesianIndex(1, 1, 1, 1), Color(0, 0, 1, 0.5)), (CartesianIndex(1, 1, 1, 2), Color(1, 0, 0, 0.5))] => Color(0.25, 0, 0.25, 0.75),
+        # # 10: opaque white (back) with opaque black on top
         [(CartesianIndex(1, 1, 1, 1), WHITE), (CartesianIndex(1, 1, 1, 3), BLACK)] => BLACK,
     ]
 
     for (i, test) in enumerate(tests)
-        # test=tests[2]
         δ = test[1]
         expected = test[2]
 
@@ -162,13 +165,13 @@ begin
             old_canvas.pixels[ix] = color
         end
 
-        collapse!(new_canvas, old_canvas, δ, blend)
+        collapse!(new_canvas, old_canvas, δ, blend, 4)
         @test new_canvas.pixels[Tuple(δ[1][1])[1:3]..., 1] ≈ expected
     end
 
     tests = [
         # Test 1: Single pixel at origin
-        Sprite(Drawing{2}(_ -> RED), Rectangle([0.0, 0.0], [0.0, 0.0])) =>
+        Sprite(Drawing(_ -> RED), Rectangle([0.0, 0.0], [0.0, 0.0])) =>
             [(CartesianIndex(1, 1, 1, 1), RED)],
         # Test 2: Single pixel at bottom-right of proportional dims
         Sprite(Drawing{2}(_ -> BLUE), Rectangle([1.0, 1.0], [0.0, 0.0])) =>

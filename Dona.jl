@@ -1,4 +1,4 @@
-# julia --quiet --interactive --threads 24 Dona.jl
+# julia --quiet --interactive --depwarn=error --threads 24 Dona.jl
 # todo: speak (tts+speaker) with interupting logic, seeing (screenshot, camera with minimal default attention)
 # todo: too many input tokens => state too big => recover
 # todo: move tests out to improve startup speed
@@ -22,5 +22,20 @@ end
 
 LoopOS.awaken(startswith(@__FILE__, "REPL") ? "/Users/1m1/Documents/Dona/Dona.jl" : @__FILE__)
 
+put!(SpeakingModule.Speaker, "hi i imi. how is you day going?")
+put!(SpeakingModule.Speaker, "hi i imi")
 
-put!(Speaker,"l")
+d=Drawing(_->RED)
+r=Rectangle([0.5,0.5],[0.1,0.1])
+s=Sprite(d,r)
+put!(s)
+r2=Rectangle([0.7,0.5],[0.1,0.1])
+move!(s, r2)
+r3=Rectangle([0.1,0.1],[0.05,0.05])
+move!(s, r2)
+clear!(s)
+clear!(rectangle::Rectangle{T,2}, depth = 0.0)
+clear!(sprite::Sprite)
+remove!(sprite::Sprite)
+move!(sprite::Sprite, rectangle::Rectangle)
+scale!(rectangle::Rectangle)
