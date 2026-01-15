@@ -64,6 +64,7 @@ function Δ(old::Canvas{T,N}, new::Canvas{T,N}) where {T<:Real,N}
 end
 
 import Main.ColorModule: opacity, CLEAR
+# todo collapse function per dimension
 function collapse!(collapsed::Canvas{T,N}, canvas::Canvas{T,N}, δ::AbstractVector{Tuple{CartesianIndex{N},<:Color{T}}}, combine::Function, collapse_dimension::Int=N) where {T<:Real,N}
     collapse_dimension_size = size(canvas.pixels, collapse_dimension)
     δ̂ = Tuple{CartesianIndex{N},Color{T}}[]
