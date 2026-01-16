@@ -3,8 +3,7 @@ module REPLModule
 import Main: LoopOS, StateModule
 import Base.take!
 import Main.StateModule: state
-import Main.PkgModule: @install
-@install ReplMaker
+Main.@install ReplMaker
 
 struct REPLInput <: LoopOS.InputPeripheral
     c::Channel{String}

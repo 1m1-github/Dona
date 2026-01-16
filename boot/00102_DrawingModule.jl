@@ -36,7 +36,7 @@ cloud = square("cloud", [0.25, 0.75], 0.2, WHITE)
 scene = cloud ∘ sun ∘ sky # cloud ontop of the sun ontop of the sky
 """
 Base.:∘(a::Drawing{N}, b::Drawing{N}) where N = Drawing{N}(x -> a(x) ∘ b(x), a.id * " ∘ " * b.id)
-Base.:∘(f::Function, d::Drawing{N}) where N = Drawing{N}(f ∘ d.f, "$f after " * d.id)
+Base.:∘(f::Function, d::Drawing{N}) where N = Drawing{N}(f ∘ d.f, d.id * " transformed by $f")
 
 import Main.ColorModule: CLEAR
 """

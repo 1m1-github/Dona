@@ -1,7 +1,6 @@
 module TypstModule
 
-import Main: @install
-@install PNGFiles
+Main.@install PNGFiles
 
 import Main.ColorModule: Color, WHITE, CLEAR
 import Main.DrawingModule: Drawing
@@ -46,9 +45,13 @@ function typst_rectangle(typst_code)
     !haskey(CACHE, typst_code) && (CACHE[typst_code] = create(typst_code))
     pixels = CACHE[typst_code]
     w, h = size(pixels)
+    radius_width = 0.5
     radius_height = 0.5 * h / w
-    @show "typst_rectangle", w, h, radius_height
-    Rectangle([0.5, 0.5], [0.5, radius_height])
+    if 0.5 < radius_height
+        radius_height = 0.5
+        radius_width = 0.5 * w / h
+    end
+    Rectangle([0.5, 0.5], [radius_width, radius_height])
 end
 typst_sprite(typst_code) = Sprite(typst_drawing(typst_code), typst_rectangle(typst_code), typst_code)
 export typst_sprite

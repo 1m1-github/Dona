@@ -3,8 +3,7 @@ module IntelligenceModule
 export intelligence
 export DEFAULT_MAX_OUTPUT_TOKENS_INTELLIGENCE, DEFAULT_MAX_INPUT_TOKENS_INTELLIGENCE, DEFAULT_COMPLEXITY_INTELLIGENCE, DEFAULT_TEMPERATURE_INTELLIGENCE
 
-import Main.PkgModule: @install
-@install HTTP, JSON3, Serialization
+Main.@install HTTP, JSON3, Serialization
 import Main.LoopOS: TrackedSymbol, Input, Action, Loop, InputPeripheral, OutputPeripheral
 import Main.CachingModule: cache!
 import Main: StateModule

@@ -25,48 +25,51 @@ Rectangle(center::NTuple{N,<:Real}, radius::NTuple{N,<:Real}, id="") where N = R
 
 Base.:(==)(r1::Rectangle{T,N}, r2::Rectangle{T,N}) where {T<:Real,N} = r1.center == r2.center && r1.radius == r2.radius
 Base.:(≈)(r1::Rectangle{T,N}, r2::Rectangle{T,N}) where {T<:Real,N} = r1.center ≈ r2.center && r1.radius ≈ r2.radius
-function pad_dimensions(r::Rectangle{T,M}, ::Val{N}) where {T<:Real,M,N}
-    N < M && error("N < M")
-    Rectangle{T,N}(
-        SVector{N,T}(i ≤ M ? r.center[i] : zero(T) for i = 1:N),
-        SVector{N,T}(i ≤ M ? r.radius[i] : zero(T) for i = 1:N),
-        r.id * " with $(N-M) padded dimensions"
-    )
-end
-function remove_dimensions(r::Rectangle{T,N}, ::Val{M}) where {T<:Real,N,M}
-    N < M && error("N < M")
-    Rectangle{T,M}(
-        SVector{M,T}(r.center[i] for i = 1:M),
-        SVector{M,T}(r.radius[i] for i = 1:M),
-        r.id * " with $(N-M) removed dimensions"
-    )
-end
+# function pad_dimensions(r::Rectangle{T,M}, ::Val{N}) where {T<:Real,M,N}
+#     N < M && error("N < M")
+#     Rectangle{T,N}(
+#         SVector{N,T}(i ≤ M ? r.center[i] : zero(T) for i = 1:N),
+#         SVector{N,T}(i ≤ M ? r.radius[i] : zero(T) for i = 1:N),
+#         # vs
+#         # SVector{N,T}(i ≤ M ? r.center[i] : one(T)/2 for i = 1:N),
+#         # SVector{N,T}(i ≤ M ? r.radius[i] : one(T)/2 for i = 1:N),
+#         r.id * " with $(N-M) padded dimensions"
+#     )
+# end
+# function remove_dimensions(r::Rectangle{T,N}, ::Val{M}) where {T<:Real,N,M}
+#     N < M && error("N < M")
+#     Rectangle{T,M}(
+#         SVector{M,T}(r.center[i] for i = 1:M),
+#         SVector{M,T}(r.radius[i] for i = 1:M),
+#         r.id * " with $(N-M) removed dimensions"
+#     )
+# end
 
-∅(T,N) = Rectangle(zero(SVector{N,T}),zero(SVector{N,T}),"EMPTY")
+
+∅(N) = Rectangle(zero(SVector{N}),zero(SVector{N}),"EMPTY")
 Base.:<(r1::Rectangle{T,N}, r2::Rectangle{T,N}) where {T<:Real,N} = all(r1.center .+ r1.radius .< r2.center .- r2.radius)
 Base.isempty(r::Rectangle) = all(iszero, r.radius)
 id(rs::AbstractVector{<:Rectangle}, separator="")= join((r.id for r in rs), separator)
 corner(r::Rectangle) = (r.center - r.radius, r.center + r.radius)
-function Base.union(rs::AbstractVector{<:Rectangle})
+function union_intersect_helper(rs::AbstractVector{Rectangle{T,N}}, low_f, high_f, separator) where {T<:Real,N}
     corners = corner.(rs)
-    low = reduce((a,b) -> min.(a,b), first.(corners))
-    high = reduce((a,b) -> max.(a,b), last.(corners))
-    center = (high + low) / 2
-    radius = (high - low) / 2
-    Rectangle(center, radius, id(rs, " ∪ "))
-end
-Base.union(r1::Rectangle, r2::Rectangle) = ∪([r1, r2])
-function Base.intersect(rs::AbstractVector{Rectangle{T,N}}) where {T<:Real,N}
-    corners = corner.(rs)
-    low = reduce((a,b) -> max.(a,b), first.(corners))
-    high = reduce((a,b) -> min.(a,b), last.(corners))
+    low = reduce((a,b) -> low_f.(a,b), first.(corners))
+    high = reduce((a,b) -> high_f.(a,b), last.(corners))
     any(low .> high) && return ∅(T,N)
     center = (high + low) / 2
     radius = (high - low) / 2
-    Rectangle(center, radius, id(rs, " ∩ "))
+    Rectangle(center, radius, id(rs, separator))
 end
+Base.union(rs::AbstractVector{<:Rectangle}) = union_intersect_helper(rs, min, max, " ∪ ")
+Base.union(r1::Rectangle, r2::Rectangle) = ∪([r1, r2])
+Base.intersect(rs::AbstractVector{<:Rectangle}) = union_intersect_helper(rs, max, min, " ∩ ")
 Base.intersect(r1::Rectangle, r2::Rectangle) = ∩([r1, r2])
 Base.:≤(r1::Rectangle{T,N}, r2::Rectangle{T,N}) where {T<:Real,N} = r1 < r2 || !isempty(r1 ∩ r2)
 Base.in(x::SVector{N,T}, r::Rectangle{T,N}) where {T,N} = all(r.center .- r.radius .≤ x .≤ r.center .+ r.radius)
+
+move(r::Rectangle, r̂::Rectangle) = scale(move(r, r̂.center), r̂.radius)
+move(r::Rectangle, center) = Rectangle(center, r.radius)
+scale(r::Rectangle, radius) = Rectangle(r.center, radius)
+export move, scale
 
 end

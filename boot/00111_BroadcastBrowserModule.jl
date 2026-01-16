@@ -1,7 +1,6 @@
 module BroadcastBrowserModule
 
-import Main: @install
-@install HTTP, URIs
+Main.@install HTTP, URIs
 
 import Main: LoopOS
 import Main.LoopOS: BatchProcessor, start!

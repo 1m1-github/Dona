@@ -1,6 +1,6 @@
-using .PkgModule
-@install StaticArrays
+Main.@install StaticArrays
 import StaticArrays: SVector, SA
+
 module ColorModule
 
 import StaticArrays: SVector
@@ -25,7 +25,9 @@ clear(color::Color) = Color(color, 0.0)
 opaque(color::Color) = Color(color, 1.0)
 invert(color::Color) = Color(one(eltype(color)) .- color.data)
 opacity(color::Color) = color[4]
-export invert, opaque, clear
+isclear(color::Color{T}) where T = opacity(color) == zero(T)
+isopaque(color::Color{T}) where T = opacity(color) == one(T)
+export invert, opaque, clear, isclear, isopaque
 
 const BLACK = Color(0.0)
 const CLEAR = clear(BLACK)

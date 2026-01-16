@@ -8,8 +8,7 @@ function learn(name::Symbol, exports::Vector{Symbol}, pkgs::Vector{Symbol}, code
     m = """
     module $mname
     export $(join(exports,','))
-    import Main.PkgModule: @install
-    @install $(join(pkgs,','))
+    Main.@install $(join(pkgs,','))
     $code
     end
     using .$mname
