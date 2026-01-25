@@ -15,7 +15,7 @@ end
 Canvas(pixels, proportional_dimensions, sprites=Sprite[], id="") = Canvas{typeof(pixels).parameters[1].parameters[1],typeof(pixels).parameters[2]}(pixels, proportional_dimensions, sprites, id)
 Base.size(c::Canvas) = size(c.pixels)
 
-import Main.RectangleModule: Rectangle, pad_dimensions
+import Main.RectangleModule: Rectangle#, pad_dimensions
 function index(canvas::Canvas{T,N}, rectangle::Rectangle{T,N})::CartesianIndices{N} where {T<:Real,N}
     bottom_left = rectangle.center - rectangle.radius
     pixel_size = size(canvas.pixels) .- 1
