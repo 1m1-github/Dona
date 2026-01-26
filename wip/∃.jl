@@ -1,49 +1,27 @@
-using SHA
-using Serialization
+"""
+I = [ZERO < ○ < ONE] denotes a unit 1-dim space of information with origin ○ (no information) in its center including the corners ZERO and ONE.
+Ω = I^I an ∞-dim metric and smooth vector space.
+∃ is a topology on Ω such that ϵ ∈ ∃:
+* ϵ ⊊ Ω
+* ∃!ϵ̂: ϵ ∈ ϵ̂ ∈ ∃
+* ∀ ϵ̂ ≠ ϵ ∈ ∃: ϵ̂ ∩ ϵ = ∅
+* ϵ.∃ ∈ I is arbitrary, computable and smooth fuzzy existence towards ONE=true xor ZERO=false.
 
-# === Constants ===
+# Ω is a mapping of R^R (∞-dim and ∞-large) to I^I (∞-dim, finite volume) unit circle.
+∃ contains all the created existence.
+Observe the world on a discreet n-dim grid g::♯ using ∃(g, ϵ=Ω) with
+struct ♯{T<:Real}
+    ϵ::∃{T} # origin(♯) == origin(ϵ) => dimension(ϵ) == 0
+    d::Vector{T} # volume dimensions
+    ρ::Vector{T} # volume radius
+    n::Vector{Int} # grid points per volume dimension
+end
+"""
+# module TheoryOfGod
 
-const Ξ = Dict{Vector{UInt8},Real}()  # existence cache
+using SHA, Serialization
 
 ○(::Type{T}) where {T<:Real} = one(T) / (one(T) + one(T))
-
-# === Point ===
-
-struct X{T<:Real}
-    d::Dict{T,T}
-    ∂::Symbol
-end
-
-X(d::Dict{T,T}) where {T<:Real} = X{T}(d, :ZEROZERO)
-
-function γ(x::X{T}, d::T) where {T<:Real}
-    haskey(x.d, d) && return x.d[d]
-    isempty(x.d) && return ○(T)
-    (x.∂ == :ZEROZERO || x.∂ == :ONEONE) && return ○(T)
-    
-    ks = sort(collect(keys(x.d)))
-    v0 = haskey(x.d, zero(T)) ? x.d[zero(T)] : ○(T)
-    v1 = haskey(x.d, one(T)) ? x.d[one(T)] : ○(T)
-    
-    if d < ks[1]
-        x.∂ == :ZEROONE && return v0
-        x.∂ == :ONEZERO && return x.d[ks[1]]
-    elseif d > ks[end]
-        x.∂ == :ZEROONE && return x.d[ks[end]]
-        x.∂ == :ONEZERO && return v1
-    else
-        i = findlast(k -> k ≤ d, ks)
-        x.∂ == :ZEROONE && return x.d[ks[i]]
-        x.∂ == :ONEZERO && return x.d[ks[i+1]]
-    end
-    
-    ○(T)
-end
-
-Base.getindex(x::X{T}, d::T) where {T<:Real} = γ(x, d)
-
-# === Existence ===
-
 struct ∃{T<:Real}
     ι::String
     d::Vector{T}
@@ -51,322 +29,415 @@ struct ∃{T<:Real}
     ρ::Vector{T}
     ∂::Vector{Symbol}
     ∃::Function
-    ∀::Union{∃{T},Nothing}
+    ∃̂::Union{∃{T},Nothing}
     h::Vector{UInt8}
     ϵ::Vector{∃{T}}
 end
-
-function Base.hash(η::∃)
-    io = IOBuffer()
-    serialize(io, (η.ι, η.d, η.μ, η.ρ, η.∂))
-    sha3_512(take!(io))
-end
-
-function γ(η::∃{T}, d::T) where {T<:Real}
-    isempty(η.d) && return ○(T)
-    
-    ks = η.d
-    n = length(ks)
-    
-    if d < ks[1]
-        mode = η.∂[1]
-        (mode == :ZEROZERO || mode == :ONEONE) && return ○(T)
-        mode == :ZEROONE && return ○(T)
-        mode == :ONEZERO && return η.μ[1]
-    elseif d > ks[end]
-        mode = η.∂[n+1]
-        (mode == :ZEROZERO || mode == :ONEONE) && return ○(T)
-        mode == :ZEROONE && return η.μ[n]
-        mode == :ONEZERO && return ○(T)
-    else
-        i = findlast(k -> k ≤ d, ks)
-        if d == ks[i]
-            return η.μ[i]
-        else
-            mode = η.∂[i+1]
-            (mode == :ZEROZERO || mode == :ONEONE) && return ○(T)
-            mode == :ZEROONE && return η.μ[i]
-            mode == :ONEZERO && return η.μ[i+1]
+i(n::Vector{<:Integer}) = (collect(i) for i ∈ Iterators.product((1:n̂ for n̂ ∈ n)...))
+# function ∃(ϵ::∃{T}, n::Vector{<:Integer}, Ξ::Dict{∃{T},T})::Array{T,length(n)} where {T<:Real} # ZERO < i
+function ∃(ϵ::∃{T}, n::Vector{<:Integer}, Ξ::Dict{∃{T},T}) where {T<:Real} # ZERO < i
+    ∃̂ = fill(○(T), n...)
+    # i = (1:length(ϵ.d))[1]
+    # for i = 1:length(ϵ.d)
+    _zero = ϵ.μ - ϵ.ρ
+    # î = collect(i(n))[1]
+    # a=[]
+    for î = i(n)
+        μ = fill(○(T), length(n))
+        for ĩ = eachindex(ϵ.d)
+            μ[ĩ] = isone(n[ĩ]) ? ϵ.μ[ĩ] : _zero[ĩ] + 2 * ϵ.ρ[ĩ] * T(î[ĩ] - 1) / T(n[ĩ] - 1)
         end
-    end
-end
-
-# === Validation ===
-
-function □(μ::Vector{T}, ρ::Vector{T}) where {T<:Real}
-    length(μ) ≠ length(ρ) && return false
-    for (o, r) ∈ zip(μ, ρ)
-        (r < zero(T) || o - r < zero(T) || o + r > one(T)) && return false
-    end
-    true
-end
-
-□(x::X{T}) where {T<:Real} = all(v -> zero(T) ≤ v ≤ one(T), values(x.d))
-
-function □(d::Vector{T}, μ::Vector{T}, ρ::Vector{T}, ∂::Vector{Symbol}) where {T<:Real}
-    n = length(d)
-    length(μ) ≠ n && return false
-    length(ρ) ≠ n && return false
-    length(∂) ≠ n + 1 && return false
-    !□(μ, ρ) && return false
-    true
-end
-
-# === Bounds Check ===
-
-function ⫉(x::X{T}, η::∃{T}) where {T<:Real}
-    for (i, d) ∈ enumerate(η.d)
-        v = x[d]
-        lo, hi = η.μ[i] - η.ρ[i], η.μ[i] + η.ρ[i]
-        (v < lo || v > hi) && return false
-    end
-    true
-end
-
-# === Boundary Modes ===
-
-closed_zero(mode::Symbol) = mode == :ONEZERO || mode == :ONEONE
-closed_one(mode::Symbol) = mode == :ZEROONE || mode == :ONEONE
-
-# === Membership ===
-
-function ∈(x::X{T}, η::∃{T}) where {T<:Real}
-    n = length(η.d)
-    n == 0 && return true
-    
-    ks = sort(collect(keys(x.d)))
-    
-    for d ∈ ks
-        if d ∉ η.d
-            v = x.d[d]
-            ηv = γ(η, d)
-            v ≠ ηv && return false
-        end
-    end
-    
-    for (i, d) ∈ enumerate(η.d)
-        v = x[d]
-        lo, hi = η.μ[i] - η.ρ[i], η.μ[i] + η.ρ[i]
-        
-        if lo == hi
-            v ≠ lo && return false
+        x̂ = ∃{T}("", ϵ.d, μ, zeros(T, length(ϵ.d)), fill(:ONEONE, length(ϵ.d)), _ -> one(T), nothing, [], [])
+        if haskey(Ξ, x̂)
+            ∃̂[î] = Ξ[x̂]
             continue
         end
-        
-        cl = closed_zero(η.∂[i])
-        cr = closed_one(η.∂[i+1])
-        
-        if cl
-            v < lo && return false
-        else
-            v ≤ lo && return false
-        end
-        if cr
-            v > hi && return false
-        else
-            v ≥ hi && return false
-        end
+        Ξ[x̂] = ∃̂[î] = ∃(x̂, ϵ)
+        # push!(a,x̂)
     end
-    true
+    ∃̂
+    # a
 end
+function ∃(x::∃{T}, ϵ::∃{T}) where {T<:Real}
+    !□(x) && return (○(T), ϵ, false)
 
-# === At Boundary ===
-
-function ∂(x::X{T}, η::∃{T}) where {T<:Real}
-    for (i, d) ∈ enumerate(η.d)
-        η.ρ[i] == zero(T) && continue
-        v = x[d]
-        lo, hi = η.μ[i] - η.ρ[i], η.μ[i] + η.ρ[i]
-        (v == lo || v == hi) && return true
-    end
-    false
-end
-
-# === Disjoint Intervals ===
-
-function ∅(lo₁, hi₁, cl₁, cr₁, lo₂, hi₂, cl₂, cr₂)
-    if cr₁ && cl₂
-        hi₁ < lo₂ && return true
-    else
-        hi₁ ≤ lo₂ && return true
-    end
-    if cr₂ && cl₁
-        hi₂ < lo₁ && return true
-    else
-        hi₂ ≤ lo₁ && return true
-    end
-    false
-end
-
-# === Intersection ===
-
-function ∩(η::∃{T}, η′::∃{T}) where {T<:Real}
-    for (i, d) ∈ enumerate(η.d)
-        if d ∉ η′.d
-            v = γ(η′, d)
-            lo, hi = η.μ[i] - η.ρ[i], η.μ[i] + η.ρ[i]
-            cl = closed_zero(η.∂[i])
-            cr = closed_one(η.∂[i+1])
-            
-            if cl
-                (v < lo) && return false
-            else
-                (v ≤ lo) && return false
-            end
-            if cr
-                (v > hi) && return false
-            else
-                (v ≥ hi) && return false
-            end
+    for c ∈ ϵ.ϵ
+        if ⫉(x, c)
+            r = ∃(x, c)
+            r[2] ≢ ϵ && return r
         end
     end
-    
-    for (j, d) ∈ enumerate(η′.d)
-        if d ∉ η.d
-            v = γ(η, d)
-            lo, hi = η′.μ[j] - η′.ρ[j], η′.μ[j] + η′.ρ[j]
-            cl = closed_zero(η′.∂[j])
-            cr = closed_one(η′.∂[j+1])
-            
-            if cl
-                (v < lo) && return false
-            else
-                (v ≤ lo) && return false
-            end
-            if cr
-                (v > hi) && return false
-            else
-                (v ≥ hi) && return false
-            end
-        end
-    end
-    
-    for (i, d) ∈ enumerate(η.d)
-        j = findfirst(==(d), η′.d)
-        j === nothing && continue
-        
-        lo₁, hi₁ = η.μ[i] - η.ρ[i], η.μ[i] + η.ρ[i]
-        lo₂, hi₂ = η′.μ[j] - η′.ρ[j], η′.μ[j] + η′.ρ[j]
-        
-        cl₁ = closed_zero(η.∂[i])
-        cr₁ = closed_one(η.∂[i+1])
-        cl₂ = closed_zero(η′.∂[j])
-        cr₂ = closed_one(η′.∂[j+1])
-        
-        ∅(lo₁, hi₁, cl₁, cr₁, lo₂, hi₂, cl₂, cr₂) && return false
-    end
-    
-    n, m = length(η.d), length(η′.d)
-    if n > 0 && m > 0
-        mode₁ = η.∂[n+1]
-        mode₂ = η′.∂[m+1]
-        mode₁ ≠ mode₂ && return false
-        if mode₁ == :ZEROONE
-            tail₁ = η.μ[n]
-            tail₂ = η′.μ[m]
-            tail₁ ≠ tail₂ && return false
-        end
-    end
-    
-    true
+
+    x ∈ ϵ || return (○(T), ϵ, true)
+    ∂(x, ϵ) && return (○(T), ϵ, true)
+
+    k = h(x)
+    haskey(Ξ, k) && return (Ξ[k], ϵ, true)
+    Ξ[k] = ϵ.∃(x)
+    (Ξ[k], ϵ, true)
 end
+# function ∃(n::Vector{Integer}, ϵ::∃{T}) where {T<:Real}
+#     i(n)
+#     Dict(collect(idx) => ∃(X(g, collect(idx)), ϵ)[1] for idx ∈ i(g))
+# end
+# function X(d::Dict{T,T}, ∂::Vector{Symbol}) where {T<:Real}
+#     dims = sort(collect(keys(d)))
+#     vals = [d[k] for k in dims]
+#     ∃{T}("", dims, vals, zeros(T, length(d)), ∂, identity, nothing, UInt8[], ∃{T}[])
+# end
+# function X(d::Dict{T,T}, ∂::Symbol=:ZEROZERO) where {T<:Real}
+#     n = length(d)
+#     X(d, fill(∂, n + 1))
+# end
 
-# === Containment ===
-
-function ⊂(η′::∃{T}, η::∃{T}) where {T<:Real}
-    for (i, d) ∈ enumerate(η.d)
-        lo, hi = η.μ[i] - η.ρ[i], η.μ[i] + η.ρ[i]
-        j = findfirst(==(d), η′.d)
-        if j === nothing
-            v = γ(η′, d)
-            (v < lo || v > hi) && return false
-        else
-            lo′, hi′ = η′.μ[j] - η′.ρ[j], η′.μ[j] + η′.ρ[j]
-            (lo′ < lo || hi′ > hi) && return false
-        end
-    end
-    true
-end
-
-# === Find Parent ===
-
-function ∀(η′::∃{T}, Ω::∃{T}) where {T<:Real}
-    for c ∈ Ω.ϵ
-        ⊂(η′, c) && return ∀(η′, c)
-    end
-    Ω
-end
-
-# === Create ===
-
-function ∃!(Ω::∃{T}, ι::String, d::Vector{T}, μ::Vector{T}, ρ::Vector{T},
-            ∂::Vector{Symbol}, E::Function) where {T<:Real}
-    !□(d, μ, ρ, ∂) && return nothing
-    η′ = ∃{T}(ι, d, μ, ρ, ∂, E, nothing, UInt8[], ∃{T}[])
-    p = ∀(η′, Ω)
-    p ≢ Ω && ∩(p, η′) && return nothing
-    any(c -> ∩(c, η′), p.ϵ) && return nothing
-    η = ∃{T}(ι, d, μ, ρ, ∂, E, p, hash(p), ∃{T}[])
-    push!(p.ϵ, η)
-    η
-end
-
-# === Hash Point ===
-
-function h(x::X{T}) where {T<:Real}
+function Base.hash(ϵ::∃)
     io = IOBuffer()
-    serialize(io, (x.d, x.∂))
+    serialize(io, (ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ.h))
     sha3_512(take!(io))
 end
+
+# function ∃(ϵ::∃{T}, d::T) where {T<:Real}
+#     isempty(ϵ.d) && return ○(T)
+
+#     ks = ϵ.d
+#     n = length(ks)
+
+#     if d < ks[1]
+#         mode = ϵ.∂[1]
+#         (mode == :ZEROZERO || mode == :ONEONE) && return ○(T)
+#         mode == :ZEROONE && return ○(T)
+#         mode == :ONEZERO && return ϵ.μ[1]
+#     elseif d > ks[end]
+#         mode = ϵ.∂[n+1]
+#         (mode == :ZEROZERO || mode == :ONEONE) && return ○(T)
+#         mode == :ZEROONE && return ϵ.μ[n]
+#         mode == :ONEZERO && return ○(T)
+#     else
+#         i = findlast(k -> k ≤ d, ks)
+#         if d == ks[i]
+#             return ϵ.μ[i]
+#         else
+#             mode = ϵ.∂[i+1]
+#             (mode == :ZEROZERO || mode == :ONEONE) && return ○(T)
+#             mode == :ZEROONE && return ϵ.μ[i]
+#             mode == :ONEZERO && return ϵ.μ[i+1]
+#         end
+#     end
+# end
+
+# # === Validation ===
+
+# function □(μ::Vector{T}, ρ::Vector{T}) where {T<:Real}
+#     length(μ) ≠ length(ρ) && return false
+#     for (o, r) ∈ zip(μ, ρ)
+#         (r < zero(T) || o - r < zero(T) || o + r > one(T)) && return false
+#     end
+#     true
+# end
+
+# □(x::X{T}) where {T<:Real} = all(v -> zero(T) ≤ v ≤ one(T), values(x.d))
+
+# function □(d::Vector{T}, μ::Vector{T}, ρ::Vector{T}, ∂::Vector{Symbol}) where {T<:Real}
+#     n = length(d)
+#     length(μ) ≠ n && return false
+#     length(ρ) ≠ n && return false
+#     length(∂) ≠ n + 1 && return false
+#     !□(μ, ρ) && return false
+#     true
+# end
+
+# # === Bounds Check ===
+
+# function ⫉(x::X{T}, ϵ::∃{T}) where {T<:Real}
+#     for (i, d) ∈ enumerate(ϵ.d)
+#         v = x[d]
+#         lo, hi = ϵ.μ[i] - ϵ.ρ[i], ϵ.μ[i] + ϵ.ρ[i]
+#         (v < lo || v > hi) && return false
+#     end
+#     true
+# end
+
+# # === Boundary Modes ===
+
+# closed_zero(mode::Symbol) = mode == :ONEZERO || mode == :ONEONE
+# closed_one(mode::Symbol) = mode == :ZEROONE || mode == :ONEONE
+
+# # === Membership ===
+
+# function ∈(x::X{T}, ϵ::∃{T}) where {T<:Real}
+#     n = length(ϵ.d)
+#     n == 0 && return true
+
+#     ks = sort(collect(keys(x.d)))
+
+#     for d ∈ ks
+#         if d ∉ ϵ.d
+#             v = x.d[d]
+#             ϵv = ∃(ϵ, d)
+#             v ≠ ϵv && return false
+#         end
+#     end
+
+#     for (i, d) ∈ enumerate(ϵ.d)
+#         v = x[d]
+#         lo, hi = ϵ.μ[i] - ϵ.ρ[i], ϵ.μ[i] + ϵ.ρ[i]
+
+#         if lo == hi
+#             v ≠ lo && return false
+#             continue
+#         end
+
+#         cl = closed_zero(ϵ.∂[i])
+#         cr = closed_one(ϵ.∂[i+1])
+
+#         if cl
+#             v < lo && return false
+#         else
+#             v ≤ lo && return false
+#         end
+#         if cr
+#             v > hi && return false
+#         else
+#             v ≥ hi && return false
+#         end
+#     end
+#     true
+# end
+
+# # === At Boundary ===
+
+# function ∂(x::X{T}, ϵ::∃{T}) where {T<:Real}
+#     for (i, d) ∈ enumerate(ϵ.d)
+#         ϵ.ρ[i] == zero(T) && continue
+#         v = x[d]
+#         lo, hi = ϵ.μ[i] - ϵ.ρ[i], ϵ.μ[i] + ϵ.ρ[i]
+#         (v == lo || v == hi) && return true
+#     end
+#     false
+# end
+
+# # === Disjoint Intervals ===
+
+# function ∅(lo₁, hi₁, cl₁, cr₁, lo₂, hi₂, cl₂, cr₂)
+#     if cr₁ && cl₂
+#         hi₁ < lo₂ && return true
+#     else
+#         hi₁ ≤ lo₂ && return true
+#     end
+#     if cr₂ && cl₁
+#         hi₂ < lo₁ && return true
+#     else
+#         hi₂ ≤ lo₁ && return true
+#     end
+#     false
+# end
+
+# # === Intersection ===
+
+# function ∩(ϵ::∃{T}, ϵ′::∃{T}) where {T<:Real}
+#     for (i, d) ∈ enumerate(ϵ.d)
+#         if d ∉ ϵ′.d
+#             v = ∃(ϵ′, d)
+#             lo, hi = ϵ.μ[i] - ϵ.ρ[i], ϵ.μ[i] + ϵ.ρ[i]
+#             cl = closed_zero(ϵ.∂[i])
+#             cr = closed_one(ϵ.∂[i+1])
+
+#             if cl
+#                 (v < lo) && return false
+#             else
+#                 (v ≤ lo) && return false
+#             end
+#             if cr
+#                 (v > hi) && return false
+#             else
+#                 (v ≥ hi) && return false
+#             end
+#         end
+#     end
+
+#     for (j, d) ∈ enumerate(ϵ′.d)
+#         if d ∉ ϵ.d
+#             v = ∃(ϵ, d)
+#             lo, hi = ϵ′.μ[j] - ϵ′.ρ[j], ϵ′.μ[j] + ϵ′.ρ[j]
+#             cl = closed_zero(ϵ′.∂[j])
+#             cr = closed_one(ϵ′.∂[j+1])
+
+#             if cl
+#                 (v < lo) && return false
+#             else
+#                 (v ≤ lo) && return false
+#             end
+#             if cr
+#                 (v > hi) && return false
+#             else
+#                 (v ≥ hi) && return false
+#             end
+#         end
+#     end
+
+#     for (i, d) ∈ enumerate(ϵ.d)
+#         j = findfirst(==(d), ϵ′.d)
+#         j === nothing && continue
+
+#         lo₁, hi₁ = ϵ.μ[i] - ϵ.ρ[i], ϵ.μ[i] + ϵ.ρ[i]
+#         lo₂, hi₂ = ϵ′.μ[j] - ϵ′.ρ[j], ϵ′.μ[j] + ϵ′.ρ[j]
+
+#         cl₁ = closed_zero(ϵ.∂[i])
+#         cr₁ = closed_one(ϵ.∂[i+1])
+#         cl₂ = closed_zero(ϵ′.∂[j])
+#         cr₂ = closed_one(ϵ′.∂[j+1])
+
+#         ∅(lo₁, hi₁, cl₁, cr₁, lo₂, hi₂, cl₂, cr₂) && return false
+#     end
+
+#     n, m = length(ϵ.d), length(ϵ′.d)
+#     if n > 0 && m > 0
+#         mode₁ = ϵ.∂[n+1]
+#         mode₂ = ϵ′.∂[m+1]
+#         mode₁ ≠ mode₂ && return false
+#         if mode₁ == :ZEROONE
+#             tail₁ = ϵ.μ[n]
+#             tail₂ = ϵ′.μ[m]
+#             tail₁ ≠ tail₂ && return false
+#         end
+#     end
+
+#     true
+# end
+
+# # === Containment ===
+
+# function ⊂(ϵ′::∃{T}, ϵ::∃{T}) where {T<:Real}
+#     for (i, d) ∈ enumerate(ϵ.d)
+#         lo, hi = ϵ.μ[i] - ϵ.ρ[i], ϵ.μ[i] + ϵ.ρ[i]
+#         j = findfirst(==(d), ϵ′.d)
+#         if j === nothing
+#             v = ∃(ϵ′, d)
+#             (v < lo || v > hi) && return false
+#         else
+#             lo′, hi′ = ϵ′.μ[j] - ϵ′.ρ[j], ϵ′.μ[j] + ϵ′.ρ[j]
+#             (lo′ < lo || hi′ > hi) && return false
+#         end
+#     end
+#     true
+# end
+
+# # === Find Parent ===
+
+# function ∃̂(ϵ′::∃{T}, Ω::∃{T}) where {T<:Real}
+#     for c ∈ Ω.ϵ
+#         ⊂(ϵ′, c) && return ∃̂(ϵ′, c)
+#     end
+#     Ω
+# end
+
+# # === Create ===
+
+# function ∃!(Ω::∃{T}, ι::String, d::Vector{T}, μ::Vector{T}, ρ::Vector{T},
+#             ∂::Vector{Symbol}, E::Function) where {T<:Real}
+#     !□(d, μ, ρ, ∂) && return nothing
+#     ϵ′ = ∃{T}(ι, d, μ, ρ, ∂, E, nothing, UInt8[], ∃{T}[])
+#     p = ∃̂(ϵ′, Ω)
+#     p ≢ Ω && ∩(p, ϵ′) && return nothing
+#     any(c -> ∩(c, ϵ′), p.ϵ) && return nothing
+#     ϵ = ∃{T}(ι, d, μ, ρ, ∂, E, p, hash(p), ∃{T}[])
+#     push!(p.ϵ, ϵ)
+#     ϵ
+# end
+
+# # === Hash Point ===
+
+# function h(x::X{T}) where {T<:Real}
+#     io = IOBuffer()
+#     serialize(io, (x.d, x.∂))
+#     sha3_512(take!(io))
+# end
 
 # === Observe ===
 
-function ∃(x::X{T}, η::∃{T}) where {T<:Real}
-    !□(x) && return (○(T), η, false)
-    
-    for c ∈ η.ϵ
-        if ⫉(x, c)
-            r = ∃(x, c)
-            r[2] ≢ η && return r
-        end
-    end
-    
-    x ∈ η || return (○(T), η, true)
-    ∂(x, η) && return (○(T), η, true)
-    
-    k = h(x)
-    haskey(Ξ, k) && return (Ξ[k], η, true)
-    Ξ[k] = η.∃(x)
-    (Ξ[k], η, true)
-end
+# function ∃(x::X{T}, ϵ::∃{T}) where {T<:Real}
+#     !□(x) && return (○(T), ϵ, false)
+
+#     for c ∈ ϵ.ϵ
+#         if ⫉(x, c)
+#             r = ∃(x, c)
+#             r[2] ≢ ϵ && return r
+#         end
+#     end
+
+#     x ∈ ϵ || return (○(T), ϵ, true)
+#     ∂(x, ϵ) && return (○(T), ϵ, true)
+
+#     k = h(x)
+#     haskey(Ξ, k) && return (Ξ[k], ϵ, true)
+#     Ξ[k] = ϵ.∃(x)
+#     (Ξ[k], ϵ, true)
+# end
 
 # === Grid ===
 
-struct ♯{T<:Real}
-    d::Vector{T}
-    μ::Vector{T}
-    ρ::Vector{T}
-    n::Vector{Int}
-    ∂::Symbol
-end
+# struct ♯{T<:Real}
+#     d::Vector{T}
+#     μ::Vector{T}
+#     ρ::Vector{T}
+#     n::Vector{Integer}
+#     ∂::Symbol
+# end
+# ♯(d::Vector{T}, μ::Vector{T}, ρ::Vector{T}, n::Vector{Int}) where {T<:Real} = ♯{T}(d, μ, ρ, n, :ZEROZERO)
 
-♯(d::Vector{T}, μ::Vector{T}, ρ::Vector{T}, n::Vector{Int}) where {T<:Real} = ♯{T}(d, μ, ρ, n, :ZEROZERO)
+# for _i = i(g) @show _i end
+# g = ♯([0.0,1.0], [0.1,0.2], [0.05,0.1], [3,2])
+# struct ♯{T<:Real}
+#     ϵ::∃{T}
+#     n::Vector{Int}
+# end
+# function X(d::Dict{T,T}, ∂::Vector{Symbol}) where {T<:Real}
+#     dims = sort(collect(keys(d)))
+#     vals = [d[k] for k in dims]
+#     ∃{T}("", dims, vals, zeros(T, length(d)), ∂, identity, nothing, UInt8[], ∃{T}[])
+# end
+# function X(d::Dict{T,T}, ∂::Symbol=:ZEROZERO) where {T<:Real}
+#     n = length(d)
+#     X(d, fill(∂, n + 1))
+# end
+# """
+# x[d], interpolated if need be.
+# """
+# function ∃(x::X{T}, d::T) where {T<:Real}
+#     haskey(x.d, d) && return x.d[d]
+#     isempty(x.d) && return ○(T)
+#     (x.∂ == :ZEROZERO || x.∂ == :ONEONE) && return ○(T)
 
-function X(g::♯{T}, idx::Vector{Int}) where {T<:Real}
-    p = Dict{T,T}()
-    for (i, d) ∈ enumerate(g.d)
-        lo, hi = g.μ[i] - g.ρ[i], g.μ[i] + g.ρ[i]
-        p[d] = g.n[i] == 1 ? g.μ[i] : lo + T(idx[i] - 1) / T(g.n[i] - 1) * (hi - lo)
-    end
-    X{T}(p, g.∂)
-end
+#     ks = sort(collect(keys(x.d)))
+#     v0 = haskey(x.d, zero(T)) ? x.d[zero(T)] : ○(T)
+#     v1 = haskey(x.d, one(T)) ? x.d[one(T)] : ○(T)
 
-i(g::♯) = (collect(idx) for idx ∈ Iterators.product((1:n for n ∈ g.n)...))
+#     if d < ks[1]
+#         x.∂ == :ZEROONE && return v0
+#         x.∂ == :ONEZERO && return x.d[ks[1]]
+#     elseif d > ks[end]
+#         x.∂ == :ZEROONE && return x.d[ks[end]]
+#         x.∂ == :ONEZERO && return v1
+#     else
+#         i = findlast(k -> k ≤ d, ks)
+#         x.∂ == :ZEROONE && return x.d[ks[i]]
+#         x.∂ == :ONEZERO && return x.d[ks[i+1]]
+#     end
 
-function ∃(g::♯{T}, η::∃{T}) where {T<:Real}
-    Dict(collect(idx) => ∃(X(g, collect(idx)), η)[1] for idx ∈ i(g))
-end
+#     ○(T)
+# end
+# Base.getindex(x::X{T}, d::T) where {T<:Real} = ∃(x, d)
+# function X(g::♯{T}, idx::Vector{Int}) where {T<:Real}
+#     p = Dict{T,T}()
+#     for (i, d) ∈ enumerate(g.d)
+#         lo, hi = g.μ[i] - g.ρ[i], g.μ[i] + g.ρ[i]
+#         p[d] = g.n[i] == 1 ? g.μ[i] : lo + T(idx[i] - 1) / T(g.n[i] - 1) * (hi - lo)
+#     end
+#     X{T}(p, g.∂)
+# end
 
-function array(g::♯{T}, r::Dict{Vector{Int},T}) where {T<:Real}
-    [r[[i,j]] for i ∈ 1:g.n[1], j ∈ 1:g.n[2]]
-end
+# function array(g::♯{T}, r::Dict{Vector{Int},T}) where {T<:Real}
+#     [r[[i,j]] for i ∈ 1:g.n[1], j ∈ 1:g.n[2]]
+# end
+
+# end
