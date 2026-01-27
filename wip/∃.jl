@@ -34,103 +34,177 @@ struct ∃{T<:Real}
     ϵ::Vector{∃{T}}
 end
 i(n::Vector{<:Integer}) = (collect(i) for i ∈ Iterators.product((1:n̂ for n̂ ∈ n)...))
-function ∃(ϵ::∃{T}, n::Vector{<:Integer})::Array{T,length(n)} where {T<:Real} # ZERO < i
+function ∃(n::Vector{<:Integer}, ϵ::∃{T}, Ξ::Dict{∃{T},T})::Array{T,length(n)} where {T<:Real} # ZERO < i
     ∃̂ = fill(○(T), n...)
     _zero = ϵ.μ - ϵ.ρ
-    # î = collect(i(n))[1]
+    # î = collect(i(n))[6]
     for î = i(n)
+        @show î
         μ = fill(○(T), length(n))
         for ĩ = eachindex(ϵ.d)
             μ[ĩ] = isone(n[ĩ]) ? ϵ.μ[ĩ] : _zero[ĩ] + 2 * ϵ.ρ[ĩ] * T(î[ĩ] - 1) / T(n[ĩ] - 1)
         end
-        x̂ = ∃{T}("", ϵ.d, μ, zeros(T, length(ϵ.d)), fill(:ONEONE, length(ϵ.d)+1), _ -> one(T), ϵ, [])
-        e, _ = ∃(x̂, ϵ)
-        ∃̂[î...] = e
+        x̂ = ∃{T}("", ϵ.d, μ, zeros(T, length(ϵ.d)), fill(:ONEONE, length(ϵ.d) + 1), _ -> one(T), ϵ, [])
+        if haskey(Ξ, x̂)
+            @show "haskey"
+            ∃̂[î] = Ξ[x̂]
+            continue
+        end
+        Ξ[x̂] = ∃̂[î...] = ∃(x̂, ϵ)
+        @show Ξ[x̂]
     end
     ∃̂
 end
-x=x̂
+# x = x̂
 function ∃(x::∃{T}, ϵ::∃{T}) where {T<:Real}
-    x ∈ ϵ || return (○(T), ϵ)
+    @show ∂(x, ϵ)
+    ∂(x, ϵ) && return ○(T)
+    @show x ∈ ϵ
+    x ∈ ϵ && return ϵ.∃(x)
     for ϵ̂ = ϵ.ϵ
-        if ⫉(x, ϵ̂)
-            r = ∃(x, ϵ̂, Ξ)
-            r[end] ≢ ϵ && return r
-        end
+        @show "for", x ∈ ϵ̂
+        x ∈ ϵ̂ && return ϵ̂.∃(x)
     end
-    ∂(x, ϵ) && return (○(T), ϵ)
-
-    haskey(Ξ, x) || (Ξ[x] = ϵ.∃(x))
-    (Ξ[x], ϵ)
+    ○(T)
 end
 closed_zero(mode::Symbol) = mode == :ONEZERO || mode == :ONEONE
 closed_one(mode::Symbol) = mode == :ZEROONE || mode == :ONEONE
 function ∈(x::∃{T}, ϵ::∃{T}) where {T<:Real}
-    isempty(ϵ.d) && return true
-    iϵ = sortperm(ϵ.d)
-    ix = sortperm(x.d)
+    isempty(ϵ.d) && return all(d -> X(x, d) == ○(T), x.d)
+
+    for dx = x.d
+        if dx ∉ ϵ.d
+            xx = x.d[dx]
+            xϵ = X(ϵ, dx)
+            xx ≠ xϵ && return false
+        end
+    end
+
+    # (iϵ, dϵ) = collect(enumerate(ϵ.d))[1]
+    # for (iϵ, dϵ) = enumerate(ϵ.d)
+    #     @show iϵ, dϵ
+    #     xx = X(x, dϵ)
+    #     _zero, _one = ϵ.μ[iϵ] - ϵ.ρ[iϵ], ϵ.μ[iϵ] + ϵ.ρ[iϵ]
+
+    #     if lo == hi
+    #         xx ≠ lo && return false
+    #         continue
+    #     end
+
+    #     cl = closed_zero(ϵ.∂[iϵ])
+    #     cr = closed_one(ϵ.∂[iϵ+1])
+
+    #     if cl
+    #         xx < lo && return false
+    #     else
+    #         xx ≤ lo && return false
+    #     end
+    #     if cr
+    #         xx > hi && return false
+    #     else
+    #         xx ≥ hi && return false
+    #     end
+    # end
+    # @show "true"
+    # true
+
+    # iϵ = ix = 1
+    # while true
+    #     dϵ = ϵ.d[iϵ]
+    #     dx = x.d[ix]
+    #     if dx == dϵ
+
+    #     else
+    #     end
+    # end
+
+    # isempty(ϵ.d) && return all(d -> X(x, d) == ○(T), x.d)
+    # iϵ = sortperm(ϵ.d)
+    # ix = sortperm(x.d)
     # îϵ = iϵ[2]
-    for îϵ = iϵ
-        dϵ = ϵ.d[îϵ]
-        @show îϵ, dϵ
-        # îx = ix[2]
-        for îx = ix
-            @show îx
-            dx = x.d[îx]
-            xx = X(x, dx)
-            @show xx, dx
-            if dx == dϵ
-                ρ = ϵ.ρ[îϵ]
-                μ = ϵ.μ[îϵ]
-                @show ρ,μ
+    # for îϵ = iϵ
+    # (iϵ, dϵ) = collect(enumerate(ϵ.d))[1]
+    for (iϵ, dϵ) = enumerate(ϵ.d)
+    #     # dϵ = ϵ.d[îϵ]
+        @show iϵ, dϵ
+    #     # îx = ix[2]
+    #     # for îx = ix
+    #     # (_, dx) = collect(enumerate(x.d))[1]
+    #     for (_, dx) = enumerate(x.d)
+    #         # @show îx
+    #         # dx = x.d[ix]
+    #         if dx == dϵ
+                xx = X(x, dϵ)
+    #             @show xx, dx
+                μ = ϵ.μ[iϵ]
+                ρ = ϵ.ρ[iϵ]
+                @show ρ, μ
                 if iszero(ρ)
-                    @show xx,μ
+                    @show xx, μ
                     xx ≠ μ && return false
                     continue
                 end
                 _zero, _one = μ - ρ, μ + ρ
                 @show _zero, _one
-                if closed_zero(ϵ.∂[îϵ+1])
+                if closed_zero(ϵ.∂[iϵ])
                     @show "closed_zero"
                     xx < _zero && return false
                 else
                     @show "!closed_zero"
                     xx ≤ _zero && return false
                 end
-                if closed_one(ϵ.∂[îϵ+1])
+                if closed_one(ϵ.∂[iϵ+1])
                     @show "closed_one"
                     _one < xx && return false
                 else
                     @show "!closed_one"
                     _zero ≤ xx && return false
                 end
-            else
-                xϵ = X(ϵ, dx)
-                @show xϵ
-                xx ≠ xϵ && return false
-            end
-        end
+    #         # else
+    #         #     xϵ = X(ϵ, dx)
+    #         #     @show xϵ, xx
+    #         #     xx ≠ xϵ && return false
+    #         end
+            
+    #     end
     end
+
+    # for (iϵ, dϵ) = enumerate(ϵ.d)
+    #     # dϵ = ϵ.d[îϵ]
+    #     @show iϵ, dϵ
+    #     # îx = ix[2]
+    #     # for îx = ix
+    #     # (_, dx) = collect(enumerate(x.d))[1]
+    #     for (_, dx) = enumerate(x.d)
+    #         if dx ≠ dϵ
+
+    #         end
+    #     end
+    # end
+
     @show "true"
     true
 end
 function ∂(x::∃{T}, ϵ::∃{T}) where {T<:Real}
     for (i, d) = enumerate(ϵ.d)
+        @show "∂", i, d, ϵ.ρ[i]
         iszero(ϵ.ρ[i]) && continue
         x̂ = X(x, d)
+        @show "∂", x̂
         _zero, _one = ϵ.μ[i] - ϵ.ρ[i], ϵ.μ[i] + ϵ.ρ[i]
+        @show "∂", _zero, _one
         (x̂ == _zero || x̂ == _one) && return true
     end
     false
 end
-function ⫉(x::∃{T}, ϵ::∃{T}) where {T<:Real}
-    for (i, d) = enumerate(ϵ.d)
-        x̂ = X(x, d)
-        _zero, _one = ϵ.μ[i] - ϵ.ρ[i], ϵ.μ[i] + ϵ.ρ[i]
-        (x̂ < _zero || x̂ > _one) && return false
-    end
-    true
-end
+# function ⫉(x::∃{T}, ϵ::∃{T}) where {T<:Real}
+#     for (i, d) = enumerate(ϵ.d)
+#         x̂ = X(x, d)
+#         _zero, _one = ϵ.μ[i] - ϵ.ρ[i], ϵ.μ[i] + ϵ.ρ[i]
+#         (x̂ < _zero || x̂ > _one) && return false
+#     end
+#     true
+# end
 function X(ϵ::∃{T}, d::T)::T where {T<:Real}
     isempty(ϵ.d) && return ○(T)
     for (i, d̂) = enumerate(ϵ.d)
