@@ -19,7 +19,8 @@ end
 """
 # module TheoryOfGod
 
-using SHA, Serialization
+# using SHA, Serialization
+using Serialization
 
 ○(::Type{T}) where {T<:Real} = one(T) / (one(T) + one(T))
 struct ∃{T<:Real}
@@ -28,53 +29,132 @@ struct ∃{T<:Real}
     μ::Vector{T}
     ρ::Vector{T}
     ∂::Vector{Symbol}
-    ∃::Function
+    ∃::Function # ∃ -> I
     ∃̂::Union{∃{T},Nothing}
-    h::Vector{UInt8}
     ϵ::Vector{∃{T}}
 end
 i(n::Vector{<:Integer}) = (collect(i) for i ∈ Iterators.product((1:n̂ for n̂ ∈ n)...))
-# function ∃(ϵ::∃{T}, n::Vector{<:Integer}, Ξ::Dict{∃{T},T})::Array{T,length(n)} where {T<:Real} # ZERO < i
-function ∃(ϵ::∃{T}, n::Vector{<:Integer}, Ξ::Dict{∃{T},T}) where {T<:Real} # ZERO < i
+function ∃(ϵ::∃{T}, n::Vector{<:Integer})::Array{T,length(n)} where {T<:Real} # ZERO < i
     ∃̂ = fill(○(T), n...)
-    # i = (1:length(ϵ.d))[1]
-    # for i = 1:length(ϵ.d)
     _zero = ϵ.μ - ϵ.ρ
     # î = collect(i(n))[1]
-    # a=[]
     for î = i(n)
         μ = fill(○(T), length(n))
         for ĩ = eachindex(ϵ.d)
             μ[ĩ] = isone(n[ĩ]) ? ϵ.μ[ĩ] : _zero[ĩ] + 2 * ϵ.ρ[ĩ] * T(î[ĩ] - 1) / T(n[ĩ] - 1)
         end
-        x̂ = ∃{T}("", ϵ.d, μ, zeros(T, length(ϵ.d)), fill(:ONEONE, length(ϵ.d)), _ -> one(T), nothing, [], [])
-        if haskey(Ξ, x̂)
-            ∃̂[î] = Ξ[x̂]
-            continue
-        end
-        Ξ[x̂] = ∃̂[î] = ∃(x̂, ϵ)
-        # push!(a,x̂)
+        x̂ = ∃{T}("", ϵ.d, μ, zeros(T, length(ϵ.d)), fill(:ONEONE, length(ϵ.d)+1), _ -> one(T), ϵ, [])
+        e, _ = ∃(x̂, ϵ)
+        ∃̂[î...] = e
     end
     ∃̂
-    # a
 end
+x=x̂
 function ∃(x::∃{T}, ϵ::∃{T}) where {T<:Real}
-    !□(x) && return (○(T), ϵ, false)
-
-    for c ∈ ϵ.ϵ
-        if ⫉(x, c)
-            r = ∃(x, c)
-            r[2] ≢ ϵ && return r
+    x ∈ ϵ || return (○(T), ϵ)
+    for ϵ̂ = ϵ.ϵ
+        if ⫉(x, ϵ̂)
+            r = ∃(x, ϵ̂, Ξ)
+            r[end] ≢ ϵ && return r
         end
     end
+    ∂(x, ϵ) && return (○(T), ϵ)
 
-    x ∈ ϵ || return (○(T), ϵ, true)
-    ∂(x, ϵ) && return (○(T), ϵ, true)
-
-    k = h(x)
-    haskey(Ξ, k) && return (Ξ[k], ϵ, true)
-    Ξ[k] = ϵ.∃(x)
-    (Ξ[k], ϵ, true)
+    haskey(Ξ, x) || (Ξ[x] = ϵ.∃(x))
+    (Ξ[x], ϵ)
+end
+closed_zero(mode::Symbol) = mode == :ONEZERO || mode == :ONEONE
+closed_one(mode::Symbol) = mode == :ZEROONE || mode == :ONEONE
+function ∈(x::∃{T}, ϵ::∃{T}) where {T<:Real}
+    isempty(ϵ.d) && return true
+    iϵ = sortperm(ϵ.d)
+    ix = sortperm(x.d)
+    # îϵ = iϵ[2]
+    for îϵ = iϵ
+        dϵ = ϵ.d[îϵ]
+        @show îϵ, dϵ
+        # îx = ix[2]
+        for îx = ix
+            @show îx
+            dx = x.d[îx]
+            xx = X(x, dx)
+            @show xx, dx
+            if dx == dϵ
+                ρ = ϵ.ρ[îϵ]
+                μ = ϵ.μ[îϵ]
+                @show ρ,μ
+                if iszero(ρ)
+                    @show xx,μ
+                    xx ≠ μ && return false
+                    continue
+                end
+                _zero, _one = μ - ρ, μ + ρ
+                @show _zero, _one
+                if closed_zero(ϵ.∂[îϵ+1])
+                    @show "closed_zero"
+                    xx < _zero && return false
+                else
+                    @show "!closed_zero"
+                    xx ≤ _zero && return false
+                end
+                if closed_one(ϵ.∂[îϵ+1])
+                    @show "closed_one"
+                    _one < xx && return false
+                else
+                    @show "!closed_one"
+                    _zero ≤ xx && return false
+                end
+            else
+                xϵ = X(ϵ, dx)
+                @show xϵ
+                xx ≠ xϵ && return false
+            end
+        end
+    end
+    @show "true"
+    true
+end
+function ∂(x::∃{T}, ϵ::∃{T}) where {T<:Real}
+    for (i, d) = enumerate(ϵ.d)
+        iszero(ϵ.ρ[i]) && continue
+        x̂ = X(x, d)
+        _zero, _one = ϵ.μ[i] - ϵ.ρ[i], ϵ.μ[i] + ϵ.ρ[i]
+        (x̂ == _zero || x̂ == _one) && return true
+    end
+    false
+end
+function ⫉(x::∃{T}, ϵ::∃{T}) where {T<:Real}
+    for (i, d) = enumerate(ϵ.d)
+        x̂ = X(x, d)
+        _zero, _one = ϵ.μ[i] - ϵ.ρ[i], ϵ.μ[i] + ϵ.ρ[i]
+        (x̂ < _zero || x̂ > _one) && return false
+    end
+    true
+end
+function X(ϵ::∃{T}, d::T)::T where {T<:Real}
+    isempty(ϵ.d) && return ○(T)
+    for (i, d̂) = enumerate(ϵ.d)
+        d == d̂ && return ϵ.μ[i]
+    end
+    (ϵ.∂ == :ZEROZERO || ϵ.∂ == :ONEONE) && return ○(T)
+    d̂ = sort(ϵ.d)
+    _zero = iszero(d̂[1]) ? ϵ.d[1] : ○(T)
+    _one = isone(d̂[end]) ? ϵ.d[end] : ○(T)
+    if d < d̂[1]
+        ∂ = ϵ.∂[1]
+        ∂ == :ZEROONE && return _zero
+        ∂ == :ONEZERO && return ○(T)
+    elseif d̂[end] < d
+        ∂ = ϵ.∂[end]
+        ∂ == :ZEROONE && return ○(T)
+        ∂ == :ONEZERO && return _one
+    else
+        i = findlast(d̃ -> d̃ < d, d̂)
+        ∂ = ϵ.∂[i+1]
+        ∂ == :ZEROONE && return ϵ.d[d̂[i+1]]
+        ∂ == :ONEZERO && return ϵ.d[d̂[i]]
+    end
+    ○(T)
 end
 # function ∃(n::Vector{Integer}, ϵ::∃{T}) where {T<:Real}
 #     i(n)
@@ -90,11 +170,11 @@ end
 #     X(d, fill(∂, n + 1))
 # end
 
-function Base.hash(ϵ::∃)
-    io = IOBuffer()
-    serialize(io, (ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ.h))
-    sha3_512(take!(io))
-end
+# function Base.hash(ϵ::∃)
+#     io = IOBuffer()
+#     serialize(io, (ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ.h))
+#     sha3_512(take!(io))
+# end
 
 # function ∃(ϵ::∃{T}, d::T) where {T<:Real}
 #     isempty(ϵ.d) && return ○(T)
