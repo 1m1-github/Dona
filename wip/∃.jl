@@ -1,116 +1,163 @@
 """
 I = [ZERO < ○ < ONE] denotes a unit 1-dim space of information with origin ○ (no information) in its center including the corners ZERO and ONE.
 Ω = I^I an ∞-dim metric and smooth vector space.
-∃ is a topology on Ω such that ϵ ∈ ∃:
+∃ is a pretopology on Ω such that ϵ ∈ ∃:
 * ϵ ⊆ Ω
-* ∃!ϵ̂: ϵ ∈ ϵ̂ ∈ ∃: ϵ|ϵ̂ ⊆ ϵ̂
+* ∃!ϵ̂: ϵ ∈ ϵ̂ ∈ ∃: ϵ|ϵ̂ ⊆ ϵ̂ <=> ϵ ⫉ ϵ̂
 * ∀ ϵ̂ ≠ ϵ ∈ ∃: ϵ̂ ∩ ϵ = ∅
 * ϵ.∃ ∈ I is arbitrary, computable and smooth fuzzy existence towards ONE=true xor ZERO=false.
 
 ϵ ∈ ∃ defines its existence inside an Ω using an origin vector (μ) and a radius vector (ρ), these vectors are finite and all other dimensional coordinates of ϵ follow from stepwise interpolation defined in the ∂ vector.
 If we use a horizontal axis for dimension and a vertical axis for coordinate in the dimension, for any ϵ, the chart looks like a stepwise constant function with finite jumps.
+Each child ϵ is a subset of its parent in the active dimensions (0 ≤ ρ) declared by the parent (as opposed to undeclared dimensions where 0==ρ).
 """
-module TheoryOfGod
+# module TheoryOfGod
 
-using Serialization
+# @enum Border ZEROZER0 ZEROONE ONEZERO ONEONE
+# closed_zero(∂::Border) = ∂ == ONEZERO || ∂ == ONEONE
+# closed_one(∂::Border) = ∂ == ZEROONE || ∂ == ONEONE
+# closed(d::Vector) = fill(ONEONE, d + 1)
 
 ○(::Type{T}) where {T<:Real} = one(T) / (one(T) + one(T))
-abstract type Topology{T<:Real} end
-struct ∀{T<:Real} <: Topology{T}
-    ϵ::Vector{Topology{T}}
+abstract type Pretopology{T<:Real} end
+struct ∀{T<:Real} <: Pretopology{T}
+    ϵ::Vector{Pretopology{T}}
 end
-struct ∃{T<:Real} <: Topology{T}
+struct ∃{T<:Real} <: Pretopology{T}
     ι::String
-    d::Vector{T}
+    d::Vector{T} # sorted, distinct
     μ::Vector{T} # length(μ) == length(d)
     ρ::Vector{T} # length(ρ) == length(d)
-    ∂::Vector{Symbol} # length(∂) == length(d) + 1
-    ∃::Function # Topology{T} -> I
-    ∃̂::Topology{T}
-    ϵ::Vector{∃{T}}
-end
-index(n::Vector{<:Integer}) = (collect(i) for i ∈ Iterators.product((1:n̂ for n̂ ∈ n)...))
-function ∃(n::Vector{<:Integer}, ϵ::∃{T}, Ξ::Dict{<:Topology{T},T}=Dict()) where {T<:Real}
-    ∃̂ = fill(○(T), n...)
-    _zero = ϵ.μ - ϵ.ρ
+    ∂::Vector{Bool} # length(∂) == 2length(d), ∂[i] <=> [μ-ρ,..., ∂[2i] <=> ...,μ+ρ]
+    # ∂d::Vector{Bool} # length(∂d) == length(d) + 1, ∂d[i] <=> [d[i-1],d[i]... , zero xor one closed, no ambiguity between d,μ,ρ,∂
+    ∃::Function # X(ρ=0) ∈ ∃ -> I
+    ∃̂::Pretopology{T} # ∃ ⫉ ∃̂ ⩓ ∃ ∩ ∃̂ = ∅
+    ϵ::Vector{∃{T}} # ϵ ⫉ ∃ ⩓ ϵ ∩ ∃ = ∅
+end # todo check validity for outside creators
+# ∃(ϵ::∃) = ∃{eltype(ϵ.d)}(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ.∃̂, ϵ.ϵ)
+# ∃(ϵ, ϵ̂) = ∃(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∂d, ϵ.∃, ϵ̂, ϵ.ϵ)
+∃(ϵ, ϵ̂) = ∃(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ̂, ϵ.ϵ)
+# X(ϵ::∃, d, μ) = ∃("", d, μ, zeros(d), close(d), _ -> one(eltype(d)), ϵ, [])
+X(ϵ, μ) = ∃("", ϵ.d, μ, zeros(ϵ.d), fill(true, length(ϵ.∂)), _ -> one(eltype(ϵ.μ)), ϵ, []) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
+# X(ϵ, μ) = ∃("", ϵ.d, μ, zeros(ϵ.d), fill(true, length(ϵ.∂)), ϵ.∂d, _ -> one(eltype(ϵ.μ)), ϵ, []) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
+# X(ϵ::∃, μ) = X(ϵ, ϵ.d, μ)
+# unit(x::∃, ϵ::∃) = ∃("", x.d, x.μ - ϵ.μ, zeros(x.d), close(ϵ.d), _ -> one(eltype(ϵ.d)), ϵ, [])
+unit(x, ϵ) = X(ϵ, x.μ - ϵ.μ)
+index(n) = (collect(i) for i ∈ Iterators.product((1:n̂ for n̂ ∈ n)...))
+function ∃(n, ϵ, Ξ=Dict())
+    ○̂ = ○(eltype(ϵ.μ))
+    ∃̂ = fill(○̂, n...)
+    ẑero = ϵ.μ - ϵ.ρ
     for i = index(n)
-        μ = fill(○(T), length(n))
+        μ = fill(○̂, length(n))
         for î = eachindex(ϵ.d)
-            μ[î] = isone(n[î]) ? ϵ.μ[î] : _zero[î] + 2 * ϵ.ρ[î] * T(i[î] - 1) / T(n[î] - 1)
+            μ[î] = isone(n[î]) ? ϵ.μ[î] : ẑero[î] + 2 * ϵ.ρ[î] * T(i[î] - 1) / T(n[î] - 1)
         end
-        x̂ = ∃{T}("", ϵ.d, μ, zeros(T, length(ϵ.d)), fill(:ONEONE, length(ϵ.d) + 1), _ -> one(T), ϵ, [])
-        if haskey(Ξ, x̂)
-            ∃̂[i] = Ξ[x̂]
+        x = X(ϵ, μ) # x ∈ cl(ϵ)
+        if haskey(Ξ, x) # todo test
+            ∃̂[i] = Ξ[x]
             continue
         end
-        Ξ[x̂] = ∃̂[i...] = ∃(x̂, nothing, ϵ)
+        Ξ[x] = ∃̂[i...] = ∃(x, nothing, ϵ)
     end
     ∃̂
 end
-function ∂(x::∃, ϵ::∃)
+# ∂mode[1] ∈ [00: 1/2, 01: ]
+# 0 ... ∂mode[1] ... μ(ϵ, ϵ.d[1]) ... ∂mode[2] ... μ(ϵ, ϵ.d[2]) ... ∂mode[end-1] ... μ(ϵ, ϵ.d[end]) ... ∂mode[end] ... 1
+μ(a, b, x) = a + (b-a)*x
+function μ(ϵ, d)
+    T = eltype(d)
+    ○̂ = ○(T)
+    exact = true
+    isempty(ϵ.d) && return ○̂, 0, exact
+    i = searchsortedfirst(ϵ.d, d)
+    ϵ.d[i] == d && return ϵ.μ[i], i, exact
+    ϵd1 = ϵ.d[1] ; ϵdend = ϵ.d[end] ; ϵμ1 = ϵ.μ[1] ; ϵμend = ϵ.μ[end]
+    exact = false
+    if d < ϵd1
+        zerod = zero(T) ; oned = ϵd1 ; zeroμ = ○̂ ; oneμ = ϵμ1
+        # d̂ = d/ϵd1
+        # μ(○̂, ϵμ1, d̂), d̂, exact
+        # if ϵ.∂d[1] return μ(○̂, ϵμ1, d/ϵd1), 0, exact
+        # if ϵ.∂d[1] return ○̂, 0, exact
+        # else return ϵμ1, 0, exact end
+    elseif ϵdend < d
+        zerod = ϵdend ; oned = one(T) ; zeroμ = ϵμend ; oneμ = ○̂
+        # d̂ = (d-ϵdend)/(one(eltype(d)) - ϵdend)
+        # μ(ϵμend, ○̂, d̂), d̂, exact
+        # if ϵ.∂d[end] return ϵμend, 0, exact
+        # else return ○̂, 0, exact end
+    else
+        zerod = ϵ.d[i] ; oned = ϵ.d[i+1] ; zeroμ = ϵ.μ[i] ; oneμ = ϵ.μ[i+1]
+    end
+    d̂ = (d - zerod)/(oned - zerod)
+    μ(zeroμ, oneμ, d̂), d̂, exact
+    # ϵ.∂d[i+1] && return ϵ.μ[i], 0, exact
+    # return ϵ.μ[i+1], 0, exact
+end
+function ∂(x, ϵ) # x ∈ cl(ϵ)
     for (i, d) = enumerate(ϵ.d)
-        iszero(ϵ.ρ[i]) && continue
-        x̂ = μ(x, d)
-        _zero, _one = ϵ.μ[i] - ϵ.ρ[i], ϵ.μ[i] + ϵ.ρ[i]
-        (x̂ == _zero || x̂ == _one) && return true
+        ρ = ϵ.ρ[i]
+        iszero(ρ) && continue
+        μ = ϵ.μ[i]
+        μ̂, _, _ = μ(x, d)
+        ẑero, ône = μ - ρ,μ + ρ
+        (μ̂ == ẑero || μ̂ == ône) && return true
     end
     false
 end
-function μ(ϵ::∃{T}, d::T)::T where {T<:Real}
-    isempty(ϵ.d) && return ○(T)
-    for (i, d̂) = enumerate(ϵ.d)
-        d == d̂ && return ϵ.μ[i]
-    end
-    d̂ = sort(ϵ.d)
-    _zero = iszero(d̂[1]) ? ϵ.d[1] : ○(T)
-    _one = isone(d̂[end]) ? ϵ.d[end] : ○(T)
-    if d < d̂[1]
-        ∂ = ϵ.∂[1]
-        ∂ == :ZEROONE && return ϵ.μ[1]
-        ∂ == :ONEZERO && return _zero
-    elseif d̂[end] < d
-        ∂ = ϵ.∂[end]
-        ∂ == :ZEROONE && return _one
-        ∂ == :ONEZERO && return ϵ.μ[end]
-    else
-        i = findlast(d̃ -> d̃ < d, d̂)
-        ∂ = ϵ.∂[i+1]
-        ∂ == :ZEROONE && return ϵ.d[d̂[i+1]]
-        ∂ == :ONEZERO && return ϵ.d[d̂[i]]
-    end
-    ○(T)
-end
-function ∃(x::∃{T}, ϵchecked::Union{∃{T},Nothing}, ϵ̂::∃{T}) where {T<:Real}
-    ∂(x, ϵ̂) && return ○(T)
-    isnothing(ϵchecked) && ( x ⩀ ϵ̂ || return ○(T) )
-    x ∩ ϵ̂ && return ϵ̂.∃(x)
+function ∃(x, ϵ, ϵ̂) # x ∈ cl(ϵ̂)
+    ○̂ = ○(eltype(ϵ̂.μ))
+    ∂(x, ϵ̂) && return ○̂
+    isnothing(ϵ) && ( x ⫉ ϵ̂ || return ○̂ )
+    x̂ = unit(x, ϵ̂)
+    x ∩ ϵ̂ && return ϵ̂.∃(x̂)
     for ϵ̃ = ϵ̂.ϵ
-        ϵ̃ == ϵchecked && continue
-        x ⩀ ϵ̃ || continue
-        x ∩ ϵ̃ && return ϵ̃.∃(x)
+        ϵ̃ == ϵ && continue
+        x ⫉ ϵ̃ || continue
+        x ∩ ϵ̃ && return ϵ̃.∃(x̂)
     end
-    isnothing(ϵ̂.∃̂) && return ○(T)
+    isnothing(ϵ̂.∃̂) && return ○̂
     ∃(x, ϵ̂, ϵ̂.∃̂)
 end
-closed_zero(mode::Symbol) = mode == :ONEZERO || mode == :ONEONE
-closed_one(mode::Symbol) = mode == :ZEROONE || mode == :ONEONE
-function ∅(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
-    (cone₁ && czero₂ ? one₁ < zero₂ : one₁ ≤ zero₂) && return true
-    (cone₂ && czero₁ ? one₂ < zero₁ : one₂ ≤ zero₁) && return true
-    false
+# closed_zero(mode::Symbol) = mode == :ONEZERO || mode == :ONEONE
+# closed_one(mode::Symbol) = mode == :ZEROONE || mode == :ONEONE
+# function ∅(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
+#     (cone₁ && czero₂ ? one₁ < zero₂ : one₁ ≤ zero₂) && return true
+#     (cone₂ && czero₁ ? one₂ < zero₁ : one₂ ≤ zero₁) && return true
+#     false
+# end
+# [0,1] ⊆ [0,1] : true,true : true
+# ]0,1] ⊆ [0,1] : false,true : true
+# [0,1] ⊆ ]0,1] : true,false : false
+# ]0,1] ⊆ ]0,1] : false, false : true
+function ⊆(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
+    żero = zero₂ < zero₁ || (zero₂ == zero₁ && (!czero₁ || czero₂))
+    ȯne = one₁ < one₂ || (one₁ == one₂ && (!cone₁ || cone₂))
+    żero && ȯne
 end
-function ⩀(ϵ::∃, ϵ̂::∃)
+# ϵ, ϵ̂=ϵmin([0.0], [0.5], [0.05]), ϵmin([0.0], [0.5], [0.04])
+# i,d=1,ϵ̂.d[1]
+function ⫉(ϵ, ϵ̂)
     for (i, d) ∈ enumerate(ϵ̂.d)
-        d ∈ ϵ.d && continue
-        x = μ(ϵ, d)
-        _zero, _one = ϵ̂.μ[i] - ϵ̂.ρ[i], ϵ̂.μ[i] + ϵ̂.ρ[i]
-        ∅(x, x, true, true, _zero, _one, closed_zero(ϵ̂.∂[i]), closed_one(ϵ̂.∂[i+1])) && return false
+        ρ̂ = ϵ̂.ρ[i]
+        iszero(ρ̂) && continue
+        μ̂ = ϵ̂.μ[i]
+        μ, iϵ, exact = μ(ϵ, d)
+        ρ = exact ? ϵ.ρ[iϵ] : zero(eltype(ϵ.ρ))
+        żero, ȯne = μ - ρ, μ + ρ
+        ẑero, ône = μ̂ - ρ̂, μ̂ + ρ̂
+        # _∂zero = ∂mode(ϵ, d)
+        # _∂one = ∂mode(ϵ, d)
+        # ∂̂zero = ϵ̂.∂[i]
+        # ∂̂one = ϵ̂.∂[i+1]
+        !⊆(żero, ȯne, ϵ.∂[iϵ], closed_one(_∂one), ẑero, ône, closed_zero(∂̂zero), closed_one(∂̂one)) && return false
     end
     true
 end
 function Base.:∩(ϵ::∃, ϵ̂::∃)
-    ϵ ⩀ ϵ̂ || return false
-    ϵ̂ ⩀ ϵ || return false
+    ϵ ⫉ ϵ̂ || return false
+    ϵ̂ ⫉ ϵ || return false
     for (i, d) ∈ enumerate(ϵ.d)
         j = findfirst(==(d), ϵ̂.d)
         isnothing(j) && continue
@@ -141,26 +188,31 @@ function Base.:∩(ϵ::∃, ϵ̂::∃)
     any(ϵ̃ -> ϵ ∩ ϵ̃, ϵ̂.ϵ)
 end
 function ∃!(ϵ::∃, Ω::∀)
-    intersects, ϵ̂ = ϵ ∩ Ω
-    intersects && return nothing
-    ϵ̃ = ∃{eltype(ϵ.d)}(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ̂, ϵ.ϵ)
+    ϵ̂ = ∃̂(ϵ, Ω)
+    ϵ̂ === Ω && ( ϵ̃ = ∃(ϵ, Ω) ; push!(Ω.ϵ, ϵ̃) ; return ϵ̃ )
+    ϵ̇ = ∃(ϵ, ϵ̂)
+    ϵ̇ ∩ ϵ̂ && return nothing
+    any(ϵ̃ -> ϵ̇ ∩ ϵ̃, ϵ̂.ϵ) && return nothing
+    push!(ϵ̂.ϵ, ϵ̇)
+end
+function Base.push!(ϵ̂::Pretopology, ϵ::∃)
+    ϵ̃ = ∃(ϵ, ϵ̂)
     push!(ϵ̂.ϵ, ϵ̃)
     ϵ̃
 end
-function Base.:∩(ϵ::∃, ϵ̂::Topology)
-    ϵ′ = Ref{Topology}(ϵ̂)
-    ϵdepth = Ref(0)
-    intersects = any(ϵ̃ -> ∩(ϵ, ϵ̃, 1, ϵ′, ϵdepth), ϵ̂.ϵ)
-    intersects, ϵ′[]
+function ∃̂(ϵ::∃, ϵ̂::Pretopology)
+    ϵϵ = filter(ϵ̃ -> ϵ ⫉ ϵ̃, ϵ̂.ϵ)
+    isempty(ϵϵ) && return ϵ̂
+    1 < length(ϵϵ) && return
+    ϵ̃ = only(ϵϵ)
+    ∃̂(ϵ, ϵ̃)
 end
-function Base.:∩(ϵ::∃, ϵ̂::Topology, ϵ̂depth::Int, ϵ′::Ref{Topology}, ϵdepth::Ref{<:Integer})
-    ϵ ⩀ ϵ̂ || return false
-    if ϵdepth[] < ϵ̂depth
-        ϵ′[] = ϵ̂
-        ϵdepth[] = ϵ̂depth
-    end
-    ϵ ∩ ϵ̂ && return true
-    any(ϵ̃ -> ∩(ϵ, ϵ̃, ϵ̂depth + 1, ϵ′, ϵdepth), ϵ̂.ϵ)
+function Θ(ϵ::Pretopology)
+    n = length(ϵ.ϵ)
+    for ϵ̂ = ϵ.ϵ n += Θ(ϵ̂)end
+    n
 end
 
-end
+# end
+
+
