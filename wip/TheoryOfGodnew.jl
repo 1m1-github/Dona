@@ -29,6 +29,7 @@ struct ∃{T<:Real} <: Topology{T}
     ∃̂::Topology{T}
     ϵ::Vector{∃{T}}
 end
+const complexity=Dict{∃, BigInt}()
 index(n::Vector{<:Integer}) = (collect(i) for i ∈ Iterators.product((1:n̂ for n̂ ∈ n)...))
 function ∃(n::Vector{<:Integer}, ϵ::∃{T}, Ξ::Dict{<:Topology{T},T}=Dict())::Array{T, length(n)} where {T<:Real}
     ∃̂ = fill(○(T), n...)
@@ -146,22 +147,30 @@ function ∃!(ϵ::∃, Ω::∀)
     intersects && return nothing
     ϵ̃ = ∃{eltype(ϵ.d)}(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ̂, ϵ.ϵ)
     push!(ϵ̂.ϵ, ϵ̃)
+    ϵ′ = ϵ̃
+    while !(ϵ′.∃̂ isa ∀)
+        complexity[ϵ′.∃̂] += 1
+        ϵ′ = ϵ′.∃̂
+    end
     ϵ̃
 end
 function Base.:∩(ϵ::∃, ϵ̂::Topology)
-    ϵ′ = Ref{Topology}(ϵ̂)
-    ϵdepth = Ref(0)
-    intersects = any(ϵ̃ -> ∩(ϵ, ϵ̃, 1, ϵ′, ϵdepth), ϵ̂.ϵ)
-    intersects, ϵ′[]
+    # ϵ′ = Ref{Topology}(ϵ̂)
+    # ϵdepth = Ref(0)
+    ϵ′ = only(filter(ϵ̃ -> ϵ ⩀ ϵ̃, ϵ̂.ϵ))
+    ϵ ∩ ϵ′ && return true
+    any(ϵ̃ -> ∩(ϵ, ϵ̃), ϵ′.ϵ)
+    # intersects = any(ϵ̃ -> ∩(ϵ, ϵ̃, 1, ϵ′, ϵdepth), ϵ̂.ϵ)
+    # intersects, ϵ′[]
 end
-function Base.:∩(ϵ::∃, ϵ̂::Topology, ϵ̂depth::Int, ϵ′::Ref{Topology}, ϵdepth::Ref{<:Integer})
-    ϵ ⩀ ϵ̂ || return false
-    if ϵdepth[] < ϵ̂depth
-        ϵ′[] = ϵ̂
-        ϵdepth[] = ϵ̂depth
-    end
-    ϵ ∩ ϵ̂ && return true
-    any(ϵ̃ -> ∩(ϵ, ϵ̃, ϵ̂depth + 1, ϵ′, ϵdepth), ϵ̂.ϵ)
-end
+# function Base.:∩(ϵ::∃, ϵ̂::Topology, ϵ̂depth::Int, ϵ′::Ref{Topology}, ϵdepth::Ref{<:Integer})
+#     # ϵ ⩀ ϵ̂ || return false
+#     if ϵdepth[] < ϵ̂depth
+#         ϵ′[] = ϵ̂
+#         ϵdepth[] = ϵ̂depth
+#     end
+#     ϵ ∩ ϵ̂ && return true
+#     any(ϵ̃ -> ∩(ϵ, ϵ̃, ϵ̂depth + 1, ϵ′, ϵdepth), ϵ̂.ϵ)
+# end
 
 # end
