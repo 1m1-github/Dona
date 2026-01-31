@@ -28,18 +28,18 @@ struct ∃{T<:Real} <: Pretopology{T}
     d::Vector{T} # sorted, distinct
     μ::Vector{T} # length(μ) == length(d)
     ρ::Vector{T} # length(ρ) == length(d)
-    ∂::Vector{Bool} # length(∂) == 2length(d), ∂[i] <=> [μ-ρ,..., ∂[2i] <=> ...,μ+ρ]
-    # ∂d::Vector{Bool} # length(∂d) == length(d) + 1, ∂d[i] <=> [d[i-1],d[i]... , zero xor one closed, no ambiguity between d,μ,ρ,∂
+    ∂::Vector{Bool} # length(∂) == 2length(d), ∂[i] <=> [μ-ρ,..., ∂[2i] <=> ...,μ+ρ] both in d=i
+    ∂d::Vector{Bool} # length(∂d) == 2(length(d) + 1), ∂d[i] <=> [d[i-1],d[i]..., ∂d[2i] <=> ...d[i-1],d[i]]
     ∃::Function # X(ρ=0) ∈ ∃ -> I
     ∃̂::Pretopology{T} # ∃ ⫉ ∃̂ ⩓ ∃ ∩ ∃̂ = ∅
     ϵ::Vector{∃{T}} # ϵ ⫉ ∃ ⩓ ϵ ∩ ∃ = ∅
 end # todo check validity for outside creators
 # ∃(ϵ::∃) = ∃{eltype(ϵ.d)}(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ.∃̂, ϵ.ϵ)
-# ∃(ϵ, ϵ̂) = ∃(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∂d, ϵ.∃, ϵ̂, ϵ.ϵ)
-∃(ϵ, ϵ̂) = ∃(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ̂, ϵ.ϵ)
+∃(ϵ, ϵ̂) = ∃(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∂d, ϵ.∃, ϵ̂, ϵ.ϵ)
+# ∃(ϵ, ϵ̂) = ∃(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ̂, ϵ.ϵ)
 # X(ϵ::∃, d, μ) = ∃("", d, μ, zeros(d), close(d), _ -> one(eltype(d)), ϵ, [])
-X(ϵ, μ) = ∃("", ϵ.d, μ, zeros(ϵ.d), fill(true, length(ϵ.∂)), _ -> one(eltype(ϵ.μ)), ϵ, []) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
-# X(ϵ, μ) = ∃("", ϵ.d, μ, zeros(ϵ.d), fill(true, length(ϵ.∂)), ϵ.∂d, _ -> one(eltype(ϵ.μ)), ϵ, []) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
+# X(ϵ, μ) = ∃("", ϵ.d, μ, zeros(ϵ.d), fill(true, length(ϵ.∂)), _ -> one(eltype(ϵ.μ)), ϵ, []) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
+X(ϵ, μ) = ∃("", ϵ.d, μ, zeros(ϵ.d), fill(true, length(ϵ.∂)), fill(true, length(ϵ.∂d)), _ -> one(eltype(ϵ.μ)), ϵ, []) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
 # X(ϵ::∃, μ) = X(ϵ, ϵ.d, μ)
 # unit(x::∃, ϵ::∃) = ∃("", x.d, x.μ - ϵ.μ, zeros(x.d), close(ϵ.d), _ -> one(eltype(ϵ.d)), ϵ, [])
 unit(x, ϵ) = X(ϵ, x.μ - ϵ.μ)
@@ -65,42 +65,32 @@ end
 # ∂mode[1] ∈ [00: 1/2, 01: ]
 # 0 ... ∂mode[1] ... μ(ϵ, ϵ.d[1]) ... ∂mode[2] ... μ(ϵ, ϵ.d[2]) ... ∂mode[end-1] ... μ(ϵ, ϵ.d[end]) ... ∂mode[end] ... 1
 μ(a, b, x) = a + (b-a)*x
-function μ(ϵ, d)
+function μρ(ϵ, d)
     T = eltype(d)
     ○̂ = ○(T)
-    exact = true
-    isempty(ϵ.d) && return ○̂, 0, exact
+    isempty(ϵ.d) && return ○̂, 0, true, true
     i = searchsortedfirst(ϵ.d, d)
-    ϵ.d[i] == d && return ϵ.μ[i], i, exact
-    ϵd1 = ϵ.d[1] ; ϵdend = ϵ.d[end] ; ϵμ1 = ϵ.μ[1] ; ϵμend = ϵ.μ[end]
-    exact = false
+    ϵ.d[i] == d && return ϵ.μ[i], ϵ.ρ[i], ϵ.∂[i], ϵ.∂[2i]
+    ϵd1 = ϵ.d[1] ; ϵdend = ϵ.d[end] ; ϵμ1 = ϵ.μ[1]
+    zerod = ϵd1 ; oned = ϵd1 ; zeroμ = ○̂ ; oneμ = ○̂ ; zeroρ = zero(T) ; oneρ = zero(T)
     if d < ϵd1
-        zerod = zero(T) ; oned = ϵd1 ; zeroμ = ○̂ ; oneμ = ϵμ1
-        # d̂ = d/ϵd1
-        # μ(○̂, ϵμ1, d̂), d̂, exact
-        # if ϵ.∂d[1] return μ(○̂, ϵμ1, d/ϵd1), 0, exact
-        # if ϵ.∂d[1] return ○̂, 0, exact
-        # else return ϵμ1, 0, exact end
+        zerod = zero(T) ; oneμ = ϵμ1 ; oneρ = ϵ.ρ[1]
     elseif ϵdend < d
-        zerod = ϵdend ; oned = one(T) ; zeroμ = ϵμend ; oneμ = ○̂
-        # d̂ = (d-ϵdend)/(one(eltype(d)) - ϵdend)
-        # μ(ϵμend, ○̂, d̂), d̂, exact
-        # if ϵ.∂d[end] return ϵμend, 0, exact
-        # else return ○̂, 0, exact end
+        zerod = ϵdend ; oned = one(T) ; zeroμ = ϵ.μ[end] ; zeroρ = ϵ.ρ[end]
+        i -= 1
     else
-        zerod = ϵ.d[i] ; oned = ϵ.d[i+1] ; zeroμ = ϵ.μ[i] ; oneμ = ϵ.μ[i+1]
+        oned = ϵ.d[i+1] ; zeroμ = ϵμ1 ; oneμ = ϵ.μ[i+1] ; zeroρ = ϵ.ρ[i] ; oneρ = ϵ.ρ[i+1]
     end
     d̂ = (d - zerod)/(oned - zerod)
-    μ(zeroμ, oneμ, d̂), d̂, exact
-    # ϵ.∂d[i+1] && return ϵ.μ[i], 0, exact
-    # return ϵ.μ[i+1], 0, exact
+    # μ(zeroμ, oneμ, d̂), μ(zeroρ, oneρ, d̂), ϵ.∂[i] && ϵ.∂[i+1], ϵ.∂[2i] && ϵ.∂[2(i+1)]
+    μ(zeroμ, oneμ, d̂), μ(zeroρ, oneρ, d̂), ϵ.∂d[i], ϵ.∂d[i+1]
 end
 function ∂(x, ϵ) # x ∈ cl(ϵ)
     for (i, d) = enumerate(ϵ.d)
         ρ = ϵ.ρ[i]
         iszero(ρ) && continue
         μ = ϵ.μ[i]
-        μ̂, _, _ = μ(x, d)
+        μ̂, _ = μρ(x, d)
         ẑero, ône = μ - ρ,μ + ρ
         (μ̂ == ẑero || μ̂ == ône) && return true
     end
@@ -120,13 +110,6 @@ function ∃(x, ϵ, ϵ̂) # x ∈ cl(ϵ̂)
     isnothing(ϵ̂.∃̂) && return ○̂
     ∃(x, ϵ̂, ϵ̂.∃̂)
 end
-# closed_zero(mode::Symbol) = mode == :ONEZERO || mode == :ONEONE
-# closed_one(mode::Symbol) = mode == :ZEROONE || mode == :ONEONE
-# function ∅(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
-#     (cone₁ && czero₂ ? one₁ < zero₂ : one₁ ≤ zero₂) && return true
-#     (cone₂ && czero₁ ? one₂ < zero₁ : one₂ ≤ zero₁) && return true
-#     false
-# end
 # [0,1] ⊆ [0,1] : true,true : true
 # ]0,1] ⊆ [0,1] : false,true : true
 # [0,1] ⊆ ]0,1] : true,false : false
@@ -136,53 +119,56 @@ function ⊆(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone
     ȯne = one₁ < one₂ || (one₁ == one₂ && (!cone₁ || cone₂))
     żero && ȯne
 end
-# ϵ, ϵ̂=ϵmin([0.0], [0.5], [0.05]), ϵmin([0.0], [0.5], [0.04])
-# i,d=1,ϵ̂.d[1]
 function ⫉(ϵ, ϵ̂)
     for (i, d) ∈ enumerate(ϵ̂.d)
         ρ̂ = ϵ̂.ρ[i]
         iszero(ρ̂) && continue
         μ̂ = ϵ̂.μ[i]
-        μ, iϵ, exact = μ(ϵ, d)
-        ρ = exact ? ϵ.ρ[iϵ] : zero(eltype(ϵ.ρ))
+        μ, ρ, zero∂, one∂ = μρ(ϵ, d)
         żero, ȯne = μ - ρ, μ + ρ
         ẑero, ône = μ̂ - ρ̂, μ̂ + ρ̂
-        # _∂zero = ∂mode(ϵ, d)
-        # _∂one = ∂mode(ϵ, d)
-        # ∂̂zero = ϵ̂.∂[i]
-        # ∂̂one = ϵ̂.∂[i+1]
-        !⊆(żero, ȯne, ϵ.∂[iϵ], closed_one(_∂one), ẑero, ône, closed_zero(∂̂zero), closed_one(∂̂one)) && return false
+        !⊆(żero, ȯne, zero∂, one∂, ẑero, ône, ϵ.∂[i], ϵ.∂[2i]) && return false
     end
     true
 end
+# ∩ false:
+# [0,1] ∩ [2,3]
+# [0,1] ∩ ]1,3]
+# [0,1[ ∩ ]1,3]
+# ∩(0,1,true,true,2,3,true,true)
+# ∩(0,1,true,true,1,3,false,true)
+# ∩(0,1,true,false,1,3,false,true)
+# ∩(0,2,true,false,1,3,false,true)
+function Base.:∩(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
+    ẑero = max(zero₁, zero₂)
+    ône = min(one₁, one₂)
+    ẑero < ône && return true
+    ẑero ≠ ône && return false
+    cẑero = zero₂ < zero₁ ? czero₁ : (zero₁ < zero₂ ? czero₂ : czero₁ && czero₂)
+    cône = one₁ < one₂ ? cone₁ : (one₂ < one₁ ? cone₂ : cone₁ && cone₂)
+    cẑero && cône
+end
+# function ⩀()
+#     for (i, d) ∈ enumerate(ϵ.d)
+#         żero, ȯne = ϵ.μ[i] - ϵ.ρ[i], ϵ.μ[i] + ϵ.ρ[i]
+#         μ̂, ρ̂, ẑero∂, ône∂ = μρ(ϵ̂, d)
+#         ẑero, ône = μ̂ - ρ̂, μ̂ + ρ̂
+#         !∩(żero, ȯne, ϵ.∂[i], ϵ.∂[2i], ẑero, ône, ẑero∂, ône∂) && return false
+#     end
+#     true
+# end
+# d̂: 0.1 ... 0.2 
+# ϵ: [0.5±0.1[ ... [0.5+x±0.1] ... ]0.6±0.1]
+# ϵ̂: [0.3±0.1[ ... [0.3+x±0.1] ... ]0.4±0.1]
 function Base.:∩(ϵ::∃, ϵ̂::∃)
-    ϵ ⫉ ϵ̂ || return false
-    ϵ̂ ⫉ ϵ || return false
-    for (i, d) ∈ enumerate(ϵ.d)
-        j = findfirst(==(d), ϵ̂.d)
-        isnothing(j) && continue
-        zero₁, one₁ = ϵ.μ[i] - ϵ.ρ[i], ϵ.μ[i] + ϵ.ρ[i]
-        zero₂, one₂ = ϵ̂.μ[j] - ϵ̂.ρ[j], ϵ̂.μ[j] + ϵ̂.ρ[j]
-        ∅(
-            zero₁,
-            one₁, 
-            closed_zero(ϵ.∂[i]), 
-            closed_one(ϵ.∂[i+1]), 
-            zero₂, 
-            one₂, 
-            closed_zero(ϵ̂.∂[j]), 
-            closed_one(ϵ̂.∂[j+1])) && return false
-    end
-    n, m = length(ϵ.d), length(ϵ̂.d)
-    if 0 < n && 0 < m
-        mode₁ = ϵ.∂[n+1]
-        mode₂ = ϵ̂.∂[m+1]
-        mode₁ ≠ mode₂ && return false
-        if mode₁ == :ZEROONE
-            tail₁ = ϵ.μ[n]
-            tail₂ = ϵ̂.μ[m]
-            tail₁ ≠ tail₂ && return false
-        end
+    d̂ = sort(∪(ϵ.d, ϵ̂.d))
+    for (i, d) ∈ d̂
+        μ, ρ, zero∂, one∂ = μρ(ϵ, d)
+        μ̂, ρ̂, ẑero∂, ône∂ = μρ(ϵ̂, d)
+        żero, ȯne = μ - ρ, μ + ρ
+        ẑero, ône = μ̂ - ρ̂, μ̂ + ρ̂
+        ∩(żero, ȯne, zero∂, one∂, ẑero, ône, ẑero∂, ône∂) && return true
+
     end
     isempty(ϵ̂.ϵ) && return true
     any(ϵ̃ -> ϵ ∩ ϵ̃, ϵ̂.ϵ)
@@ -214,5 +200,3 @@ function Θ(ϵ::Pretopology)
 end
 
 # end
-
-
