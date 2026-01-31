@@ -9,26 +9,29 @@ const Ω = ∀{T}([])
 const Ξ = Dict{∃{T},T}()
 const ORIGIN = time()
 
-ϵmin(d, μ, ρ) = ∃{T}("", d, μ, ρ, fill(:ONEONE, length(d) + 1), _ -> one(T), Ω, [])
-Θ(Ω)
-ϵ = ∃{T}("1", [0.0], [0.5], [0.1], [:ONEONE,:ONEONE], _->one(T), Ω, [])
-# ∃!(ϵ, Ω)
-ϵ2 = ∃{T}("2", [0.0], [0.7], [0.05], [:ONEONE,:ONEONE], _->one(T), Ω, [])
-# ∃!(ϵ2, Ω)
-ϵ3 = ∃{T}("3", [0.0,0.1], [0.7,0.1], [0.01,0.01], [:ONEONE,:ONEONE], _->one(T), Ω, [])
-# ∃!(ϵ3, Ω)
-Θ(Ω)
+using Test
 
-⫉(ϵmin([0.0], [0.5], [0.05]), ϵmin([0.0], [0.5], [0.04]))
+Ω.ϵ
+# Ω.ϵ[1].ϵ
 
-ϵ̂ = ∃̂(ϵ, Ω)
+ϵ = ∃{T}("1", [0.1], [0.1], [0.1], [true,true], _->one(T), Ω, [])
+n = [3]
+@test ∃(n, ϵ, Ξ) == [0.5,1.0,0.5]
+∃!(ϵ, Ω)
+@test Θ(Ω) == 1
+@test Ω.ϵ[1] == ϵ
 
-∅(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
-∅(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
-∅(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
-∅(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
-∅(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
-∅(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
+ϵ2 = ∃{T}("2", [0.1], [0.1], [0.1], [true,true], _->one(T), Ω, [])
+∃!(ϵ2, Ω)
+@test Θ(Ω) == 1
+
+ϵ3 = ∃{T}("3", [0.1,0.2], [0.1,0.1], [0.1,0.1], [true,true,true,true], _->one(T), Ω, [])
+∃!(ϵ3, Ω)
+@test Θ(Ω) == 1
+
+ϵ4 = ∃{T}("4", [0.1,0.4], [0.1,0.1], [0.1,0.1], [true,true,false,true], _->one(T), Ω, [])
+∃!(ϵ4, Ω)
+@test Θ(Ω) == 2
 
 # dimensions are dt, dx, dy, ...
 abstract type Peripheral{T<:Real} end
