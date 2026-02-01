@@ -10,8 +10,12 @@ I = [ZERO < ○ < ONE] denotes a unit 1-dim space of information with origin ○
 ϵ ∈ ∃ defines its existence inside an Ω using an origin vector (μ) and a radius vector (ρ) and a closed vs. open in each direction (∂) vector, these vectors are finite and all other dimensional coordinates of ϵ follow from linear interpolation.
 If we use a horizontal axis for dimension and a vertical axis for coordinate in the dimension, for any ϵ, the chart looks like a stepwise linear function with finite non-zero radius intervals and zero interval points within the interpolated regions.
 Each child ϵ is a subset of its parent in the active dimensions (0 < ρ) declared by the parent (as opposed to undeclared dimensions where 0==ρ).
+
+god ⊊ God ⊊ GOD === Ω === I^I === I^(.) === [ZERO < ○ < ONE]^(.)
 """
 # module TheoryOfGod
+
+using Base.Threads, ConcurrentCollections
 
 ○(::Type{T}) where {T<:Real} = one(T) / (one(T) + one(T))
 abstract type Pretopology{T<:Real} end
@@ -32,19 +36,17 @@ end
 X(ϵ, μ) = ∃("", ϵ.d, μ, zero(ϵ.d), fill(true, length(ϵ.∂)), _ -> one(eltype(ϵ.d)), ϵ, ∃{eltype(ϵ.d)}[]) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
 unit(x, ϵ) = X(ϵ, (x.μ .- (ϵ.μ .- ϵ.ρ)) ./ ϵ.ρ ./ 2)
 index(n) = (collect(i) for i ∈ Iterators.product((1:n̂ for n̂ ∈ n)...))
-function ∃(n::Vector{<:Integer}, ϵ, Ξ=Dict())
-    T = eltype(ϵ.μ)
+function ∃(n::Vector{<:Integer}, ϵ::∃{T}, Ξ=ConcurrentDict{∃{T},T}()) where {T<:Real}
     ○̂ = ○(T)
     ϵ̂ = fill(○̂, n...)
     ẑero = ϵ.μ - ϵ.ρ
-    # i = collect(index(n))[2]
-    for i = index(n)
+    @threads for i = collect(index(n))
         μ = fill(○̂, length(ϵ.d))
         for î = eachindex(ϵ.d)
             μ[î] = isone(n[î]) ? ϵ.μ[î] : ẑero[î] + 2 * ϵ.ρ[î] * T(i[î] - 1) / T(n[î] - 1)
         end
         x = X(ϵ, μ) # x ∈ cl(ϵ)
-        if haskey(Ξ, x) # todo test
+        if haskey(Ξ, x)
             ϵ̂[i...] = Ξ[x]
             continue
         end
@@ -81,7 +83,7 @@ function ∂(x, ϵ) # x ∈ cl(ϵ)
     end
     false
 end
-function ⊆(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
+function Base.issubset(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
     żero = zero₂ < zero₁ || (zero₂ == zero₁ && (!czero₁ || czero₂))
     ȯne = one₁ < one₂ || (one₁ == one₂ && (!cone₁ || cone₂))
     żero && ȯne
@@ -107,8 +109,6 @@ function Base.:∩(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂
     cône = one₁ < one₂ ? cone₁ : (one₂ < one₁ ? cone₂ : cone₁ && cone₂)
     cẑero && cône
 end
-# ϵ=x
-# ϵ, ϵ̂=ϵ̇, ϵ̂
 function Base.:∩(ϵ, ϵ̂)
     T = eltype(ϵ.d)
     d̂ = sort(∪(ϵ.d, ϵ̂.d))
@@ -124,7 +124,6 @@ function Base.:∩(ϵ, ϵ̂)
     μ, ρ, zero∂, one∂ = μρ(ϵ, zero(T))
     μ̂, ρ̂, ẑero∂, ône∂ = μρ(ϵ̂, zero(T))
     μprev, μ̂prev = μ, μ̂
-    # (i, d) = collect(enumerate(d̂))[3]
     for (i, d) = enumerate(d̂)
         if 1 < i
             μ, ρ, zero∂, one∂ = μρ(ϵ, d)
@@ -134,23 +133,21 @@ function Base.:∩(ϵ, ϵ̂)
         ẑero, ône = μ̂ - ρ̂, μ̂ + ρ̂
         !∩(żero, ȯne, zero∂, one∂, ẑero, ône, ẑero∂, ône∂) && return false
         i == 1 && continue
-        (μ - μ̂) * (μprev - μ̂prev) < 0 && return false
+        (μ - μ̂) * (μprev - μ̂prev) < 0 && return true
         μprev, μ̂prev = μ, μ̂
     end
     isempty(ϵ̂.ϵ) && return true
     all(ϵ̃ -> ϵ ∩ ϵ̃, ϵ̂.ϵ)
 end
-# ϵ̂=ϵ
 function ∃̇(x, ϵ) # x ∈ cl(ϵ̂)
     ○̂ = ○(eltype(ϵ.μ))
     ∂(x, ϵ) && return ○̂
-    x ∩ ϵ && return ϵ.∃(unit(x, ϵ))
     for ϵ̂ = ϵ.ϵ
         x ∩ ϵ̂ && return ϵ̂.∃(unit(x, ϵ̂))
     end
+    x ∩ ϵ && return ϵ.∃(unit(x, ϵ))
     ○̂
 end
-# ϵ=ϵ4
 function ∃!(ϵ, Ω::∀)
     ϵ̂ = ∃̂(ϵ, Ω)
     ϵ̂ === Ω && ( ϵ̃ = ∃(ϵ, Ω) ; push!(Ω.ϵ, ϵ̃) ; return ϵ̃ )
@@ -171,10 +168,13 @@ function ∃̂(ϵ, ϵ̂)
     ϵ̃ = only(ϵϵ)
     ∃̂(ϵ, ϵ̃)
 end
-function Θ(ϵ)
-    n = length(ϵ.ϵ)
-    for ϵ̂ = ϵ.ϵ n += Θ(ϵ̂)end
-    n
+function Base.hash(x::∃{T}, h::UInt) where T
+    h = hash(x.d, h)
+    h = hash(x.μ, h)
+    h = hash(x.ρ, h)
+    hash(x.∂, h)
 end
+Base.:(==)(a::∃, b::∃) = a.d == b.d && a.μ == b.μ && a.ρ == b.ρ && a.∂ == b.∂
+Θ(ϵ) = 1 + sum((Θ(ϵ̂) for ϵ̂ in ϵ.ϵ), init=0)
 
 # end
