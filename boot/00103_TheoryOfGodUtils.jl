@@ -70,23 +70,23 @@ shape_not(s) = μ -> one(eltype(μ.μ)) - s(μ)
 # OBSERVATION HELPERS
 # ═══════════════════════════════════════════════════════════════════
 
-function observe_now(p, Ω; resolution=21)
+function observe_now(p; resolution=21)
     T = eltype(p.focus.μ)
     me = TravelPeripheral{T}(p.focus.ι, p.focus.d, p.focus.μ, 
-        T[1//1000, p.focus.ρ[2], p.focus.ρ[3]], [1, resolution, resolution])
-    v = observe(me, Ω)
+        T[1//1000, p.focus.ρ[2], p.focus.ρ[3]], [1, resolution, resolution], p.target)
+    v = observe(me)
     v[1, :, :]
 end
 
 function show_slice(slice)
     T = eltype(slice)
     for i in size(slice, 1):-1:1
-        println(join([slice[i, j] > ○(T) ? "●●" : "  " for j in 1:size(slice, 2)]))
+        println(join([slice[i, j] > ○(T) ? "●●" : (slice[i, j] < ○(T) ? "ii" : "  ") for j in 1:size(slice, 2)]))
     end
 end
 
-function look!(p, Ω; resolution=21)
-    slice = observe_now(p, Ω; resolution=resolution)
+function look!(p; resolution=21)
+    slice = observe_now(p; resolution=resolution)
     show_slice(slice)
     slice
 end
@@ -112,8 +112,7 @@ goto_end(p) = goto_time(p, one(eltype(p.focus.μ)))
 # ═══════════════════════════════════════════════════════════════════
 
 function new_world(T=Rational{BigInt})
-    Ω = ∀{T}([])
     dims = T[0, 1, 2]
-    me = TravelPeripheral{T}("me", dims, T[1//2, 1//2, 1//2], T[1//2, 1//2, 1//2], [21, 21, 21])
+    me = TravelPeripheral{T}("me", dims, T[1//2, 1//2, 1//2], T[1//2, 1//2, 1//2], [21, 21, 21], Ω)
     (Ω=Ω, me=me)
 end

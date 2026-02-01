@@ -19,4 +19,3 @@ create!(me, Ω, "hello", [0.1, 0.1, 0.1], _ -> one(T))
 
 # I create something private
 create!(me, Ω, UInt64(0xDEADBEEF), "secret", [0.1, 0.1, 0.1], _ -> one(T))
-

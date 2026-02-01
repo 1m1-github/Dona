@@ -1,4 +1,4 @@
-"""
+const THEORYOFGOD = """
 I = [ZERO < ○ < ONE] denotes a unit 1-dim space of information with origin ○ (no information) in its center including the corners ZERO and ONE.
 Ω = I^I an ∞-dim metric and smooth vector space.
 ∃ is a pretopology on Ω such that ϵ ∈ ∃:
@@ -13,9 +13,6 @@ Each child ϵ is a subset of its parent in the active dimensions (0 < ρ) declar
 
 god ⊊ God ⊊ GOD === Ω === I^I === I^(.) === [ZERO < ○ < ONE]^(.)
 """
-# module TheoryOfGod
-
-using Base.Threads, ConcurrentCollections
 
 ○(::Type{T}) where {T<:Real} = one(T) / (one(T) + one(T))
 abstract type Pretopology{T<:Real} end
@@ -36,7 +33,7 @@ end
 X(ϵ, μ) = ∃("", ϵ.d, μ, zero(ϵ.d), fill(true, length(ϵ.∂)), _ -> one(eltype(ϵ.d)), ϵ, ∃{eltype(ϵ.d)}[]) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
 unit(x, ϵ) = X(ϵ, (x.μ .- (ϵ.μ .- ϵ.ρ)) ./ ϵ.ρ ./ 2)
 index(n) = (collect(i) for i ∈ Iterators.product((1:n̂ for n̂ ∈ n)...))
-function ∃(n::Vector{<:Integer}, ϵ::∃{T}, Ξ=ConcurrentDict{∃{T},T}()) where {T<:Real}
+function ∃(n::Vector{<:Integer}, ϵ::∃{T}) where {T<:Real}
     ○̂ = ○(T)
     ϵ̂ = fill(○̂, n...)
     ẑero = ϵ.μ - ϵ.ρ
@@ -176,5 +173,3 @@ function Base.hash(x::∃{T}, h::UInt) where T
 end
 Base.:(==)(a::∃, b::∃) = a.d == b.d && a.μ == b.μ && a.ρ == b.ρ && a.∂ == b.∂
 Θ(ϵ) = 1 + sum((Θ(ϵ̂) for ϵ̂ in ϵ.ϵ), init=0)
-
-# end
