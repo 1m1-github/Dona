@@ -1,11 +1,13 @@
+export ∃, ∃!
+
 const THEORYOFGOD = """
 I = [ZERO < ○ < ONE] denotes a unit 1-dim space of information with origin ○ (no information) in its center including the corners ZERO and ONE.
 Ω = I^I an ∞-dim metric and smooth vector space.
-∃ is a pretopology on Ω such that ϵ ∈ ∃:
+We have a Pretopology on Ω such that ϵ ∈ ∃:
 * ϵ ⊆ Ω
-* ∃!ϵ̂: ϵ ∈ ϵ̂ ∈ ∃: ϵ|ϵ̂ ⊆ ϵ̂ <=> ϵ ⫉ ϵ̂
-* ∀ ϵ̂ ≠ ϵ ∈ ∃: ϵ̂ ∩ ϵ = ∅
-* ϵ.∃ ∈ I is arbitrary, computable and smooth fuzzy existence towards ONE=true xor ZERO=false.
+* ∃!ϵ̂: ϵ ∈ ϵ̂.ϵ: ϵ|ϵ̂ ⊆ ϵ̂ <=> ϵ ⫉ ϵ̂
+* ∀ ϵ̂ ≠ ϵ: ϵ̂ ∩ ϵ = ∅
+* ∀ x: x.ρ == 0 => ϵ.∃(x) ∈ I is arbitrary, computable and smooth fuzzy existence towards ONE=true xor ZERO=false.
 
 ϵ ∈ ∃ defines its existence inside an Ω using an origin vector (μ) and a radius vector (ρ) and a closed vs. open in each direction (∂) vector, these vectors are finite and all other dimensional coordinates of ϵ follow from linear interpolation.
 If we use a horizontal axis for dimension and a vertical axis for coordinate in the dimension, for any ϵ, the chart looks like a stepwise linear function with finite non-zero radius intervals and zero interval points within the interpolated regions.
@@ -17,6 +19,7 @@ god ⊊ God ⊊ GOD === Ω === I^I === I^(.) === [ZERO < ○ < ONE]^(.)
 ○(::Type{T}) where {T<:Real} = one(T) / (one(T) + one(T))
 abstract type Pretopology{T<:Real} end
 struct ∃{T<:Real} <: Pretopology{T}
+    Ο::T
     ι::String
     d::Vector{T} # sorted, distinct
     μ::Vector{T} # length(μ) == length(d)
@@ -25,11 +28,14 @@ struct ∃{T<:Real} <: Pretopology{T}
     ∃::Function # X(ρ=0) ∈ ∃ -> I
     ∃̂::Pretopology{T} # ∃ ⫉ ∃̂ ⩓ ∃ ∩ ∃̂ = ∅
     ϵ::Vector{∃{T}} # ϵ ⫉ ∃ ⩓ ϵ ∩ ∃ = ∅
+    function ∃{T}(ι::String, d::Vector{T}, μ::Vector{T}, ρ::Vector{T}, ∂::Vector{Bool}, ∃::Function, ϵ̂::Pretopology{T}, ϵ::Vector{∃{T}}) where {T}
+        new{T}(Ο(), ι, d, μ, ρ, ∂, ∃, ϵ̂, ϵ)
+    end
 end # todo check validity for outside creators ?
 struct ∀{T<:Real} <: Pretopology{T}
     ϵ::Vector{∃{T}}
 end
-∃(ϵ, ϵ̂) = ∃(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ̂, ϵ.ϵ)
+∃(ϵ, ϵ̂) = ∃{eltype(ϵ.μ)}(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ̂, ϵ.ϵ)
 X(ϵ, μ) = ∃("", ϵ.d, μ, zero(ϵ.d), fill(true, length(ϵ.∂)), _ -> one(eltype(ϵ.d)), ϵ, ∃{eltype(ϵ.d)}[]) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
 unit(x, ϵ) = X(ϵ, (x.μ .- (ϵ.μ .- ϵ.ρ)) ./ ϵ.ρ ./ 2)
 index(n) = (collect(i) for i ∈ Iterators.product((1:n̂ for n̂ ∈ n)...))
@@ -86,16 +92,18 @@ function Base.issubset(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czer
     żero && ȯne
 end
 function ⫉(ϵ, ϵ̂)
+    x = true
     for (i, d) ∈ enumerate(ϵ̂.d)
         ρ̂ = ϵ̂.ρ[i]
         iszero(ρ̂) && continue
+        x = false
         μ̂ = ϵ̂.μ[i]
         μ, ρ, zero∂, one∂ = μρ(ϵ, d)
         żero, ȯne = μ - ρ, μ + ρ
         ẑero, ône = μ̂ - ρ̂, μ̂ + ρ̂
         !⊆(żero, ȯne, zero∂, one∂, ẑero, ône, ϵ.∂[2i-1], ϵ.∂[2i]) && return false
     end
-    true
+    !x
 end
 function Base.:∩(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
     ẑero = max(zero₁, zero₂)
@@ -145,17 +153,14 @@ function ∃̇(x, ϵ) # x ∈ cl(ϵ̂)
     x ∩ ϵ && return ϵ.∃(unit(x, ϵ))
     ○̂
 end
-function ∃!(ϵ, Ω::∀)
+function ∃!(ϵ)
     ϵ̂ = ∃̂(ϵ, Ω)
-    ϵ̂ === Ω && ( ϵ̃ = ∃(ϵ, Ω) ; push!(Ω.ϵ, ϵ̃) ; return ϵ̃ )
-    ϵ̇ = ∃(ϵ, ϵ̂)
-    ϵ̇ ∩ ϵ̂ && return nothing
-    any(ϵ̃ -> ϵ̇ ∩ ϵ̃, ϵ̂.ϵ) && return nothing
-    push!(ϵ̂.ϵ, ϵ̇)
-end
-function Base.push!(ϵ̂, ϵ)
+    any(ϵ̃ -> ϵ ∩ ϵ̃, ϵ̂.ϵ) && return nothing
+    lock(L)
     ϵ̃ = ∃(ϵ, ϵ̂)
+    ϵ̂ !== Ω && ϵ̃ ∩ ϵ̂ && ( unlock(L) ; return nothing )
     push!(ϵ̂.ϵ, ϵ̃)
+    unlock(L)
     ϵ̃
 end
 function ∃̂(ϵ, ϵ̂)
@@ -172,4 +177,4 @@ function Base.hash(x::∃{T}, h::UInt) where T
     hash(x.∂, h)
 end
 Base.:(==)(a::∃, b::∃) = a.d == b.d && a.μ == b.μ && a.ρ == b.ρ && a.∂ == b.∂
-Θ(ϵ) = 1 + sum((Θ(ϵ̂) for ϵ̂ in ϵ.ϵ), init=0)
+Ο(ϵ=Ω) = one(T) + sum((Ο(ϵ̂) for ϵ̂ in ϵ.ϵ), init=zero(T))
