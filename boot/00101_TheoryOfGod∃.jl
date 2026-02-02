@@ -157,7 +157,7 @@ function ∃!(ϵ)
     ϵ̂ = ∃̂(ϵ, Ω)
     any(ϵ̃ -> ϵ ∩ ϵ̃, ϵ̂.ϵ) && return nothing
     lock(L)
-    ϵ̃ = ∃(ϵ, ϵ̂)
+    ϵ̃ = ϵ̂ === ϵ.∃̂ ? ϵ̂ : ∃(ϵ, ϵ̂)
     ϵ̂ !== Ω && ϵ̃ ∩ ϵ̂ && ( unlock(L) ; return nothing )
     push!(ϵ̂.ϵ, ϵ̃)
     unlock(L)
