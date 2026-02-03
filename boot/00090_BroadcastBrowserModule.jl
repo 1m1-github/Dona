@@ -3,11 +3,12 @@ module BroadcastBrowserModule
 Main.@install HTTP, URIs
 
 import Main: LoopOS
+import Main.LoopOS: OutputPeripheral
 import Main.LoopOS: BatchProcessor, start!
 import Base.put!
 
 "Serve and execute JavaScript on an HTTP client using SSE"
-struct BroadcastBrowser <: LoopOS.OutputPeripheral
+struct BroadcastBrowser <: OutputPeripheral
     stream::HTTP.Streams.Stream
     width::Int
     height::Int
@@ -75,7 +76,7 @@ function start(root::Function, port=freeport(8888))
             height = parse(Int, params["height"])
             bb = BroadcastBrowser(stream, width, height)
             push!(CLIENTS[], bb)
-            root(port, bb)
+            root(bb)
             handle_sse(bb)
             delete!(CLIENTS[], bb)
         else
