@@ -13,7 +13,7 @@ We have a Pretopology on Ω such that ϵ ∈ ∃:
 If we use a horizontal axis for dimension and a vertical axis for coordinate in the dimension, for any ϵ, the chart looks like a stepwise linear function with finite non-zero radius intervals and zero interval points within the interpolated regions.
 Each child ϵ is a subset of its parent in the active dimensions (0 < ρ) declared by the parent (as opposed to undeclared dimensions where 0==ρ).
 
-god ⊊ God ⊊ GOD === Ω === I^I === I^(.) === [ZERO < ○ < ONE]^(.)
+ω =god ⊊ God ⊊ GOD = Ω = I^I = I^(.) = [ZERO < ○ < ONE]^(.)
 """
 
 ○(::Type{T}) where {T<:Real} = one(T) / (one(T) + one(T))
@@ -38,25 +38,7 @@ end
 ∃(ϵ, ϵ̂) = ∃{eltype(ϵ.μ)}(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ̂, ϵ.ϵ)
 X(ϵ, μ) = ∃("", ϵ.d, μ, zero(ϵ.d), fill(true, length(ϵ.∂)), _ -> one(eltype(ϵ.d)), ϵ, ∃{eltype(ϵ.d)}[]) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
 unit(x, ϵ) = X(ϵ, (x.μ .- (ϵ.μ .- ϵ.ρ)) ./ ϵ.ρ ./ 2)
-index(n) = (collect(i) for i ∈ Iterators.product((1:n̂ for n̂ ∈ n)...))
-function ∃(n::Vector{<:Integer}, ϵ::∃{T}) where {T<:Real}
-    ○̂ = ○(T)
-    ϵ̂ = fill(○̂, n...)
-    ẑero = ϵ.μ - ϵ.ρ
-    @threads for i = collect(index(n))
-        μ = fill(○̂, length(ϵ.d))
-        for î = eachindex(ϵ.d)
-            μ[î] = isone(n[î]) ? ϵ.μ[î] : ẑero[î] + 2 * ϵ.ρ[î] * T(i[î] - 1) / T(n[î] - 1)
-        end
-        x = X(ϵ, μ) # x ∈ cl(ϵ)
-        if haskey(Ξ, x)
-            ϵ̂[i...] = Ξ[x]
-            continue
-        end
-        Ξ[x] = ϵ̂[i...] = ∃̇(x, ϵ)
-    end
-    ϵ̂
-end
+
 function μρ(ϵ, d)
     T = eltype(d)
     ○̂ = ○(T)
@@ -116,7 +98,8 @@ function Base.:∩(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂
 end
 function Base.:∩(ϵ, ϵ̂)
     T = eltype(ϵ.d)
-    d̂ = sort(∪(ϵ.d, ϵ̂.d))
+    # d̂ = sort(∪(ϵ.d, ϵ̂.d))
+    d̂ = sort(ϵ.d ∪ ϵ̂.d)
     if !iszero(d̂[1])
         if !isone(d̂[end])
             d̂ = [zero(T), d̂..., one(T)]
@@ -178,3 +161,4 @@ function Base.hash(x::∃{T}, h::UInt) where T
 end
 Base.:(==)(a::∃, b::∃) = a.d == b.d && a.μ == b.μ && a.ρ == b.ρ && a.∂ == b.∂
 Ο(ϵ=Ω) = one(T) + sum((Ο(ϵ̂) for ϵ̂ in ϵ.ϵ), init=zero(T))
+t(::∀) = 1-1/(1+log(Ο()))
