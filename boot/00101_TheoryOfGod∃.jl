@@ -19,8 +19,8 @@ Each child ϵ is a subset of its parent in the active dimensions (0 < ρ) declar
 ○(::Type{T}) where {T<:Real} = one(T) / (one(T) + one(T))
 abstract type Pretopology{T<:Real} end
 struct ∃{T<:Real} <: Pretopology{T}
-    Ο::T
-    ι::String
+    Ο::T # complexity == age
+    ι::String # name todo perhaps unique amongst siblings xor id by age+name
     d::Vector{T} # sorted, distinct
     μ::Vector{T} # length(μ) == length(d)
     ρ::Vector{T} # length(ρ) == length(d)
@@ -29,16 +29,22 @@ struct ∃{T<:Real} <: Pretopology{T}
     ∃̂::Pretopology{T} # ∃ ⫉ ∃̂ ⩓ ∃ ∩ ∃̂ = ∅
     ϵ::Vector{∃{T}} # ϵ ⫉ ∃ ⩓ ϵ ∩ ∃ = ∅
     function ∃{T}(ι::String, d::Vector{T}, μ::Vector{T}, ρ::Vector{T}, ∂::Vector{Bool}, ∃::Function, ϵ̂::Pretopology{T}, ϵ::Vector{∃{T}}) where {T}
-        new{T}(Ο(), ι, d, μ, ρ, ∂, ∃, ϵ̂, ϵ)
+        new{T}(Ο(), ι, d, μ, ρ, ∂, ∃, ϵ̂, ϵ) # todo enfore sorted d
     end
 end # todo check validity for outside creators ?
 struct ∀{T<:Real} <: Pretopology{T}
     ϵ::Vector{∃{T}}
 end
+Base.zero(::∀) = ∃{T}("zero(∀)", [zero(T), one(T)], [zero(T), zero(T)], [zero(T), zero(T)], fill(true, 4), _ -> ○(T), Ω, ∃{T}[])
+Base.one(::∀) = ∃{T}("one(∀)", [zero(T), one(T)], [one(T), one(T)], [zero(T), zero(T)], fill(true, 4), _ -> ○(T), Ω, ∃{T}[])
+# zero(ϵ::∃) = ϵ.μ .- ϵ.ρ
+# one(ϵ::∃) = ϵ.μ .+ ϵ.ρ
+Base.zero(ϵ::∃) = X(ϵ, ϵ.μ .- ϵ.ρ)
+Base.one(ϵ::∃) = X(ϵ, ϵ.μ .+ ϵ.ρ)
 ∃(ϵ, ϵ̂) = ∃{eltype(ϵ.μ)}(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ̂, ϵ.ϵ)
-X(ϵ, μ) = ∃("", ϵ.d, μ, zero(ϵ.d), fill(true, length(ϵ.∂)), _ -> one(eltype(ϵ.d)), ϵ, ∃{eltype(ϵ.d)}[]) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
-unit(x, ϵ) = X(ϵ, (x.μ .- (ϵ.μ .- ϵ.ρ)) ./ ϵ.ρ ./ 2)
-
+X(ϵ, μ) = ∃{eltype(ϵ.μ)}("", ϵ.d, μ, zero(ϵ.d), fill(true, length(ϵ.∂)), _ -> one(eltype(ϵ.μ)), ϵ, ∃{eltype(ϵ.μ)}[]) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
+unit(x, ϵ) = X(ϵ, (x.μ .- zero(ϵ).μ) ./ ϵ.ρ ./ 2)
+# ϵ=x
 function μρ(ϵ, d)
     T = eltype(d)
     ○̂ = ○(T)
@@ -57,14 +63,15 @@ function μρ(ϵ, d)
     d̂ = (d - zerod)/(oned - zerod)
     zeroμ + (oneμ-zeroμ) * d̂, zero(T), true, true
 end
-function ∂(x, ϵ) # x ∈ cl(ϵ)
+# ϵ=Ω
+∂(x, ::∀) = any(zero(x).μ .== zero(T) .|| one(x).μ .== one(T))
+function ∂(x, ϵ::∃) # x ∈ cl(ϵ)
+    # (i, d) = collect(enumerate(ϵ.d))[3]
+    ẑero, ône = zero(ϵ), one(ϵ)
     for (i, d) = enumerate(ϵ.d)
-        ρ = ϵ.ρ[i]
-        iszero(ρ) && continue
-        μ = ϵ.μ[i]
+        iszero(ϵ.ρ[i]) && continue
         μ̂, _ = μρ(x, d)
-        ẑero, ône = μ - ρ,μ + ρ
-        (μ̂ == ẑero || μ̂ == ône) && return true
+        (μ̂ == ẑero.μ[i] || μ̂ == ône.μ[i]) && return true
     end
     false
 end
@@ -127,20 +134,31 @@ function Base.:∩(ϵ, ϵ̂)
     isempty(ϵ̂.ϵ) && return true
     all(ϵ̃ -> ϵ ∩ ϵ̃, ϵ̂.ϵ)
 end
+# function ∃̇(x, ϵ) # x ∈ cl(ϵ̂)
+∃̇(x) = first(∃̇(x, Ω))
+# ϵ=Ω
 function ∃̇(x, ϵ) # x ∈ cl(ϵ̂)
-    ○̂ = ○(eltype(ϵ.μ))
-    ∂(x, ϵ) && return ○̂
-    for ϵ̂ = ϵ.ϵ
-        x ∩ ϵ̂ && return ϵ̂.∃(unit(x, ϵ̂))
+    # ○̂ = ○(eltype(ϵ.μ))
+    ∂(x, ϵ) && return ○(T), true
+    # for ϵ̂ = ϵ.ϵ
+    #     x ∩ ϵ̂ && return ϵ̂.∃(unit(x, ϵ̂))
+    # end
+    # x ∩ ϵ && return ϵ.∃(unit(x, ϵ))
+    # ○̂
+    # ϵ̂ = filter(ϵ -> x ⫉ ϵ, Ω.ϵ)[1]
+    for ϵ̂ = filter(ϵ -> x ⫉ ϵ, Ω.ϵ)
+        x ∩ ϵ̂ && return ϵ̂.∃(unit(x, ϵ̂)), true
+        ∃, found = ∃̇(x, ϵ̂)
+        found && return ∃
     end
-    x ∩ ϵ && return ϵ.∃(unit(x, ϵ))
-    ○̂
+    ○(T), false
 end
+# ϵ=ϵ̂
 function ∃!(ϵ)
     ϵ̂ = ∃̂(ϵ, Ω)
     any(ϵ̃ -> ϵ ∩ ϵ̃, ϵ̂.ϵ) && return nothing
     lock(L)
-    ϵ̃ = ϵ̂ === ϵ.∃̂ ? ϵ̂ : ∃(ϵ, ϵ̂)
+    ϵ̃ = ϵ̂ === ϵ.∃̂ ? ϵ : ∃(ϵ, ϵ̂)
     ϵ̂ !== Ω && ϵ̃ ∩ ϵ̂ && ( unlock(L) ; return nothing )
     push!(ϵ̂.ϵ, ϵ̃)
     unlock(L)
@@ -160,5 +178,5 @@ function Base.hash(x::∃{T}, h::UInt) where T
     hash(x.∂, h)
 end
 Base.:(==)(a::∃, b::∃) = a.d == b.d && a.μ == b.μ && a.ρ == b.ρ && a.∂ == b.∂
-Ο(ϵ=Ω) = one(T) + sum((Ο(ϵ̂) for ϵ̂ in ϵ.ϵ), init=zero(T))
-t(::∀) = 1-1/(1+log(Ο()))
+Ο(ϵ=Ω) = one(T) + sum((Ο(ϵ̂) for ϵ̂ in ϵ.ϵ), init=zero(T)) # todo local T better
+t(::∀) = one(T)-one(T)/(one(T)+T(log(Ο()))) # todo local T better
