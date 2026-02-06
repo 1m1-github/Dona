@@ -14,13 +14,16 @@ put!(browser.processor, JS(g.♯.n[2], g.♯.n[3]))
 t = time()
 pixel = fill((one(T),one(T),one(T),one(T)), g.♯.n[2],g.♯.n[3])
 while true
+    sleep(5)
     yield()
     t̂ = time()
     dt = t̂ - t
     t = t̂
     step(g, dt)
     p̂ixel = observe(g)
+    @show p̂ixel
     δ = Δ(pixel, p̂ixel)
+    @show δ
     isempty(δ) && continue
     js = "pixel=" * write(δ, g.♯.n[2]) * "\n" * SET_PIXELS_JS
     put!(browser.processor, js)
@@ -32,7 +35,8 @@ function godBrowser(browser)
     @show "godBrowser"
     dimx, dimy, dimc = T(0.1),T(0.2),T(0.3)
     x, y = T(0.1),T(0.1)
-    g = god{T}(dimx, dimy, dimc, x, y, browser.width, browser.height)
+    # g = god{T}(dimx, dimy, dimc, x, y, browser.width, browser.height)
+    g = god{T}(dimx, dimy, dimc, x, y, T(5), T(3))
     gb = godBrowser(g, browser)
     push!(godBROWSER[], gb)
     gb
@@ -54,6 +58,7 @@ end
 function write(δ, height)
     result = []
     for (i, color) = δ
+        @show i, color
         push!(result, (i[1] - 1, height - 1 - (i[2] - 1), round.(UInt8, typemax(UInt8) * color)...))
     end
     bracket(x) = "[" * x * "]"

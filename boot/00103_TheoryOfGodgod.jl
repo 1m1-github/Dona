@@ -6,17 +6,20 @@ mutable struct god{T<:Real}
 end
 function god{T}(dimx, dimy, dimc, x, y, nx, ny)
     d = [zero(T), dimx, dimy, dimc, one(T)]
-    ∂ = fill(true, 2 * length(d))
+    # ∂ = fill(true, 2 * length(d))
+    ∂zero = [isodd(i) for i in 1:2length(d)]
     μzero = [t(Ω), x, y, ○(T), ○(T)]
     ρzero = [zero(T), one(T) - x, one(T) - y, ○(T), zero(T)]
-    ẑero = ∃{T}("", d, μzero, ρzero, ∂, _ -> ○(T), Ω, ∃{T}[])
-    # μone = fill(one(T), length(d))
-    # ρone = fill(zero(T), length(d))
-    # ône = ∃{T}("", d, μone, ρone, ∂, _ -> ○(T), Ω, ∃{T}[])
+    ẑero = ∃{T}("", d, μzero, ρzero, ∂zero, _ -> ○(T), Ω, ∃{T}[])
+    μone = fill(one(T), length(d))
+    ρone = fill(zero(T), length(d))
+    ∂one = [iseven(i) for i in 1:2length(d)]
+    ône = ∃{T}("", d, μone, ρone, ∂one, _ -> ○(T), Ω, ∃{T}[])
+    # ∃{T}("one(∀)", [zero(T), one(T)], [one(T), one(T)], [zero(T), zero(T)], fill(true, 4), _ -> ○(T), Ω, ∃{T}[])
     ♯ = Grid([1, nx, ny, 6, 1])
     v = (zero(T), zero(T), zero(T))
-    # god(♯, ẑero, ône(Ω), v)
-    god(♯, ẑero, one(Ω), v)
+    god(♯, ẑero, ône, v)
+    # god(♯, ẑero, one(Ω), v)
 end
 # length(collect(keys(Ξ)))
 # 1 2 3 4 5 6
@@ -43,11 +46,17 @@ function observe(g::god)
     end
     pixel
 end
-∃̂(∃̇) = x̂ -> begin
-# @show x̂
+∃̃(∃̇) = x̂ -> begin
+# @show "∃̂(∃̇)", x̂.μ
     t, x, y, c, _ = x̂.μ
+# @show "∃̂(∃̇)", t, x, y, c
+# @show "∃̂(∃̇)", ∃̇
+# return ∃̇(0.1,0.2,0.3)
+# return ∃̇(t, x, y)
     r, g, b, a = ∃̇(t, x, y)
+# @show "∃̂(∃̇)", r, g, b, a
     r == g == b == a == ○(T) && return one(T)
+# @show "∃̂(∃̇) ..."
     c∂ = one(T) / 4
     if c < c∂
         r
@@ -59,12 +68,23 @@ end
         a
     end
 end
-function create(g::god, name, ∃̇)
-    ϵ = g.ône - g.ẑero
-    ϵ̂ = ∃{T}(name, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ∃̂(∃̇), Ω, ∃{T}[])
-    ∃!(ϵ̂)
+# name="circle"
+# ∃̇2=(t, x, y) -> begin
+# # @show "hi"
+#     # @show name, t, x, y, x^2 + y^2
+#     # x^2 + y^2 == 0.01 ? (T(rand()), T(rand()), T(rand()), one(T)) : (○(T), ○(T), ○(T), ○(T))
+#     @show name, t, x, y
+#     T(rand()), T(rand()), T(rand()), one(T)
+# end
+function create(g::god, name, ∃̇, ϵ)
+    ϵ̂ = g.ône - g.ẑero
+    ϵ̇ = g.ẑero + ϵ
+    ϵ̃ = ∃{T}(name, ϵ̇.d, ϵ̇.μ, ϵ̇.ρ, ϵ̇.∂, ∃̃(∃̇), ϵ̂, ∃{T}[])
+    # ϵ̂ = ∃{T}(name, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ∃̃(∃̇2), Ω, ∃{T}[])
+    ∃!(ϵ̃)
 end
 accelerate(g::god, v) = g.v = v
+jerk(g::god, j) = accelerate(g, g.v^j) # todo ?
 stop(g::god) = accelerate(g, ntuple(_ -> zero(g.T), 3))
 turn(g::god, ône) = g.ône = ône
 scale(g::god, ♯) = g.♯ = ♯
@@ -85,10 +105,11 @@ function Base.:(-)(ône::∃, ẑero::∃)
         ρ[i] = (ôneμ - ẑeroμ) / 2
         μ[i] = ẑeroμ + ρ[i]
     end
-    ∂ = fill(true, 2*length(ẑero.d))
+    # ∂ = fill(true, 2*length(ẑero.d))
+    ∂ = [iseven(i) ? ône.∂[i] : ẑero.∂[i] for i = 1:2*length(ẑero.d)]
     ∃{T}("", ẑero.d, μ, ρ, ∂, _ -> ○(T), Ω, ∃{T}[])
 end
-
+Base.:(+)(ône::∃, ẑero::∃) = ∃{T}("", ẑero.d, ẑero.μ + ône.μ, ẑero.ρ, ẑero.∂, _ -> ○(T), ône, ∃{T}[])
 # ∇(t) = t*g.ône-(1-t)*g.ẑero
 # ∇(0) = g.ẑero
 # ∇(1) = g.ône

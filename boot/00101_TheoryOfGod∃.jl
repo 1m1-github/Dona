@@ -19,7 +19,7 @@ Each child ϵ is a subset of its parent in the active dimensions (0 < ρ) declar
 ○(::Type{T}) where {T<:Real} = one(T) / (one(T) + one(T))
 abstract type Pretopology{T<:Real} end
 struct ∃{T<:Real} <: Pretopology{T}
-    Ο::T # complexity == age
+    Ο::Int # complexity == age
     ι::String # name todo perhaps unique amongst siblings xor id by age+name
     d::Vector{T} # sorted, distinct
     μ::Vector{T} # length(μ) == length(d)
@@ -35,18 +35,18 @@ end # todo check validity for outside creators ?
 struct ∀{T<:Real} <: Pretopology{T}
     ϵ::Vector{∃{T}}
 end
-Base.zero(::∀) = ∃{T}("zero(∀)", [zero(T), one(T)], [zero(T), zero(T)], [zero(T), zero(T)], fill(true, 4), _ -> ○(T), Ω, ∃{T}[])
-Base.one(::∀) = ∃{T}("one(∀)", [zero(T), one(T)], [one(T), one(T)], [zero(T), zero(T)], fill(true, 4), _ -> ○(T), Ω, ∃{T}[])
-# zero(ϵ::∃) = ϵ.μ .- ϵ.ρ
-# one(ϵ::∃) = ϵ.μ .+ ϵ.ρ
-Base.zero(ϵ::∃) = X(ϵ, ϵ.μ .- ϵ.ρ)
-Base.one(ϵ::∃) = X(ϵ, ϵ.μ .+ ϵ.ρ)
+μ̃(μ, ϵ) = (μ .- (ϵ.μ .- ϵ.ρ)) ./ ϵ.ρ / 2 # to_local
+μ̂(μ, ϵ) = ϵ.μ .- ϵ.ρ .+ 2 .* ϵ.ρ .* μ # to_parent
+ρ̃(ρ, ϵ) = ρ ./ ϵ.ρ / 2 # to_parent
+ρ̂(ρ, ϵ) = 2 .* ρ  .* ϵ.ρ # to_local
 ∃(ϵ, ϵ̂) = ∃{eltype(ϵ.μ)}(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ̂, ϵ.ϵ)
 X(ϵ, μ) = ∃{eltype(ϵ.μ)}("", ϵ.d, μ, zero(ϵ.d), fill(true, length(ϵ.∂)), _ -> one(eltype(ϵ.μ)), ϵ, ∃{eltype(ϵ.μ)}[]) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
-unit(x, ϵ) = X(ϵ, (x.μ .- zero(ϵ).μ) ./ ϵ.ρ ./ 2)
+# unit(x, ϵ) = X(ϵ, (x.μ .- zero(ϵ).μ) ./ ϵ.ρ ./ 2)
+# μ(x, ::∀) = x.μ
+# μ(x, ϵ::∃) = (x.μ .- zero(ϵ).μ) ./ ϵ.ρ ./ 2 + μ(x, ϵ.∃̂)
 # ϵ=x
 function μρ(ϵ, d)
-    T = eltype(d)
+    # T = eltype(d)
     ○̂ = ○(T)
     isempty(ϵ.d) && return ○̂, 0, true, true
     i = searchsortedfirst(ϵ.d, d)
@@ -75,14 +75,53 @@ function ∂(x, ϵ::∃) # x ∈ cl(ϵ)
     end
     false
 end
-function Base.issubset(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
+function Base.:(⊆)(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
     żero = zero₂ < zero₁ || (zero₂ == zero₁ && (!czero₁ || czero₂))
     ȯne = one₁ < one₂ || (one₁ == one₂ && (!cone₁ || cone₂))
     żero && ȯne
 end
+⫉(ϵ, ::∀) = true
+# function ⫉(ϵ, ϵ̂)
+#     x = true
+#     for (i, d) ∈ enumerate(ϵ̂.d)
+#         ρ̂ = ϵ̂.ρ[i]
+#         iszero(ρ̂) && continue
+#         x = false
+#         μ̂ = ϵ̂.μ[i]
+#         μ, ρ, zero∂, one∂ = μρ(ϵ, d)
+#         żero, ȯne = μ - ρ, μ + ρ
+#         ẑero, ône = μ̂ - ρ̂, μ̂ + ρ̂
+#         !⊆(żero, ȯne, zero∂, one∂, ẑero, ône, ϵ.∂[2i-1], ϵ.∂[2i]) && return false
+#     end
+#     !x
+# end
+# function ⫉(ϵ, ϵ̂)
+#     x = true
+#     ω = commonancestor(ϵ, ϵ̂)
+#     ωϵ = normalize(ϵ, ω)
+#     ωϵ̂ = normalize(ϵ̂, ω)
+#     # (i, d) = collect(enumerate(ωϵ̂.d))[1]
+#     for (i, d) = enumerate(ωϵ̂.d)
+#         ρ̂ = ωϵ̂.ρ[i]
+#         iszero(ρ̂) && continue
+#         x = false
+#         μ̂ = ωϵ̂.μ[i]
+#         μ, ρ, zero∂, one∂ = μρ(ωϵ, d)
+#         żero, ȯne = μ - ρ, μ + ρ
+#         ẑero, ône = μ̂ - ρ̂, μ̂ + ρ̂
+#         !⊆(żero, ȯne, zero∂, one∂, ẑero, ône, ωϵ̂.∂[2i-1], ωϵ̂.∂[2i]) && return false
+#     end
+#     !x
+# end
 function ⫉(ϵ, ϵ̂)
+    ϵ.∃̂ === ϵ̂.∃̂ && return ⪽(ϵ, ϵ̂)
+    ω = α(ϵ, ϵ̂)
+    ϕ(ϵ, ω) ⪽ ϕ(ϵ̂, ω)
+end
+function ⪽(ϵ, ϵ̂)
     x = true
-    for (i, d) ∈ enumerate(ϵ̂.d)
+    # (i, d) = collect(enumerate(ϵ̂.d))[1]
+    for (i, d) = enumerate(ϵ̂.d)
         ρ̂ = ϵ̂.ρ[i]
         iszero(ρ̂) && continue
         x = false
@@ -90,9 +129,66 @@ function ⫉(ϵ, ϵ̂)
         μ, ρ, zero∂, one∂ = μρ(ϵ, d)
         żero, ȯne = μ - ρ, μ + ρ
         ẑero, ône = μ̂ - ρ̂, μ̂ + ρ̂
-        !⊆(żero, ȯne, zero∂, one∂, ẑero, ône, ϵ.∂[2i-1], ϵ.∂[2i]) && return false
+        !⊆(żero, ȯne, zero∂, one∂, ẑero, ône, ϵ̂.∂[2i-1], ϵ̂.∂[2i]) && return false
     end
     !x
+end
+function ϕ(ϵ, ::∀)
+    ϵ.∃̂ isa ∀ && return ϵ
+    μ = μ̂(ϵ.μ, ϵ.∃̂)
+    ρ = ρ̂(ϵ.ρ, ϵ.∃̂)
+    ϵ̂̂ = ∃{T}(ϵ.ι*" ∈ "*ϵ.∃̂.ι, ϵ.d, μ, ρ, ϵ.∂, ϵ.∃, ϵ.∃̂.∃̂, ϵ.ϵ)
+    ϕ(ϵ̂̂, Ω)
+end
+# normalize(ϵ, ϵ̂) = normalize(ϵ, ϵ.μ, ϵ.ρ, ϵ̂)
+# normalize(::∃, μ, ρ, ::∀) = μ, ρ
+# function normalize(ϵ, μ, ρ, ϵ̂)
+# ϵ, ϵ̂=ba, a
+# function normalize(ϵ, ϵ̂)
+#     ϵ.∃̂ === ϵ̂ && return ϵ
+#     ϵ̂̂ = normalize(ϵ, Ω)
+#     normalize(ϵ̂̂, ϵ̂)
+# end
+function ϕ(ϵ, ϵ̂)
+    ϵ === ϵ̂ && return ∃{T}(ϵ.ι, ϵ.d, fill(○(T), length(ϵ.d)), fill(○(T), length(ϵ.d)), ϵ.∂, ϵ.∃, ϵ̂, ϵ.ϵ)
+    ϵ.∃̂ === ϵ̂ && return ϵ
+    ϵΩ = ϕ(ϵ, Ω)
+    ϵ̂Ω = ϕ(ϵ̂, Ω)
+    μ = μ̃(ϵΩ.μ, ϵ̂Ω)
+    ρ = ρ̃(ϵΩ.ρ, ϵ̂Ω)
+    ∃{T}(ϵ.ι*" ∈ "*ϵ̂.ι, ϵ.d, μ, ρ, ϵ.∂, ϵ.∃, ϵ̂, ϵ.ϵ)
+end
+# function normalize(ϵ, ϵ̂)
+#     ϵ.∃̂ === ϵ̂.∃̂ && return ϵ
+#     if ϵ.∃̂ isa ∀
+#         ϵ̂Ω = normalize(ϵ̂, Ω)
+#         μ = ?
+#         ρ = ?
+#         return ∃(ϵ.ι*" ∈ "*ϵ̂.ι, ϵ.d, μ, ρ, ϵ.∂, ϵ.∃, ϵ̂, ϵ.ϵ)
+#     end
+#     ϵϵ∃̂ = normalize(ϵ, Ω)
+#     normalize(ϵϵ∃̂, ϵ̂)
+# end
+ω(::∀) = Set(Ω)
+function ω(ϵ)
+    ωϵ = Set{Pretopology}([ϵ])
+    p = ϵ.∃̂
+    while p isa ∃
+        push!(ωϵ, p)
+        p = p.∃̂
+    end
+    push!(ωϵ, Ω)
+    ωϵ
+end
+function α(ϵ, ϵ̂)
+    ωϵ = ω(ϵ)
+    ϵ̂ ∈ ωϵ && return ϵ̂
+    p = ϵ̂.∃̂
+    while p isa ∃
+        p ∈ ωϵ && return p
+        p = p.∃̂
+    end
+    Ω
 end
 function Base.:∩(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂, cone₂)
     ẑero = max(zero₁, zero₂)
@@ -103,9 +199,14 @@ function Base.:∩(zero₁, one₁, czero₁, cone₁, zero₂, one₂, czero₂
     cône = one₁ < one₂ ? cone₁ : (one₂ < one₁ ? cone₂ : cone₁ && cone₂)
     cẑero && cône
 end
-function Base.:∩(ϵ, ϵ̂)
-    T = eltype(ϵ.d)
-    # d̂ = sort(∪(ϵ.d, ϵ̂.d))
+# ϵ ∩ ϵ̂.ϵ[2]
+# ϵ̂=ϵ̂.ϵ[2]
+# ϵ, ϵ̂=ϵ̃ , ϵ̂
+function Base.:∩(ϵ::∃, ϵ̂::∃)
+    ω = α(ϵ, ϵ̂)
+    ∩̂(ϕ(ϵ, ω), ϕ(ϵ̂, ω))
+end
+function ∩̂(ϵ, ϵ̂)
     d̂ = sort(ϵ.d ∪ ϵ̂.d)
     if !iszero(d̂[1])
         if !isone(d̂[end])
@@ -119,43 +220,67 @@ function Base.:∩(ϵ, ϵ̂)
     μ, ρ, zero∂, one∂ = μρ(ϵ, zero(T))
     μ̂, ρ̂, ẑero∂, ône∂ = μρ(ϵ̂, zero(T))
     μprev, μ̂prev = μ, μ̂
+    # (i, d) = collect(enumerate(d̂))[2]
     for (i, d) = enumerate(d̂)
+        # @show i
         if 1 < i
             μ, ρ, zero∂, one∂ = μρ(ϵ, d)
             μ̂, ρ̂, ẑero∂, ône∂ = μρ(ϵ̂, d)
         end
         żero, ȯne = μ - ρ, μ + ρ
         ẑero, ône = μ̂ - ρ̂, μ̂ + ρ̂
+        # @show i, żero, ȯne, ẑero, ône
         !∩(żero, ȯne, zero∂, one∂, ẑero, ône, ẑero∂, ône∂) && return false
         i == 1 && continue
         (μ - μ̂) * (μprev - μ̂prev) < 0 && return true
         μprev, μ̂prev = μ, μ̂
     end
+    # @show "out of loop"
     isempty(ϵ̂.ϵ) && return true
     all(ϵ̃ -> ϵ ∩ ϵ̃, ϵ̂.ϵ)
 end
 # function ∃̇(x, ϵ) # x ∈ cl(ϵ̂)
-∃̇(x) = first(∃̇(x, Ω))
-# ϵ=Ω
+# ∃̇(x) = first(∃̇(x, Ω))
+# # ϵ=Ω
+# function ∃̇(x, ϵ) # x ∈ cl(ϵ̂)
+#     @show "∃̇(x, ϵ)", x.μ, ∂(x, ϵ)
+#     # ○̂ = ○(eltype(ϵ.μ))
+#     ∂(x, ϵ) && return ○(T), true
+#     # for ϵ̂ = ϵ.ϵ
+#     #     x ∩ ϵ̂ && return ϵ̂.∃(unit(x, ϵ̂))
+#     # end
+#     # x ∩ ϵ && return ϵ.∃(unit(x, ϵ))
+#     # ○̂
+#     # ϵ̂ = filter(ϵ -> x ⫉ ϵ, Ω.ϵ)[1]
+#     for ϵ̂ = filter(ϵ -> x ⫉ ϵ, Ω.ϵ)
+#         @show "∃̇(x, ϵ)", x.μ, x ∩ ϵ̂
+#         x ∩ ϵ̂ && return ϵ̂.∃(unit(x, ϵ̂)), true
+#         ∃, found = ∃̇(x, ϵ̂)
+#         @show "∃̇(x, ϵ)", x.μ, ∃, found
+#         found && return ∃, true
+#     end
+#     @show "∃̇(x, ϵ) not found", x.μ
+#     ○(T), false
+# end
+function ∃̇(x)
+    ϵ = first(∃̇(x, Ω))
+    ϵ isa ∀ && return ○(T)
+    ϵ.∃(x)
+end
 function ∃̇(x, ϵ) # x ∈ cl(ϵ̂)
-    # ○̂ = ○(eltype(ϵ.μ))
-    ∂(x, ϵ) && return ○(T), true
-    # for ϵ̂ = ϵ.ϵ
-    #     x ∩ ϵ̂ && return ϵ̂.∃(unit(x, ϵ̂))
-    # end
-    # x ∩ ϵ && return ϵ.∃(unit(x, ϵ))
-    # ○̂
-    # ϵ̂ = filter(ϵ -> x ⫉ ϵ, Ω.ϵ)[1]
-    for ϵ̂ = filter(ϵ -> x ⫉ ϵ, Ω.ϵ)
-        x ∩ ϵ̂ && return ϵ̂.∃(unit(x, ϵ̂)), true
+    ∂(x, ϵ) && return Ω, true
+    for ϵ̂ = filter(ϵ -> x ⫉ ϵ, ϵ.ϵ)
+        x ∩ ϵ̂ && return ϵ̂, true
         ∃, found = ∃̇(x, ϵ̂)
-        found && return ∃
+        found && return ∃, true
     end
-    ○(T), false
+    Ω, false
 end
 # ϵ=ϵ̂
+# ϵ ∩ ϵ̂.ϵ[2]
+# ϵ̂.ϵ[2].ϵ
 function ∃!(ϵ)
-    ϵ̂ = ∃̂(ϵ, Ω)
+    ϵ̂ = ∃̂(ϵ)
     any(ϵ̃ -> ϵ ∩ ϵ̃, ϵ̂.ϵ) && return nothing
     lock(L)
     ϵ̃ = ϵ̂ === ϵ.∃̂ ? ϵ : ∃(ϵ, ϵ̂)
@@ -164,19 +289,43 @@ function ∃!(ϵ)
     unlock(L)
     ϵ̃
 end
-function ∃̂(ϵ, ϵ̂)
-    ϵϵ = filter(ϵ̃ -> ϵ ⫉ ϵ̃, ϵ̂.ϵ)
+function ∃̂(ϵ, ϵ̂=Ω)
+    !(ϵ ⫉ ϵ̂) && return ∃̂(ϵ, ϵ̂.∃̂)
+
+    # ϵ̃=ϵ̂.ϵ[2]
+    # ϵ̃ == ϵ
+    # ϵ̃ === ϵ
+    # ϵ̃ ≠ ϵ
+    # ϵ ⫉ ϵ̃
+    # a=ϵ
+    # b=ϵ̂.ϵ[2]
+    # a.∃̂
+    # b.∃̂
+    # Ω === bΩ.∃̂
+    # Ω === a.∃̂
+    # ϵ̂ === ϵ.∃̂
+    # a.d == b.d && a.μ == b.μ && a.ρ == b.ρ && a.∂ == b.∂ && a.∃̂ === b.∃̂
+
+    ϵϵ = filter(ϵ̃ -> ϵ̃ ≠ ϵ && ϵ ⫉ ϵ̃, ϵ̂.ϵ)
     isempty(ϵϵ) && return ϵ̂
     1 < length(ϵϵ) && throw("Need unique fitting parent.")
     ϵ̃ = only(ϵϵ)
     ∃̂(ϵ, ϵ̃)
 end
-function Base.hash(x::∃{T}, h::UInt) where T
+Base.hash(x::∀, h::UInt) = zero(UInt)
+function Base.hash(x::∃, h::UInt)
     h = hash(x.d, h)
     h = hash(x.μ, h)
     h = hash(x.ρ, h)
-    hash(x.∂, h)
+    h = hash(x.∃̂, h)
+    hash(x.ρ, h)
 end
-Base.:(==)(a::∃, b::∃) = a.d == b.d && a.μ == b.μ && a.ρ == b.ρ && a.∂ == b.∂
-Ο(ϵ=Ω) = one(T) + sum((Ο(ϵ̂) for ϵ̂ in ϵ.ϵ), init=zero(T)) # todo local T better
+Base.:(==)(a::∃, b::∃) = a.d == b.d && a.μ == b.μ && a.ρ == b.ρ && a.∂ == b.∂ && a.∃̂ === b.∃̂
+Ο(ϵ=Ω) = 1 + sum((Ο(ϵ̂) for ϵ̂ in ϵ.ϵ), init=0) # todo local T better
 t(::∀) = one(T)-one(T)/(one(T)+T(log(Ο()))) # todo local T better
+Base.zero(::∀) = ∃{T}("zero(∀)", [zero(T), one(T)], [zero(T), zero(T)], [zero(T), zero(T)], fill(true, 4), _ -> ○(T), Ω, ∃{T}[])
+Base.one(::∀) = ∃{T}("one(∀)", [zero(T), one(T)], [one(T), one(T)], [zero(T), zero(T)], fill(true, 4), _ -> ○(T), Ω, ∃{T}[])
+# zero(ϵ::∃) = ϵ.μ .- ϵ.ρ
+# one(ϵ::∃) = ϵ.μ .+ ϵ.ρ
+Base.zero(ϵ::∃) = X(ϵ, ϵ.μ .- ϵ.ρ)
+Base.one(ϵ::∃) = X(ϵ, ϵ.μ .+ ϵ.ρ)
