@@ -2,7 +2,7 @@
 
 # import Main: @install
 # @install ConcurrentCollections
-using ConcurrentCollections
+# using ConcurrentCollections
 using Base.Threads
 
 include("00101_TheoryOfGod∃.jl")

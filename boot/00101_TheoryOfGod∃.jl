@@ -40,7 +40,7 @@ end
 ρ̃(ρ, ϵ) = ρ ./ ϵ.ρ ./ 2 # to_local
 ρ̂(ρ, ϵ) = 2 .* ρ  .* ϵ.ρ # to_parent
 ∃(ϵ, ϵ̂) = ∃{T}(ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃, ϵ̂, ϵ.ϵ)
-X(ϵ, μ) = ∃{T}("x at $μ in $ϵ", ϵ.d, μ, zero(ϵ.d), fill(true, length(ϵ.∂)), _ -> one(T), ϵ, []) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
+X(ϵ, μ) = ∃{T}("x at $μ in $ϵ", ϵ.d, μ, zero(ϵ.d), fill(true, length(ϵ.∂)), _ -> one(T), ϵ, ∃{T}[]) # todo check μ ∈ [ϵ.μ-ϵ.ρ,ϵ.μ+ϵ.ρ] ?
 function μρ(ϵ, d)
     ○̂ = ○(T)
     isempty(ϵ.d) && return ○̂, 0, true, true
@@ -179,19 +179,15 @@ function Base.:∩(ϵ::∃, ϵ̂::∃)
     ϵ̇ = ϕ(ϵ, ϵ̂)
     all(ϵ̃ -> ϵ̇ ∩ ϵ̃, ϵ̂.ϵ)
 end
-function ∃̇(x)
-    ϵ = first(∃̇(x, Ω))
-    ϵ isa ∀ && return ○(T)
-    ϵ.∃(x)
-end
 function ∃̇(x, ϵ) # x ∈ cl(ϵ̂)
-    ∂(x, ϵ) && return Ω, true
+    ○̂ = ○(T)
+    ∂(x, ϵ) && return Ω, ○(T), true
     for ϵ̂ = filter(ϵ̂ -> x ⫉ ϵ̂, ϵ.ϵ)
-        x ∩ ϵ̂ && return ϵ̂, true
-        ϵ̃, found = ∃̇(x, ϵ̂)
-        found && return ϵ̃, true
+        x ∩ ϵ̂ && return ϵ̂, ϵ̂.∃(x), true
+        ϵ̃, ϵ̇, found = ∃̇(x, ϵ̂)
+        found && return ϵ̃, ϵ̇, true
     end
-    Ω, false
+    Ω, ○(T), false
 end
 function ∃!(ϵ)
     ϵ̂ = ∃̂(ϵ)
