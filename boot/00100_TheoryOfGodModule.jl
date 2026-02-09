@@ -12,7 +12,7 @@ include("00102_TheoryOfGodGrid.jl")
 # const T = Rational{BigInt}
 const T = Float64
 const Ω = ∀{T}([])
-const L = ReentrantLock()
+# const L = ReentrantLock()
 ∃!(zero(Ω)), ∃!(one(Ω))
 # const Ξ = ConcurrentDict{∃,T}()
 

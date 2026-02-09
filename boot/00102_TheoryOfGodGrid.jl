@@ -2,7 +2,12 @@
 #     n::Vector{Int}
 # end
 # function ∃̇(♯::Grid, ϵ::∃{T}, k::Int, Ξ::Dict{∃, Tuple{Pretopology{T}, T}}) where {T<:Real}
-function ∃̇(♯::NTuple{N,Int}, F::Function) where N
+# function ∃̇(♯::NTuple{N,Int}, F::Function) where N
+ks=(3,3,3)
+N=length(ks)
+typeof(view(grid,1:2))
+
+function ∃̇(ks::NTuple{N,Int}, F::Function) where N
     Ns = ntuple(d -> (1 << ks[d]) + 1, N)
     maxk = maximum(ks)
     
@@ -65,6 +70,19 @@ function ∃̇(♯::NTuple{N,Int}, F::Function) where N
     end
     grid
 end
+view(pvals, 1:np) isa AbstractVector{Float64}
+view(pcoords, 1:np) isa AbstractVector{CartesianIndex{3}}
+typeof(view(pvals, 1:np))
+typeof(view(pcoords, 1:np))
+np=2
+T=Float64
+N=2
+a=T[1.0,2.0]
+b=[CartesianIndex(1,2), CartesianIndex(1,3)]
+typeof(view(a, 1:2))
+typeof(view(b, 1:1))
+
+
 # index(n) = Iterators.product((1:n̂ for n̂ ∈ n)...)
 # function ∃̇(♯::Grid, ϵ::∃{T}, k::Int, Ξ::Dict{∃, Tuple{Pretopology{T}, T}}) where {T<:Real}
 #     # consider length(♯.n)-dim squares/pixels covering the area defined in ϵ such that:
