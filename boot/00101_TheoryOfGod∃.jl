@@ -3,7 +3,7 @@ export ∃, ∃!
 const THEORYOFGOD = """
 I = [ZERO < ○ < ONE] denotes a unit 1-dim space of information with origin ○ (no information) in its center including the corners ZERO and ONE.
 ∀ = I^I an ∞-dim metric and smooth vector space.
-We have a Pretopology ℙ on ∀ such that ϵᵢ ∈ ℙ:
+We have a Pretopology 𝕋 on ∀ such that ϵᵢ ∈ 𝕋:
 * ϵᵢ ⊆ ∀
 * ϵ₂ ∈ ϵ₁.ϵ̃ => ϵ₂|ϵ₁ ⊆ ϵ₁ <=> ϵ₂ ⫉ ϵ₁ ⩓ ϵ₂ ∈ ϵ₃.ϵ̃ => ϵ₁ = ϵ₃
 * ϵ₁ ≠ ϵ₂ => ϵ₁ ∩ ϵ₂ = ∅
@@ -34,20 +34,19 @@ struct ∃{N,T<:Real} <: ∀{T}
         new{N,T}(ϵ̂, ι, d[p], μ[p], ρ[p], ntuple(i -> ∂[p[i]], N), Φ)
     end
 end
-# T=Float64
-# struct Q{N,T<:Real} <: ∀{T}
-#     q::SVector{N,T}
-# end
-# q1=Q(SA[1])
-# q2=Q(SA[1,2])
-# qs=Q{<:Any,Int}[]
-# push!(qs, q1)
-# push!(qs, q2)
-# qs
-struct ℙ{T<:Real} <: ∀{T}
+struct 𝕋{T<:Real} <: ∀{T}
     ϵ̃::ConcurrentDict{∀{T},Vector{∃{<:Any,T}}}
     Ο::ConcurrentDict{∀{T},Int}
     L::ReentrantLock
+end
+function Base.copy!(ϵ::∃{N,T}, ϵ̂::∀{T}, GOD::𝕋{T}, d::NTuple{N,Int}=ϵ̂.d) where {N,T}
+    !haskey(GOD.ϵ̃, ϵ) && return
+    ϵ̃ = ∃{N,T}(ϵ̂, ϵ.ι, d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.Φ)
+    ∃!(ϵ̃, GOD, ϵ̂)
+    for ϵ̃̃ = GOD.ϵ̃[ϵ]
+        copy!(ϵ̃̃, ϵ̃, GOD)
+    end
+    ϵ̃
 end
 Base.hash(::∀, ::UInt) = zero(UInt)
 function Base.hash(ϵ::∃, h::UInt)
@@ -57,24 +56,12 @@ function Base.hash(ϵ::∃, h::UInt)
     h = hash(ϵ.∂, h)
     hash(objectid(ϵ.ϵ̂), h)
 end
-# Base.:(==)(ϵ::∃, ::∀) = false
-# Base.:(==)(ϵ₁::∃, ϵ₂::∃) = ϵ₁.d == ϵ₂.d && ϵ₁.μ == ϵ₂.μ && ϵ₁a.ρ == ϵ₂.ρ && ϵ₁.∂ == ϵ₂.∂ && objectid(ϵ₁.ϵ̂) == objectid(ϵ₂.ϵ̂)
-# Ο() = Ο(GOD::ℙ) = 
-# Ο(ϵ) = 1 + sum((Ο(ϵ̂) for ϵ̂ in ϵ.ϵ), init=0)
-t(GOD::ℙ{T}) where {T<:Real} = one(T) - one(T) / (one(T) + T(log(GOD.Ο[GOD])))
-# Base.zero(::∀) = ∃{T}("zero(∀)", [zero(T), one(T)], [zero(T), zero(T)], [zero(T), zero(T)], fill(true, 4), _ -> ○(T), Ω, ∃{T}[])
-# Base.one(::∀) = ∃{T}("one(∀)", [zero(T), one(T)], [one(T), one(T)], [zero(T), zero(T)], fill(true, 4), _ -> ○(T), Ω, ∃{T}[])
-# Base.zero(ϵ::∃) = X(ϵ, ϵ.μ .- ϵ.ρ)
-# Base.one(ϵ::∃) = X(ϵ, ϵ.μ .+ ϵ.ρ)
-# Base.eltype(::∀{N,T}) where {N,T<:Real} = T
-# Base.ndims(::∀{N,T}) where {N,T<:Real} = N
+t(GOD::𝕋{T}) where {T<:Real} = one(T) - one(T) / (one(T) + T(log(GOD.Ο[GOD])))
 
-μ̂(ϵ) = ϵ.μ .- ϵ.ρ .+ 2 .* ϵ.ρ .* ϵ.ϵ̂.μ
-ρ̂(ϵ) = 2 .* ϵ.ϵ̂.ρ .* ϵ.ρ
+μ̂(ϵ::∃) = ϵ.μ .- ϵ.ρ .+ 2 .* ϵ.ρ .* ϵ.ϵ̂.μ
+ρ̂(ϵ::∃) = 2 .* ϵ.ϵ̂.ρ .* ϵ.ρ
 μ̃(μ::SVector{N,T}, ϵ::∃{N,T}) where {N,T<:Real} = (μ .- (ϵ.μ .- ϵ.ρ)) ./ ϵ.ρ ./ 2
 ρ̃(ρ::SVector{N,T}, ϵ::∃{N,T}) where {N,T<:Real} = ρ ./ ϵ.ρ ./ 2
-# ∃(ϵ, ϵ̂) = ∃{N,T}(ϵ̂, ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.∃)
-# X(ϵ, μ) = ∃{N,T}(ϵ, "x at $μ in $(ϵ.ι)", ϵ.d, μ, zero(ϵ.ρ), ntuple(i -> (true, true), N), _ -> one(T))
 function μρ(ϵ::∃{N,T}, d::SVector{N,T}) where {N,T<:Real}
     ○̂ = ○(T)
     i = searchsortedfirst(ϵ.d, d)
@@ -97,7 +84,7 @@ function μρ(ϵ::∃{N,T}, d::SVector{N,T}) where {N,T<:Real}
     d = (d - d₀) / (d₁ - d₀)
     μ₀ + (μ₁ - μ₀) * d, zero(T), (true, true)
 end
-function ∂(x::∃{N,T}, ::ℙ{T}) where {N,T<:Real}
+function ∂(x::∃{N,T}, ::𝕋{T}) where {N,T<:Real}
     zeroₓ = x.μ .- x.ρ
     any(zeroₓ .== zero(T)) && return true
     oneₓ = x.μ .+ x.ρ
@@ -131,7 +118,6 @@ function ⪽(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}) where {N,T<:Real}
     end
     !x
 end
-# α(::∀) = Set(Ω)
 function α(ϵ)
     αϵ = Set{∃}([ϵ])
     p = ϵ.ϵ̂
@@ -139,7 +125,6 @@ function α(ϵ)
         push!(αϵ, p)
         p = p.ϵ̂
     end
-    # push!(αϵ, Ω)
     αϵ
 end
 function α(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}) where {N,T<:Real}
@@ -150,12 +135,11 @@ function α(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}) where {N,T<:Real}
         ϵ̂ ∈ αϵ₁ && return ϵ̂
         ϵ̂ = ϵ̂.ϵ̂
     end
-    # Ω
-    nothing # ?
+    nothing
 end
 function ℼ(ϵ)
     ϵ̂ = ϵ.ϵ̂
-    ϵ̂ isa ℙ && return ϵ
+    ϵ̂ isa 𝕋 && return ϵ
     ϵ̂̂ = ∃{N,T}(ϵ̂.ϵ̂, ϵ.ι * " ∈ " * ϵ̂.ι, ϵ.d, μ̂(ϵ), ρ̂(ϵ), ϵ.∂, ϵ.∃) # todo string speed
     ℼ(ϵ̂̂)
 end
@@ -165,7 +149,7 @@ function ℼ(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}) where {N,T<:Real}
     ϵ₁ === ϵ₂ && return ∃{N,T}(ϵ₂, ϵ₁.ι, ϵ₁.d, ○̂, ○̂, ϵ₁.∂, ϵ₁.∃)
     ϵ₁.ϵ̂ === ϵ₂ && return ϵ₁
     if ϵ₂ ∈ α(ϵ₁)
-        return ℼ(∃{N,T}(ϵ₁.ι, ϵ₁.d, μ̂(ϵ₁), ρ̂(ϵ₁), ϵ₁.∂, ϵ₁.∃, ϵ₁.ϵ̂.ϵ̂), ϵ₂)
+        return ℼ(∃{N,T}(ϵ₁.ϵ̂.ϵ̂, ϵ₁.ι, ϵ₁.d, μ̂(ϵ₁), ρ̂(ϵ₁), ϵ₁.∂, ϵ₁.∃), ϵ₂)
     end
     ϵ₁GOD = ℼ(ϵ₁)
     ϵ₂GOD = ℼ(ϵ₂)
@@ -173,11 +157,18 @@ function ℼ(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}) where {N,T<:Real}
     ρ = ρ̃(ϵ₁GOD.ρ, ϵ₂GOD)
     ∃{N,T}(ϵ₂, ϵ₁.ι, ϵ₁.d, μ, ρ, ϵ₁.∂, ϵ₁.∃)
 end
-⫉(ϵ, ::ℙ) = true
+⫉(ϵ, ::𝕋) = true
 function ⫉(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}) where {N,T<:Real}
     ϵ₁.ϵ̂ === ϵ₂.ϵ̂ && return ⪽(ϵ₁, ϵ₂)
     ϵ̂ = α(ϵ₁, ϵ₂)
     ℼ(ϵ₁, ϵ̂) ⪽ ℼ(ϵ₂, ϵ̂)
+end
+function α(ϵ₁::∃{N,T}, ϵ₂::∀{T}, GOD::𝕋{T}) where {N,T<:Real}
+    ϵ̃ = GOD.ϵ̃[ϵ₂]
+    ϵ̃₂ = filter(ϵ̃ -> ϵ̃ ≠ ϵ₁ && ϵ₁ ⫉ ϵ̃, ϵ̃)
+    isempty(ϵ̃₂) && return ϵ₂
+    1 < length(ϵ̃₂) && throw("Need unique fitting parent.")
+    α(ϵ₁, only(ϵ̃₂))
 end
 function Base.:∩(zero₁::SVector{N,T}, one₁::SVector{N,T}, ∂₁::NTuple{N,Tuple{Bool,Bool}}, zero₂::SVector{N,T}, one₂::SVector{N,T}, ∂₂::NTuple{N,Tuple{Bool,Bool}}) where {N,T<:Real}
     żero = max(zero₁, zero₂)
@@ -188,7 +179,7 @@ function Base.:∩(zero₁::SVector{N,T}, one₁::SVector{N,T}, ∂₁::NTuple{N
     ∂₀₁ = one₁ < one₂ ? ∂₁[2] : (one₂ < one₁ ? ∂₂[2] : ∂₁[2] && ∂₂[2])
     ∂₀₀ && ∂₀₁
 end
-function Base.:∩(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}, GOD::ℙ) where {N,T<:Real}
+function Base.:∩(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}, GOD::𝕋) where {N,T<:Real}
     if ϵ₁.ϵ̂ !== ϵ₂.ϵ̂
         ϵ̂ = α(ϵ₁, ϵ₂)
         return ∩(ℼ(ϵ₁, ϵ̂), ℼ(ϵ₂, ϵ̂), GOD)
@@ -223,7 +214,7 @@ function Base.:∩(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}, GOD::ℙ) where {N,T<:Real}
     ϵ̂ = ℼ(ϵ₁, ϵ₂)
     all(ϵ̃ -> ∩(ϵ̂, ϵ̃, GOD), ϵ̃)
 end
-function ∃̇(x::∃{N,T}, ϵ::∃{N,T}, GOD::ℙ{T}, Φ̂::AbstractVector{T}=[], x̂::AbstractVector{CartesianIndex{N}}=[]) where {N,T<:Real}
+function ∃̇(x::∃{N,T}, ϵ::∃{N,T}, GOD::𝕋{T}, Φ̂::AbstractVector{T}=[], x̂::AbstractVector{CartesianIndex{N}}=[]) where {N,T<:Real}
     ∂(x, ϵ) && return GOD, ○(T), true
     for ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, GOD.ϵ̃[ϵ])
         ∩(x, ϵ̃, GOD) && return ϵ̃, ϵ̃.Φ(x, Φ̂, x̂), true
@@ -232,21 +223,17 @@ function ∃̇(x::∃{N,T}, ϵ::∃{N,T}, GOD::ℙ{T}, Φ̂::AbstractVector{T}=[
     end
     GOD, ○(T), false
 end
-function ∃!(ϵ::∃{N,T}, GOD::ℙ{T}) where {N,T<:Real}
-    ϵ̂ = α(ϵ, GOD, GOD)
+function ∃!(ϵ::∃{N,T}, GOD::𝕋{T}, ϵ̂::∃{N,T}=α(ϵ, GOD, GOD)) where {N,T<:Real}
     ϵ̃ = GOD.ϵ̃[ϵ̂]
     any(ϵ̃ -> ∩(ϵ, ϵ̃, GOD), ϵ̃) && return nothing
     lock(GOD.L)
-    if ϵ̂ !== ϵ.ϵ̂ ϵ = ∃{N,T}(ϵ̂, ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.Φ) end
+    if ϵ̂ !== ϵ.ϵ̂
+        ϵ = ∃{N,T}(ϵ̂, ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.Φ)
+    end
     ϵ̂ !== GOD && ∩(ϵ̃, ϵ̂, GOD) && (unlock(GOD.L); return nothing)
     push!(ϵ̃, ϵ)
+    GOD.Ο[ϵ] = GOD.Ο[GOD]
+    GOD.Ο[GOD] += 1
     unlock(GOD.L)
     ϵ
-end
-function α(ϵ₁::∃{N,T}, ϵ₂::∀{T}, GOD::ℙ{T}) where {N,T<:Real}
-    ϵ̃ = GOD.ϵ̃[ϵ₂]
-    ϵ̃₂ = filter(ϵ̃ -> ϵ̃ ≠ ϵ₁ && ϵ₁ ⫉ ϵ̃, ϵ̃)
-    isempty(ϵ̃₂) && return ϵ₂
-    1 < length(ϵ̃₂) && throw("Need unique fitting parent.")
-    α(ϵ₁, only(ϵ̃₂))
 end
