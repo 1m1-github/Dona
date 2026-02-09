@@ -1,5 +1,5 @@
 mutable struct god{T<:Real}
-    ♯::Grid
+    ♯::NTuple{}
     ẑero::∃{T}
     ône::∃{T}
     v::Tuple{T,T,T} # dt(ẑero)/dt̂, dx/dt(ẑero), dy/dt(ẑero)

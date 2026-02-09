@@ -2,8 +2,9 @@
 
 # import Main: @install
 # @install ConcurrentCollections
-# using ConcurrentCollections
+using ConcurrentCollections
 using Base.Threads
+using StaticArrays
 
 include("00101_TheoryOfGod∃.jl")
 include("00102_TheoryOfGodGrid.jl")
@@ -44,7 +45,7 @@ create(g, name, (t, x, y) -> begin
 # @show "hi"
     # @show name, t, x, y, x^2 + y^2
     # x^2 + y^2 == 0.01 ? (T(rand()), T(rand()), T(rand()), one(T)) : (○(T), ○(T), ○(T), ○(T))
-    @show name, t, x, y
+    # @show name, t, x, y
     T(rand()), T(rand()), T(rand()), one(T)
 end,ϵ)
 Ω.ϵ
