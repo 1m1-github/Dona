@@ -1,4 +1,4 @@
-export ∃, ∃!
+export ∃, ∃̇, ∃!
 
 const THEORYOFGOD = """
 I = [ZERO < ○ < ONE] denotes a unit 1-dim space of information with origin ○ (no information) in its center including the corners ZERO and ONE.
@@ -39,8 +39,20 @@ struct 𝕋{T<:Real} <: ∀{T}
     Ο::ConcurrentDict{∀{T},Int}
     L::ReentrantLock
 end
-function Base.copy!(ϵ::∃{N,T}, ϵ̂::∀{T}, GOD::𝕋{T}, d::NTuple{N,Int}=ϵ̂.d) where {N,T}
+function new_parent_dims(ϵ::∃{N,T}, ϵ̂::∃{N,T})
+    d = copy(ϵ.d)
+    nϵ̂ = length(ϵ.ϵ̂.d)
+    for (i, dᵢ) = enumerate(ϵ.d)
+        iϵ̂ = searchsortedfirst(ϵ.ϵ̂.d, dᵢ)
+        nϵ̂ < iϵ̂ && continue
+        iszero(ϵ.ϵ̂.ρ[iϵ̂]) && continue
+        d[i] = ϵ̂.d[iϵ̂]
+    end
+    d
+end
+function Base.copy!(ϵ::∃{N,T}, ϵ̂::∃{N,T}, GOD::𝕋{T}) where {N,T}
     !haskey(GOD.ϵ̃, ϵ) && return
+    d = new_parent_dims(ϵ, ϵ̂)
     ϵ̃ = ∃{N,T}(ϵ̂, ϵ.ι, d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.Φ)
     ∃!(ϵ̃, GOD, ϵ̂)
     for ϵ̃̃ = GOD.ϵ̃[ϵ]
@@ -58,11 +70,11 @@ function Base.hash(ϵ::∃, h::UInt)
 end
 t(GOD::𝕋{T}) where {T<:Real} = one(T) - one(T) / (one(T) + T(log(GOD.Ο[GOD])))
 
-μ̂(ϵ::∃) = ϵ.μ .- ϵ.ρ .+ 2 .* ϵ.ρ .* ϵ.ϵ̂.μ
-ρ̂(ϵ::∃) = 2 .* ϵ.ϵ̂.ρ .* ϵ.ρ
+μ̂(ϵ::∃) = ϵ.ϵ̂ isa 𝕋 ? ϵ.μ : ϵ.μ .- ϵ.ρ .+ 2 .* ϵ.ρ .* ϵ.ϵ̂.μ
+ρ̂(ϵ::∃) = ϵ.ϵ̂ isa 𝕋 ? ϵ.ρ : 2 .* ϵ.ϵ̂.ρ .* ϵ.ρ
 μ̃(μ::SVector{N,T}, ϵ::∃{N,T}) where {N,T<:Real} = (μ .- (ϵ.μ .- ϵ.ρ)) ./ ϵ.ρ ./ 2
 ρ̃(ρ::SVector{N,T}, ϵ::∃{N,T}) where {N,T<:Real} = ρ ./ ϵ.ρ ./ 2
-function μρ(ϵ::∃{N,T}, d::SVector{N,T}) where {N,T<:Real}
+function μρ(ϵ::∃{N,T}, d::T) where {N,T<:Real}
     ○̂ = ○(T)
     i = searchsortedfirst(ϵ.d, d)
     if i ≤ N && ϵ.d[i] == d
@@ -137,25 +149,25 @@ function α(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}) where {N,T<:Real}
     end
     nothing
 end
-function ℼ(ϵ)
+function ℼ(ϵ::∃{N,T}) where {N,T<:Real}
     ϵ̂ = ϵ.ϵ̂
     ϵ̂ isa 𝕋 && return ϵ
-    ϵ̂̂ = ∃{N,T}(ϵ̂.ϵ̂, ϵ.ι * " ∈ " * ϵ̂.ι, ϵ.d, μ̂(ϵ), ρ̂(ϵ), ϵ.∂, ϵ.∃) # todo string speed
+    ϵ̂̂ = ∃{N,T}(ϵ̂.ϵ̂, "", ϵ.d, μ̂(ϵ), ρ̂(ϵ), ϵ.∂, ϵ.Φ)
     ℼ(ϵ̂̂)
 end
 ℼ(ϵ, ::Nothing) = ℼ(ϵ)
 function ℼ(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}) where {N,T<:Real}
     ○̂ = fill(○(T), N)
-    ϵ₁ === ϵ₂ && return ∃{N,T}(ϵ₂, ϵ₁.ι, ϵ₁.d, ○̂, ○̂, ϵ₁.∂, ϵ₁.∃)
+    ϵ₁ === ϵ₂ && return ∃{N,T}(ϵ₂, ϵ₁.ι, ϵ₁.d, ○̂, ○̂, ϵ₁.∂, ϵ₁.Φ)
     ϵ₁.ϵ̂ === ϵ₂ && return ϵ₁
     if ϵ₂ ∈ α(ϵ₁)
-        return ℼ(∃{N,T}(ϵ₁.ϵ̂.ϵ̂, ϵ₁.ι, ϵ₁.d, μ̂(ϵ₁), ρ̂(ϵ₁), ϵ₁.∂, ϵ₁.∃), ϵ₂)
+        return ℼ(∃{N,T}(ϵ₁.ϵ̂.ϵ̂, ϵ₁.ι, ϵ₁.d, μ̂(ϵ₁), ρ̂(ϵ₁), ϵ₁.∂, ϵ₁.Φ), ϵ₂)
     end
     ϵ₁GOD = ℼ(ϵ₁)
     ϵ₂GOD = ℼ(ϵ₂)
     μ = μ̃(ϵ₁GOD.μ, ϵ₂GOD)
     ρ = ρ̃(ϵ₁GOD.ρ, ϵ₂GOD)
-    ∃{N,T}(ϵ₂, ϵ₁.ι, ϵ₁.d, μ, ρ, ϵ₁.∂, ϵ₁.∃)
+    ∃{N,T}(ϵ₂, ϵ₁.ι, ϵ₁.d, μ, ρ, ϵ₁.∂, ϵ₁.Φ)
 end
 ⫉(ϵ, ::𝕋) = true
 function ⫉(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}) where {N,T<:Real}
@@ -163,12 +175,12 @@ function ⫉(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}) where {N,T<:Real}
     ϵ̂ = α(ϵ₁, ϵ₂)
     ℼ(ϵ₁, ϵ̂) ⪽ ℼ(ϵ₂, ϵ̂)
 end
-function α(ϵ₁::∃{N,T}, ϵ₂::∀{T}, GOD::𝕋{T}) where {N,T<:Real}
+function β(ϵ₁::∃{N,T}, ϵ₂::∀{T}, GOD::𝕋{T}) where {N,T<:Real}
     ϵ̃ = GOD.ϵ̃[ϵ₂]
     ϵ̃₂ = filter(ϵ̃ -> ϵ̃ ≠ ϵ₁ && ϵ₁ ⫉ ϵ̃, ϵ̃)
     isempty(ϵ̃₂) && return ϵ₂
     1 < length(ϵ̃₂) && throw("Need unique fitting parent.")
-    α(ϵ₁, only(ϵ̃₂))
+    β(ϵ₁, only(ϵ̃₂), GOD)
 end
 function Base.:∩(zero₁::SVector{N,T}, one₁::SVector{N,T}, ∂₁::NTuple{N,Tuple{Bool,Bool}}, zero₂::SVector{N,T}, one₂::SVector{N,T}, ∂₂::NTuple{N,Tuple{Bool,Bool}}) where {N,T<:Real}
     żero = max(zero₁, zero₂)
@@ -223,14 +235,14 @@ function ∃̇(x::∃{N,T}, ϵ::∃{N,T}, GOD::𝕋{T}, Φ̂::AbstractVector{T}=
     end
     GOD, ○(T), false
 end
-function ∃!(ϵ::∃{N,T}, GOD::𝕋{T}, ϵ̂::∃{N,T}=α(ϵ, GOD, GOD)) where {N,T<:Real}
-    ϵ̃ = GOD.ϵ̃[ϵ̂]
-    any(ϵ̃ -> ∩(ϵ, ϵ̃, GOD), ϵ̃) && return nothing
+function ∃!(ϵ::∃{N,T}, GOD::𝕋{T}, ϵ̂::∃{N,T}=β(ϵ, GOD, GOD)) where {N,T<:Real}
     lock(GOD.L)
+    ϵ̃ = GOD.ϵ̃[ϵ̂]
+    any(ϵ̃ -> ∩(ϵ, ϵ̃, GOD), ϵ̃) && (unlock(GOD.L); return nothing)
     if ϵ̂ !== ϵ.ϵ̂
         ϵ = ∃{N,T}(ϵ̂, ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.Φ)
     end
-    ϵ̂ !== GOD && ∩(ϵ̃, ϵ̂, GOD) && (unlock(GOD.L); return nothing)
+    ϵ̂ !== GOD && ∩(ϵ, ϵ̂, GOD) && (unlock(GOD.L); return nothing)
     push!(ϵ̃, ϵ)
     GOD.Ο[ϵ] = GOD.Ο[GOD]
     GOD.Ο[GOD] += 1
