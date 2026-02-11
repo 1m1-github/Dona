@@ -2,8 +2,8 @@
 
 # import Main: @install
 # @install ConcurrentCollections
-using ConcurrentCollections
-using Base.Threads
+# using ConcurrentCollections
+# using Base.Threads
 using StaticArrays
 
 include("00101_TheoryOfGod∃.jl")
