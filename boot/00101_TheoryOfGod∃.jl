@@ -235,24 +235,63 @@ function Base.:∩(ϵ₁::∃, ϵ₂::∃, GOD::𝕋)
     ϵ̂ = ℼ(ϵ₁, ϵ₂)
     all(ϵ̃ -> ∩(ϵ̂, ϵ̃, GOD), ϵ̃)
 end
-function observe(ϵ::∃, ♯::NTuple)
-    g = fill(○, ♯...)
-    N = length(♯)
-    Threads.@threads for idx in CartesianIndices(g)
-        x = ntuple(i -> T(idx[i] - 1) / T(♯[i] - 1), N)
-        g[idx] = ϵ.Φ(x)
+# function observe(ϵ::∃, ♯::NTuple)
+#     g = fill(○, ♯...)
+#     N = length(♯)
+#     Threads.@threads for idx in CartesianIndices(g)
+#         x = ntuple(i -> T(idx[i] - 1) / T(♯[i] - 1), N)
+#         g[idx] = ϵ.Φ(x)
+#     end
+#     g
+# end
+function gpu_eval(Φ, coords)
+    out = Vector{T}(undef, length(coords))
+    Threads.@threads for i in eachindex(coords)
+        out[i] = Φ(coords[i])
     end
-    g
+    out
 end
-function ∃̇(x::∃, ϵ::∃, GOD::𝕋)
-    ∂(x, ϵ) && return GOD, ○, true
+idx_to_coord(idx, ♯) = ntuple(i -> T(idx[i] - 1) / T(♯[i] - 1), length(♯))
+function observe(ϵ::∃, GOD::𝕋, ♯::NTuple)
+    owners = assign_owners(ϵ, GOD, ♯)
+    grid = fill(○, ♯...)
+    
+    # group indices by owner
+    groups = Dict{∃, Vector{CartesianIndex}}()
+    for idx in CartesianIndices(owners)
+        push!(get!(groups, owners[idx], []), idx)
+    end
+    
+    # one GPU kernel per owner
+    for (owner, indices) in groups
+        # all points in this group share the same Φ
+        # launch as single kernel
+        coords = map(idx -> idx_to_coord(idx, ♯), indices)
+        values = gpu_eval(owner.Φ, coords)  # single kernel, fully parallel
+        for (i, idx) in enumerate(indices)
+            grid[idx] = values[i]
+        end
+    end
+    grid
+end
+function X(x::∃, GOD::𝕋, ϵ::∀=β(x, GOD, GOD))
+    ∂(x, ϵ) && return GOD, true
     ϵ̃ = get(GOD.ϵ̃, ϵ, ∃[])
     for ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, ϵ̃)
-        ∩(x, ϵ̃, GOD) && return ϵ̃, ϵ̃.Φ(x), true
-        ϵ̂, ϵ̇, found = ∃̇(x, ϵ̃, GOD)
-        found && return ϵ̂, ϵ̇, true
+        ∩(x, ϵ̃, GOD) && return ϵ̃, true
+        ϵ̂, found = ∃̇(x, ϵ̃, GOD)
+        found && return ϵ̂, true
     end
-    GOD, ○, false
+    GOD, false
+end
+function assign_owners(ϵ::∃, GOD::𝕋, ♯::NTuple)
+    Ξ = Array{∃}(undef, ♯...)
+    Threads.@threads for i in CartesianIndices(Ξ)
+        x = idx_to_coord(i, ♯)
+        ξ, _ = X(x, GOD, ϵ)
+        Ξ[i] = ξ
+    end
+    Ξ
 end
 # ϵ=ϵ̃
 # ϵ̂=β(ϵ, GOD, GOD)
