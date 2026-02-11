@@ -11,9 +11,8 @@ include("00102_TheoryOfGodGrid.jl")
 
 # const T = Rational{BigInt}
 const T = Float64
-const Ω = ∀{T}([])
-# const L = ReentrantLock()
-∃!(zero(Ω)), ∃!(one(Ω))
+const GOD = 𝕋{T}()
+# ∃!(zero(Ω)), ∃!(one(Ω))
 # const Ξ = ConcurrentDict{∃,T}()
 
 # in LoopOS
@@ -23,12 +22,12 @@ include("00103_TheoryOfGodgod.jl")
 include("00090_BroadcastBrowser2Module.jl")
 import Main.BroadcastBrowserModule: BroadcastBrowser, start
 include("00105_TheoryOfGodgodBrowser.jl")
-const BROWSERTASK = Threads.@spawn start(b->godBrowser(b))
+# const BROWSERTASK = Threads.@spawn start(b->godBrowser(b))
 
-g=collect(values(godBROWSER[]))[1].g
+# g=collect(values(godBROWSER[]))[1].g
 # dimx, dimy, dimc = T(0.1),T(0.2),T(0.3)
 # x, y = T(0.1),T(0.1)
-# g = god{T}(dimx, dimy, dimc, x, y, T(5), T(3))
+# g = god{T}(dimx, dimy, dimc, x, y, T(2^3), T(2^3))
 # # dt = 0.01
 # # step(g, dt)
 # g.ẑero.μ
@@ -36,11 +35,15 @@ g=collect(values(godBROWSER[]))[1].g
 # @time p̂ixel = observe(g)
 # δ = Δ(pixel, p̂ixel)
 # isempty(δ)
+dimx, dimy, dimc = T(0.1),T(0.2),T(0.3)
+x, y = T(0.1),T(0.1)
+g = god{T}(dimx, dimy, dimc, x, y, T(3), T(3))
+N=5
 name="circle"
-ϵ=∃{T}(name, g.ẑero.d, 
-[zero(T), T(0.1), T(0.9), zero(T), zero(T)], 
-[zero(T), T(0.1), T(0.1), zero(T), zero(T)], 
-fill(false, 2*5), _->○(T), Ω, ∃{T}[])
+d = g.ẑero.d
+μ = SA[zero(T), T(0.1), T(0.1), ○(T), zero(T)]
+ρ = SA[zero(T), T(0.1), T(0.1), ○(T), zero(T)]
+ϵ=∃{N,T}(GOD,name, d, μ, ρ, ntuple(_->(false,false), 5), (_,_,_)->○(T))
 create(g, name, (t, x, y) -> begin
 # @show "hi"
     # @show name, t, x, y, x^2 + y^2
@@ -48,11 +51,9 @@ create(g, name, (t, x, y) -> begin
     # @show name, t, x, y
     T(rand()), T(rand()), T(rand()), one(T)
 end,ϵ)
-Ω.ϵ
-Ω.ϵ[1].ϵ
-Ω.ϵ[2].ϵ
-Ο()
-# Ω.ϵ[1].μ
-# Ω.ϵ[1].ρ
+collect(keys(GOD.ϵ̃))
+GOD.Ο[GOD]
+
+observe(g)
 
 # end

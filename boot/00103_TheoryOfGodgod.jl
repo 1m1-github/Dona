@@ -1,25 +1,29 @@
-mutable struct god{T<:Real}
-    ♯::NTuple{}
-    ẑero::∃{T}
-    ône::∃{T}
+mutable struct god{N,T<:Real}
+    ♯::NTuple{N,Int}
+    ẑero::∃{N,T}
+    ône::∃{N,T}
     v::Tuple{T,T,T} # dt(ẑero)/dt̂, dx/dt(ẑero), dy/dt(ẑero)
 end
-function god{T}(dimx, dimy, dimc, x, y, nx, ny)
-    d = [zero(T), dimx, dimy, dimc, one(T)]
+# g = god{T}(dimx, dimy, dimc, x, y, T(5), T(3))
+# nx, ny=T(5), T(3)
+function god{T}(dimx, dimy, dimc, x, y, nx, ny) where {T<:Real}
+    d = SA[zero(T), dimx, dimy, dimc, one(T)]
     # ∂ = fill(true, 2 * length(d))
-    ∂zero = [isodd(i) for i in 1:2length(d)]
-    μzero = [t(Ω), x, y, ○(T), ○(T)]
-    ρzero = [zero(T), one(T) - x, one(T) - y, ○(T), zero(T)]
-    ẑero = ∃{T}("", d, μzero, ρzero, ∂zero, _ -> ○(T), Ω, ∃{T}[])
-    μone = fill(one(T), length(d))
-    ρone = fill(zero(T), length(d))
-    ∂one = [iseven(i) for i in 1:2length(d)]
-    ône = ∃{T}("", d, μone, ρone, ∂one, _ -> ○(T), Ω, ∃{T}[])
-    # ∃{T}("one(∀)", [zero(T), one(T)], [one(T), one(T)], [zero(T), zero(T)], fill(true, 4), _ -> ○(T), Ω, ∃{T}[])
-    ♯ = Grid([1, nx, ny, 6, 1])
+    ∂zero = ntuple(_ -> (true, false), length(d))
+    μzero = SA[t(GOD), x, y, ○(T), ○(T)]
+    ρzero = SA[zero(T), one(T)-x, one(T)-y, ○(T), zero(T)]
+    ẑero = ∃{5,T}(GOD, "", d, μzero, ρzero, ∂zero, (_,_,_) -> ○(T))
+    μone = @SVector ones(T, 5)
+    ρone = @SVector zeros(T, 5)
+    ∂one = ntuple(_ -> (false, true), length(d))
+    ône = ∃{5,T}(GOD, "", d, μone, ρone, ∂one, (_,_,_) -> ○(T))
+    # ∃{T}("one(∀)", [zero(T), one(T)], [one(T), one(T)], [zero(T), zero(T)], fill(true, 4), _ -> ○(T), GOD, ∃{T}[])
+    # ♯ = Grid([1, nx, ny, 6, 1])
+    # ♯ = (1, nx, ny, 6, 1)
+    ♯ = (0, nx, ny, 3, 0)
     v = (zero(T), zero(T), zero(T))
-    god(♯, ẑero, ône, v)
-    # god(♯, ẑero, one(Ω), v)
+    god{5,T}(♯, ẑero, ône, v)
+    # god(♯, ẑero, one(GOD), v)
 end
 # length(collect(keys(Ξ)))
 # 1 2 3 4 5 6
@@ -27,9 +31,10 @@ end
 # 0.25 0.5 0.75 1.0
 function observe(g::god)
     ϵ = g.ône - g.ẑero
-    pixel = fill((one(T), one(T), one(T), one(T)), g.♯.n[2], g.♯.n[3])
-    # x = ∃(g.♯, Ω)
-    x = ∃(g.♯, ϵ)
+    pixel = fill((one(T), one(T), one(T), one(T)), g.♯[2], g.♯[3])
+    # x = ∃(g.♯, GOD)
+    # x = ∃̇(g.♯, ϵ, GOD)
+    x = ∃̇(g.♯, GOD)
     # i = collect(CartesianIndices(pixel))[1]
     for i = CartesianIndices(pixel)
         r = x[1, i[1], i[2], 2, 1]
@@ -46,17 +51,17 @@ function observe(g::god)
     end
     pixel
 end
-∃̃(∃̇) = x̂ -> begin
-# @show "∃̂(∃̇)", x̂.μ
+∃̃(∃̇) = (x̂, Φ̇, ẋ) -> begin
+    # @show "∃̂(∃̇)", x̂.μ
     t, x, y, c, _ = x̂.μ
-# @show "∃̂(∃̇)", t, x, y, c
-# @show "∃̂(∃̇)", ∃̇
-# return ∃̇(0.1,0.2,0.3)
-# return ∃̇(t, x, y)
+    # @show "∃̂(∃̇)", t, x, y, c
+    # @show "∃̂(∃̇)", ∃̇
+    # return ∃̇(0.1,0.2,0.3)
+    # return ∃̇(t, x, y)
     r, g, b, a = ∃̇(t, x, y)
-# @show "∃̂(∃̇)", r, g, b, a
+    # @show "∃̂(∃̇)", r, g, b, a
     r == g == b == a == ○(T) && return one(T)
-# @show "∃̂(∃̇) ..."
+    # @show "∃̂(∃̇) ..."
     c∂ = one(T) / 4
     if c < c∂
         r
@@ -76,12 +81,12 @@ end
 #     @show name, t, x, y
 #     T(rand()), T(rand()), T(rand()), one(T)
 # end
-function create(g::god, name, ∃̇, ϵ)
+function create(g::god{N,T}, name, ∃̇, ϵ) where {N,T<:Real}
     ϵ̂ = g.ône - g.ẑero
     ϵ̇ = g.ẑero + ϵ
-    ϵ̃ = ∃{T}(name, ϵ̇.d, ϵ̇.μ, ϵ̇.ρ, ϵ̇.∂, ∃̃(∃̇), ϵ̂, ∃{T}[])
-    # ϵ̂ = ∃{T}(name, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ∃̃(∃̇2), Ω, ∃{T}[])
-    ∃!(ϵ̃)
+    ϵ̃ = ∃{N,T}(ϵ̂, name, ϵ̇.d, ϵ̇.μ, ϵ̇.ρ, ϵ̇.∂, ∃̃(∃̇))
+    # ϵ̂ = ∃{T}(name, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ∃̃(∃̇2), GOD, ∃{T}[])
+    ∃!(ϵ̃, GOD)
 end
 accelerate(g::god, v) = g.v = v
 jerk(g::god, j) = accelerate(g, g.v^j) # todo ?
@@ -95,10 +100,10 @@ scale(g::god, ♯) = g.♯ = ♯
 # μρ(ẑero, d)
 # ϵ, d=ẑero, d
 # (i, d) = collect(enumerate(d̂))[5]
-function Base.:(-)(ône::∃, ẑero::∃)
+function Base.:(-)(ône::∃{N,T}, ẑero::∃{N,T}) where {N,T<:Real}
     # d̂ = sort(unique(ẑero.d ∪ ône.d)) # todo sort vs unique order
-    μ = fill(○(T), length(ẑero.d))
-    ρ = fill(○(T), length(ẑero.d))
+    μ = @MVector fill(○(T), length(ẑero.d))
+    ρ = @MVector fill(○(T), length(ẑero.d))
     for (i, d) = enumerate(ẑero.d)
         ẑeroμ, _ = μρ(ẑero, d)
         ôneμ, _ = μρ(ône, d)
@@ -106,10 +111,10 @@ function Base.:(-)(ône::∃, ẑero::∃)
         μ[i] = ẑeroμ + ρ[i]
     end
     # ∂ = fill(true, 2*length(ẑero.d))
-    ∂ = [iseven(i) ? ône.∂[i] : ẑero.∂[i] for i = 1:2*length(ẑero.d)]
-    ∃{T}("", ẑero.d, μ, ρ, ∂, _ -> ○(T), Ω, ∃{T}[])
+    ∂ = ntuple(i -> iseven(i) ? ône.∂[i] : ẑero.∂[i], length(ẑero.d))
+    ∃{N,T}(GOD, "", ẑero.d, SVector(μ), SVector(ρ), ∂, (_,_,_) -> ○(T))
 end
-Base.:(+)(ône::∃, ẑero::∃) = ∃{T}("", ẑero.d, ẑero.μ + ône.μ, ẑero.ρ, ẑero.∂, _ -> ○(T), ône, ∃{T}[])
+Base.:(+)(ône::∃{N,T}, ẑero::∃{N,T}) where {N,T<:Real} = ∃{N,T}(ône, "", ẑero.d, ẑero.μ + ône.μ, ẑero.ρ, ẑero.∂, _ -> ○(T))
 # ∇(t) = t*g.ône-(1-t)*g.ẑero
 # ∇(0) = g.ẑero
 # ∇(1) = g.ône
@@ -117,11 +122,11 @@ Base.:(+)(ône::∃, ẑero::∃) = ∃{T}("", ẑero.d, ẑero.μ + ône.μ, 
 # speed = dt(ẑero)/dt̂, dx/dt(ẑero), dy/dt(ẑero)
 # t = 1 - 1/(1+log(C)) = log(C)/(1+log(C))
 # dt(ẑero) = speed[1]*dt̂
-function step(g::god, dt̂)
+function step(g::god{N,T}, dt̂) where {N,T<:Real}
     dt = g.v[1] * dt̂
     dx = g.v[2] * dt
     dy = g.v[3] * dt
-    μ = [g.ẑero.μ[1] + dt, g.ẑero.μ[2] + dx, g.ẑero.μ[3] + dy, ○(T), ○(T)]
-    ρ = [zero(T), one(T) - μ[2], one(T) - μ[3], ○(T), ○(T)]
-    g.ẑero = ∃{T}("", g.ẑero.d, μ, ρ, g.ẑero.∂, _ -> ○(T), Ω, ∃{T}[])
+    μ = SA[g.ẑero.μ[1]+dt, g.ẑero.μ[2]+dx, g.ẑero.μ[3]+dy, ○(T), ○(T)]
+    ρ = SA[zero(T), one(T)-μ[2], one(T)-μ[3], ○(T), ○(T)]
+    g.ẑero = ∃{N,T}(GOD, "", g.ẑero.d, μ, ρ, g.ẑero.∂, (_,_,_) -> ○(T))
 end

@@ -1,38 +1,45 @@
-# struct Grid
-#     n::Vector{Int}
-# end
-# function ∃̇(♯::Grid, ϵ::∃{T}, k::Int, Ξ::Dict{∃, Tuple{Pretopology{T}, T}}) where {T<:Real}
-# function ∃̇(♯::NTuple{N,Int}, F::Function) where N
-ks=(3,3,3)
-N=length(ks)
-typeof(view(grid,1:2))
+# ♯=g.♯
+# ♯ = (0,3,3,3,0)
+function ∃̇(♯::NTuple{N,Int}, ϵ::∃{N,T}, GOD::𝕋{T}) where {N,T<:Real}
+    # ks = ceil.(Int, log2.(♯))
+    # ks = ♯
+    # d = @SVector (!).(iszero.(♯))
+    ♯̂ = [!iszero(g) for g = ♯]
+    ♯̇ = ♯[♯̂]
+    Ṅ = length(♯̇)
+    Ns = ntuple(i -> (1 << ♯̇[i]) + 1, Ṅ)
+    grid = fill(○(T), Ns...)
 
-function ∃̇(ks::NTuple{N,Int}, F::Function) where N
-    Ns = ntuple(d -> (1 << ks[d]) + 1, N)
-    maxk = maximum(ks)
-    
-    grid = fill(NaN, Ns...)
-    
-    center = CartesianIndex(ntuple(d -> (Ns[d]+1)>>1, N))
-    grid[center] = F(center, Float64[], CartesianIndex{N}[])
-    
+    center = CartesianIndex(ntuple(i -> (Ns[i] + 1) >> 1, Ṅ))
+    # μ = MVector(ϵ.μ)
+    # i̇ = 1
+    # for i = 1:N
+    #     iszero(♯[i]) && continue
+    #     μ[i] = ϵ.μ[i] + ϵ.ρ[i]*(2*T(center[i̇])/T(Ns[i̇])-1)
+    #     i̇ +=1
+    # end
+    ρ = @SVector zeros(T,N)
+    x = ∃{N,T}(ϵ, "", ϵ.d, ϵ.μ, ρ, ntuple(_->(true, true), N), ϵ.Φ)
+    # grid[center] = ϵ.Φ(center, T[], CartesianIndex{N}[])
+    _, grid[center], _ = ∃̇(x, ϵ, GOD, T[], CartesianIndex{N}[])
+
     for b in 0:(1<<N)-1
-        ci = CartesianIndex(ntuple(d -> 1 + (Ns[d]-1)*((b>>(d-1))&1), N))
-        grid[ci] = F(ci, [grid[center]], [center])
+        ci = CartesianIndex(ntuple(d -> 1 + (Ns[d] - 1) * ((b >> (d - 1)) & 1), N))
+        grid[ci] = ϵ.Φ(ci, [grid[center]], [center])
     end
-    
-    for ℓ in 1:maxk
-        ss = ntuple(d -> ℓ ≤ ks[d] ? 1 << (ks[d]-ℓ) : 0, N)
+
+    for ℓ in 1:maximum(ks)
+        ss = ntuple(d -> ℓ ≤ ks[d] ? 1 << (ks[d] - ℓ) : 0, N)
         strides = ntuple(d -> max(ss[d], 1), N)
         ci = CartesianIndices(ntuple(d -> 1:strides[d]:Ns[d], N))
-        
+
         @threads for pt in ci
             isnan(grid[pt]) || continue
-            
-            odd_mask = ntuple(d -> ss[d] > 0 && isodd((pt[d]-1) ÷ ss[d]), N)
+
+            odd_mask = ntuple(d -> ss[d] > 0 && isodd((pt[d] - 1) ÷ ss[d]), N)
             nodd = count(odd_mask)
             nodd == 0 && continue
-            
+
             bit_pos = MVector{N,Int}(undef)
             j = 0
             for d in 1:N
@@ -41,16 +48,16 @@ function ∃̇(ks::NTuple{N,Int}, F::Function) where N
                     j += 1
                 end
             end
-            
-            pvals = MVector{1 << N, Float64}(undef)
-            pcoords = MVector{1 << N, CartesianIndex{N}}(undef)
+
+            pvals = MVector{1 << N,T}(undef)
+            pcoords = MVector{1 << N,CartesianIndex{N}}(undef)
             np = 0
-            for b in 0:(1 << nodd)-1
+            for b in 0:(1<<nodd)-1
                 valid = true
                 coords = MVector{N,Int}(undef)
                 for d in 1:N
                     if odd_mask[d]
-                        coords[d] = pt[d] + ss[d] * (2*((b >> bit_pos[d]) & 1) - 1)
+                        coords[d] = pt[d] + ss[d] * (2 * ((b >> bit_pos[d]) & 1) - 1)
                         if coords[d] < 1 || coords[d] > Ns[d]
                             valid = false
                             break
@@ -65,78 +72,8 @@ function ∃̇(ks::NTuple{N,Int}, F::Function) where N
                     pcoords[np] = CartesianIndex(Tuple(coords))
                 end
             end
-            grid[pt] = F(pt, view(pvals, 1:np), view(pcoords, 1:np))
+            grid[pt] = ϵ.Φ(pt, view(pvals, 1:np), view(pcoords, 1:np))
         end
     end
     grid
 end
-view(pvals, 1:np) isa AbstractVector{Float64}
-view(pcoords, 1:np) isa AbstractVector{CartesianIndex{3}}
-typeof(view(pvals, 1:np))
-typeof(view(pcoords, 1:np))
-np=2
-T=Float64
-N=2
-a=T[1.0,2.0]
-b=[CartesianIndex(1,2), CartesianIndex(1,3)]
-typeof(view(a, 1:2))
-typeof(view(b, 1:1))
-
-
-# index(n) = Iterators.product((1:n̂ for n̂ ∈ n)...)
-# function ∃̇(♯::Grid, ϵ::∃{T}, k::Int, Ξ::Dict{∃, Tuple{Pretopology{T}, T}}) where {T<:Real}
-#     # consider length(♯.n)-dim squares/pixels covering the area defined in ϵ such that:
-#     # ♯.n is the number of squares in each dimension (1 square for undeclared dimensions)
-#     # the corners of ϵ are centers of the corner squares
-#     # all points in ϵ belong to at least 1 square, some points to multiple (edges or corners of squares)
-#     # we bisect the space starting at the center, then all the corners of the full space, then each mid point between each point that exists
-#     # each of these steps (k) is one after another, as the potential function ∃̇ is run given the coordinate and value of the points that made this center
-#     # each step itself runs the points in parallel (@threads for)
-#     # the points are all in the continuous space and map to potentially multiple squares (any that it is touching considering the squares as closed sets), if a latter theoretical point paints a square that already had a value, we just overwrite, as in, the iterator delivers the square index and value, no problem, its an update
-#     # could we return an iterator that adds points as k advances (and within k the threads return results going into the cache Ξ) ?
-#     # the first steps are technically also centers between corners, the corners as centers between the center, the center the center between nothing and everything (center=origin), so each step takes the center of what exists, runs those in parallel and delivers to the caller by asap (iterator)
-#     #
-#     if k == 0
-#         # center
-#         x = X(ϵ, ϵ.μ)
-#         ϵ̂, ϵ̇, _ = ∃̇(x, ϵ) # owner, value, _
-#         Ξ[x] = ϵ̂, ϵ̇
-# # ... return # something for iterator
-#     elseif k == 1
-#         # all corners
-#         n = filter(n -> n ≠ 1, ♯.n...)
-    # n = findall(n -> 1 < n, ♯.n)
-
-
-#         for i = 1:2^n
-# # ...  find μ such that x = X(ϵ, μ) gives a corner and then ϵ̂, ϵ̇, _ = ∃̇(x, ϵ) ; Ξ[x] = ϵ̂, ϵ̇
-#         end
-# # ... return # something for iterator
-#     end
-#     ϵ̇ = ∃̇(♯, ϵ, k-1, Ξ)
-#     # 1 < k: enumerate all centers of all points that exist (Ξ) such that
-#     # no doubles (no need to run ∃̇(x, ϵ) if haskey(Ξ,x))
-#     # run all these points in parallel using:
-# # @threads for i = ...
-# # ... onex, zerox = ... two existing points
-#     onex∃, zero∃ = Ξ[onex], Ξ[zerox] # their values
-#     ϵ̂, ϵ̇, _ = ∃̇(onex, onex∃, zerox, zero∃, x, ϵ) # ... new center value
-# # end @threads for
-# # ... return iterator
-# end
-# old:
-# function ∃̇(♯::Grid, ϵ::∃{T}) where {T<:Real}
-#     ○̂ = ○(T)
-#     ϵ̂ = fill(○̂, ♯.n...)
-#     μẑero = ϵ.μ .- ϵ.ρ
-#     @threads for i = collect(index(♯.n))
-#         μ = fill(○̂, length(ϵ.d))
-#         for î = eachindex(ϵ.d)
-#             μ[î] = isone(♯.n[î]) ? ϵ.μ[î] : μẑero[î] + 2 * ϵ.ρ[î] * T(i[î] - 1) / T(♯.n[î] - 1)
-#         end
-#         x = X(ϵ, μ) # x ∈ cl(ϵ)
-#         ϵ̂[i...] = ∃̇(x, ϵ)
-#     end
-#     ϵ̂
-# end
-

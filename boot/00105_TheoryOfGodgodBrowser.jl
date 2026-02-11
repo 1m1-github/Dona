@@ -10,9 +10,9 @@ struct godBrowser
 end
 godBrowser(g,browser) = godBrowser(g, Threads.@spawn begin
     try
-put!(browser.processor, JS(g.♯.n[2], g.♯.n[3]))
+put!(browser.processor, JS(g.♯[2], g.♯[3]))
 t = time()
-pixel = fill((one(T),one(T),one(T),one(T)), g.♯.n[2],g.♯.n[3])
+pixel = fill((one(T),one(T),one(T),one(T)), g.♯[2],g.♯[3])
 while true
     sleep(5)
     yield()
@@ -25,7 +25,7 @@ while true
     δ = Δ(pixel, p̂ixel)
     @show δ
     isempty(δ) && continue
-    js = "pixel=" * write(δ, g.♯.n[2]) * "\n" * SET_PIXELS_JS
+    js = "pixel=" * write(δ, g.♯[2]) * "\n" * SET_PIXELS_JS
     put!(browser.processor, js)
 end
 catch e @show e end
@@ -36,7 +36,8 @@ function godBrowser(browser)
     dimx, dimy, dimc = T(0.1),T(0.2),T(0.3)
     x, y = T(0.1),T(0.1)
     # g = god{T}(dimx, dimy, dimc, x, y, browser.width, browser.height)
-    g = god{T}(dimx, dimy, dimc, x, y, T(5), T(3))
+    # g = god{T}(dimx, dimy, dimc, x, y, T(200), T(100))
+    g = god{T}(dimx, dimy, dimc, x, y, T(2^3), T(2^3))
     gb = godBrowser(g, browser)
     push!(godBROWSER[], gb)
     gb

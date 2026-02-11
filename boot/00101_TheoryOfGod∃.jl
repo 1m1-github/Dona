@@ -39,7 +39,14 @@ struct 𝕋{T<:Real} <: ∀{T}
     Ο::ConcurrentDict{∀{T},Int}
     L::ReentrantLock
 end
-function new_parent_dims(ϵ::∃{N,T}, ϵ̂::∃{N,T})
+function 𝕋{T}() where {T<:Real}
+    ϵ̃ = ConcurrentDict{∀{T},Vector{∃{<:Any,T}}}()
+    Ο = ConcurrentDict{∀{T},Int}()
+    GOD = 𝕋{T}(ϵ̃, Ο, ReentrantLock())
+    GOD.Ο[GOD] = 1
+    GOD
+end
+function new_parent_dims(ϵ::∃{N,T}, ϵ̂::∃{N,T}) where {N,T<:Real}
     d = copy(ϵ.d)
     nϵ̂ = length(ϵ.ϵ̂.d)
     for (i, dᵢ) = enumerate(ϵ.d)
@@ -50,7 +57,7 @@ function new_parent_dims(ϵ::∃{N,T}, ϵ̂::∃{N,T})
     end
     d
 end
-function Base.copy!(ϵ::∃{N,T}, ϵ̂::∃{N,T}, GOD::𝕋{T}) where {N,T}
+function Base.copy!(ϵ::∃{N,T}, ϵ̂::∃{N,T}, GOD::𝕋{T}) where {N,T<:Real}
     !haskey(GOD.ϵ̃, ϵ) && return
     d = new_parent_dims(ϵ, ϵ̂)
     ϵ̃ = ∃{N,T}(ϵ̂, ϵ.ι, d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.Φ)
@@ -111,7 +118,7 @@ function ∂(x::∃{N,T}, ϵ::∃{N,T}) where {N,T<:Real}
     end
     false
 end
-function Base.:(⊆)(zero₁::SVector{N,T}, one₁::SVector{N,T}, ∂₁::NTuple{N,Tuple{Bool,Bool}}, zero₂::SVector{N,T}, one₂::SVector{N,T}, ∂₂::NTuple{N,Tuple{Bool,Bool}}) where {N,T<:Real}
+function Base.:(⊆)(zero₁::T, one₁::T, ∂₁::Tuple{Bool,Bool}, zero₂::T, one₂::T, ∂₂::Tuple{Bool,Bool}) where {N,T<:Real}
     żero = zero₂ < zero₁ || (zero₂ == zero₁ && (!∂₁[1] || ∂₂[1]))
     ȯne = one₁ < one₂ || (one₁ == one₂ && (!∂₁[2] || ∂₂[2]))
     żero && ȯne
@@ -175,14 +182,15 @@ function ⫉(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}) where {N,T<:Real}
     ϵ̂ = α(ϵ₁, ϵ₂)
     ℼ(ϵ₁, ϵ̂) ⪽ ℼ(ϵ₂, ϵ̂)
 end
+# ϵ₁,ϵ₂=ϵ, GOD
 function β(ϵ₁::∃{N,T}, ϵ₂::∀{T}, GOD::𝕋{T}) where {N,T<:Real}
-    ϵ̃ = GOD.ϵ̃[ϵ₂]
+    ϵ̃ = get(GOD.ϵ̃, ϵ₂, ∃{N,T}[])
     ϵ̃₂ = filter(ϵ̃ -> ϵ̃ ≠ ϵ₁ && ϵ₁ ⫉ ϵ̃, ϵ̃)
     isempty(ϵ̃₂) && return ϵ₂
     1 < length(ϵ̃₂) && throw("Need unique fitting parent.")
     β(ϵ₁, only(ϵ̃₂), GOD)
 end
-function Base.:∩(zero₁::SVector{N,T}, one₁::SVector{N,T}, ∂₁::NTuple{N,Tuple{Bool,Bool}}, zero₂::SVector{N,T}, one₂::SVector{N,T}, ∂₂::NTuple{N,Tuple{Bool,Bool}}) where {N,T<:Real}
+function Base.:∩(zero₁::T, one₁::T, ∂₁::Tuple{Bool,Bool}, zero₂::T, one₂::T, ∂₂::Tuple{Bool,Bool}) where {N,T<:Real}
     żero = max(zero₁, zero₂)
     ȯne = min(one₁, one₂)
     żero < ȯne && return true
@@ -228,22 +236,29 @@ function Base.:∩(ϵ₁::∃{N,T}, ϵ₂::∃{N,T}, GOD::𝕋) where {N,T<:Real
 end
 function ∃̇(x::∃{N,T}, ϵ::∃{N,T}, GOD::𝕋{T}, Φ̂::AbstractVector{T}=[], x̂::AbstractVector{CartesianIndex{N}}=[]) where {N,T<:Real}
     ∂(x, ϵ) && return GOD, ○(T), true
-    for ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, GOD.ϵ̃[ϵ])
+    ϵ̃ = get(GOD.ϵ̃, ϵ, ∃{N,T}[])
+    for ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, ϵ̃)
         ∩(x, ϵ̃, GOD) && return ϵ̃, ϵ̃.Φ(x, Φ̂, x̂), true
         ϵ̂, ϵ̇, found = ∃̇(x, ϵ̃, GOD)
         found && return ϵ̂, ϵ̇, true
     end
     GOD, ○(T), false
 end
-function ∃!(ϵ::∃{N,T}, GOD::𝕋{T}, ϵ̂::∃{N,T}=β(ϵ, GOD, GOD)) where {N,T<:Real}
+# ϵ=ϵ̃
+# ϵ̂=β(ϵ, GOD, GOD)
+function ∃!(ϵ::∃{N,T}, GOD::𝕋{T}, ϵ̂::∀{T}=β(ϵ, GOD, GOD)) where {N,T<:Real}
     lock(GOD.L)
-    ϵ̃ = GOD.ϵ̃[ϵ̂]
+    ϵ̃ = get(GOD.ϵ̃, ϵ̂, ∃{N,T}[])
     any(ϵ̃ -> ∩(ϵ, ϵ̃, GOD), ϵ̃) && (unlock(GOD.L); return nothing)
     if ϵ̂ !== ϵ.ϵ̂
         ϵ = ∃{N,T}(ϵ̂, ϵ.ι, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.Φ)
     end
     ϵ̂ !== GOD && ∩(ϵ, ϵ̂, GOD) && (unlock(GOD.L); return nothing)
-    push!(ϵ̃, ϵ)
+    if haskey(GOD.ϵ̃, ϵ̂)
+        push!(GOD.ϵ̃[ϵ̂], ϵ)
+    else
+        GOD.ϵ̃[ϵ̂] = [ϵ]
+    end
     GOD.Ο[ϵ] = GOD.Ο[GOD]
     GOD.Ο[GOD] += 1
     unlock(GOD.L)
