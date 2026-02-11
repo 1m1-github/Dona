@@ -1,5 +1,5 @@
-using StaticArrays
-const T = Float64
+# using StaticArrays
+# const T = Float64
 
 export ∃, ∃̇, ∃!
 
@@ -19,6 +19,7 @@ Each child ϵ is a subset of its parent in the active dimensions (0 < ρ) declar
 god ⊊ God ⊊ GOD = ∀ = I^I = I^(.) = [ZERO < ○ < ONE]^(.)
 
 god can observe all, God can create in non-existing non-past, GOD can iterate all.
+god observes, God creates, GOD iterates.
 """
 
 const ○ = one(T) / (one(T) + one(T))
@@ -42,20 +43,21 @@ struct ∃{N,F} <: ∀
 end
 Base.hash(ϵ::∃, h) = hash(ϵ.h, h)
 struct 𝕋 <: ∀
-    ϵ̃::Dict{∀, Vector{∃}}
-    Ο::Dict{∀, Int}
+    ϵ̃::Dict{∀,Vector{∃}}
+    Ο::Dict{∀,Int}
     L::ReentrantLock
+    s::Ref{Int}
     function 𝕋()
-        ϵ̃ = Dict{∀, Vector{∃}}()
+        ϵ̃ = Dict{∀,Vector{∃}}()
         Ο = Dict{∀,Int}()
-        GOD = new(ϵ̃, Ο, ReentrantLock())
-        GOD.Ο[GOD] = 1
+        GOD = new(ϵ̃, Ο, ReentrantLock(), Ref(1))
+        GOD.Ο[GOD] = GOD.s[]
         GOD
     end
 end
 Base.hash(::𝕋, h) = hash(:GOD, h)
 t(GOD::𝕋) = one(T) - one(T) / (one(T) + T(log(GOD.Ο[GOD])))
-function new_parent_dims(ϵ::∃, ϵ̂::∃)
+function δ(ϵ::∃, ϵ̂::∃)
     d = copy(ϵ.d)
     nϵ̂ = length(ϵ.ϵ̂.d)
     for (i, dᵢ) = enumerate(ϵ.d)
@@ -68,7 +70,7 @@ function new_parent_dims(ϵ::∃, ϵ̂::∃)
 end
 function Base.copy!(ϵ::∃, ϵ̂::∃, GOD::𝕋)
     !haskey(GOD.ϵ̃, ϵ) && return
-    d = new_parent_dims(ϵ, ϵ̂)
+    d = δ(ϵ, ϵ̂)
     ϵ̃ = ∃(ϵ̂, d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.Φ)
     ∃!(ϵ̃, GOD, ϵ̂)
     for ϵ̃̃ = GOD.ϵ̃[ϵ]
@@ -76,7 +78,6 @@ function Base.copy!(ϵ::∃, ϵ̂::∃, GOD::𝕋)
     end
     ϵ̃
 end
-
 μ̂(ϵ::∃) = ϵ.ϵ̂ isa 𝕋 ? ϵ.μ : ϵ.μ .- ϵ.ρ .+ 2 .* ϵ.ρ .* ϵ.ϵ̂.μ
 ρ̂(ϵ::∃) = ϵ.ϵ̂ isa 𝕋 ? ϵ.ρ : 2 .* ϵ.ϵ̂.ρ .* ϵ.ρ
 μ̃(μ, ϵ::∃) = (μ .- (ϵ.μ .- ϵ.ρ)) ./ ϵ.ρ ./ 2
@@ -263,9 +264,19 @@ function ∃!(ϵ::∃, GOD::𝕋, ϵ̂::∀=β(ϵ, GOD, GOD))
         ϵ = ∃(ϵ̂, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.Φ)
     end
     ϵ̂ !== GOD && ∩(ϵ, ϵ̂, GOD) && (unlock(GOD.L); return nothing)
+    while Sys.free_memory() < GOD.s[] + sizeof(ϵ)
+        rm!(GOD)
+    end
     push!(get!(GOD.ϵ̃, ϵ̂, ∃[]), ϵ)
     GOD.Ο[ϵ] = GOD.Ο[GOD]
     GOD.Ο[GOD] += 1
     unlock(GOD.L)
     ϵ
+end
+function rm!(GOD::𝕋)
+    ϵ̂̂ = argmin(ϵ -> GOD.Ο[ϵ], filter(k -> k isa ∃, keys(GOD.Ο)))
+    GOD.s[] -= sizeof(ϵ̂̂)
+    filter!(ϵ -> ϵ !== ϵ̂̂, GOD.ϵ̃[ϵ̂̂.ϵ̂])
+    delete!(GOD.ϵ̃, ϵ̂̂)
+    delete!(GOD.Ο, ϵ̂̂)
 end
