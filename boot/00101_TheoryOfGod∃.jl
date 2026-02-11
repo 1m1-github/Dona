@@ -20,20 +20,29 @@ god can observe all, God can create in non-existing non-past, GOD can iterate al
 
 ○(::Type{T}) where {T<:Real} = one(T) / (one(T) + one(T))
 abstract type ∀{T<:Real} end
-struct ∃{N,T<:Real} <: ∀{T}
+struct ∃{N,T<:Real,F} <: ∀{T}
     ϵ̂::∀{T}
-    ι::String
     d::SVector{N,T}
     μ::SVector{N,T}
     ρ::SVector{N,T}
     ∂::NTuple{N,Tuple{Bool,Bool}}
-    Φ::Function
-    function ∃{N,T}(ϵ̂::∀{T}, ι::String, d::SVector{N,T}, μ::SVector{N,T}, ρ::SVector{N,T}, ∂::NTuple{N,Tuple{Bool,Bool}}, Φ::Function) where {N,T<:Real}
+    Φ::F
+    h::UInt
+    function ∃(ϵ̂::∀{T}, d::SVector{N,T}, μ::SVector{N,T}, ρ::SVector{N,T}, ∂::NTuple{N,Tuple{Bool,Bool}}, Φ::F) where {N,T<:Real,F}
         @assert 1 ≤ N
         p = sortperm(d)
-        new{N,T}(ϵ̂, ι, d[p], μ[p], ρ[p], ntuple(i -> ∂[p[i]], N), Φ)
+        d, μ, ρ = (x[p] for x = (d, μ, ρ))...
+        ∂ = ntuple(i -> ∂[p[i]], N)
+        h = hash(d, hash(μ, hash(ρ, hash(∂, hash(ϵ̂)))))
+        new{N,T,F}(ϵ̂, d, μ, ρ, ∂, Φ, h)
     end
+    # function ∃{N,T}(ϵ̂::∀{T}, ι::String, d::SVector{N,T}, μ::SVector{N,T}, ρ::SVector{N,T}, ∂::NTuple{N,Tuple{Bool,Bool}}, Φ::Function) where {N,T<:Real}
+    #     @assert 1 ≤ N
+    #     p = sortperm(d)
+    #     new{N,T}(ϵ̂, ι, d[p], μ[p], ρ[p], ntuple(i -> ∂[p[i]], N), Φ)
+    # end
 end
+Base.hash(ϵ::∃, h::UInt) = hash(ϵ.h, h)
 struct 𝕋{T<:Real} <: ∀{T}
     ϵ̃::ConcurrentDict{∀{T},Vector{∃{<:Any,T}}}
     Ο::ConcurrentDict{∀{T},Int}
@@ -67,13 +76,13 @@ function Base.copy!(ϵ::∃{N,T}, ϵ̂::∃{N,T}, GOD::𝕋{T}) where {N,T<:Real
     end
     ϵ̃
 end
-Base.hash(::∀, ::UInt) = zero(UInt)
+Base.hash(::𝕋, h::UInt) = hash(:GOD, h)
 function Base.hash(ϵ::∃, h::UInt)
     h = hash(ϵ.d, h)
     h = hash(ϵ.μ, h)
     h = hash(ϵ.ρ, h)
     h = hash(ϵ.∂, h)
-    hash(objectid(ϵ.ϵ̂), h)
+    hash(ϵ.ϵ̂, h)
 end
 t(GOD::𝕋{T}) where {T<:Real} = one(T) - one(T) / (one(T) + T(log(GOD.Ο[GOD])))
 
