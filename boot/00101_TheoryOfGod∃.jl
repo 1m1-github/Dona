@@ -1,27 +1,3 @@
-# using StaticArrays
-# const T = Float64
-
-export ∃, ∃̇, ∃!
-
-const THEORYOFGOD = """
-I = [ZERO < ○ < ONE] denotes a unit 1-dim space of information with origin ○ (no information) in its center including the corners ZERO and ONE.
-∀ = I^I an ∞-dim metric and smooth vector space.
-We have a Pretopology 𝕋 on ∀ such that ϵᵢ ∈ 𝕋:
-* ϵᵢ ⊆ ∀
-* ϵ₂ ∈ ϵ₁.ϵ̃ => ϵ₂|ϵ₁ ⊆ ϵ₁ <=> ϵ₂ ⫉ ϵ₁ ⩓ ϵ₂ ∈ ϵ₃.ϵ̃ => ϵ₁ = ϵ₃
-* ϵ₁ ≠ ϵ₂ => ϵ₁ ∩ ϵ₂ = ∅
-* x ∈ ϵᵢ ⊊ ∀: x.ρ = 0 => ϵᵢ.Φ(x) ∈ I is arbitrary, computable and smooth fuzzy existence potential towards ONE=true xor ZERO=false.
-
-ϵ ⊊ ∀ defines its existence inside a subset of ∀ using an origin (μ), a radius (ρ) and a closed vs. open in each direction (∂) vector. These vectors are finite and all other dimensional coordinates of ϵ follow from linear interpolation.
-If we use a horizontal axis for dimension and a vertical axis for coordinate in the dimension, for any ϵ, the chart looks like a stepwise linear function with finite non-zero radius intervals and zero interval points within the interpolated regions.
-Each child ϵ is a subset of its parent in the active dimensions (0 < ρ) declared by the parent (as opposed to undeclared dimensions where 0==ρ).
-
-god ⊊ God ⊊ GOD = ∀ = I^I = I^(.) = [ZERO < ○ < ONE]^(.)
-
-god can observe all, God can create in non-existing non-past, GOD can iterate all.
-god observes, God creates, GOD iterates.
-"""
-
 const ○ = one(T) / (one(T) + one(T))
 abstract type ∀ end
 struct ∃{N,F} <: ∀
@@ -50,13 +26,13 @@ struct 𝕋 <: ∀
     function 𝕋()
         ϵ̃ = Dict{∀,Vector{∃}}()
         Ο = Dict{∀,Int}()
-        GOD = new(ϵ̃, Ο, ReentrantLock(), Ref(1))
-        GOD.Ο[GOD] = GOD.s[]
-        GOD
+        God = new(ϵ̃, Ο, ReentrantLock(), Ref(1))
+        God.Ο[God] = God.s[]
+        God
     end
 end
-Base.hash(::𝕋, h) = hash(:GOD, h)
-t(GOD::𝕋) = one(T) - one(T) / (one(T) + T(log(GOD.Ο[GOD])))
+Base.hash(::𝕋, h::UInt) = hash(:God, h)
+t(God::𝕋) = one(T) - one(T) / (one(T) + T(log(God.Ο[God])))
 function δ(ϵ::∃, ϵ̂::∃)
     d = copy(ϵ.d)
     nϵ̂ = length(ϵ.ϵ̂.d)
@@ -68,13 +44,13 @@ function δ(ϵ::∃, ϵ̂::∃)
     end
     d
 end
-function Base.copy!(ϵ::∃, ϵ̂::∃, GOD::𝕋)
-    !haskey(GOD.ϵ̃, ϵ) && return
+function Base.copy!(ϵ::∃, ϵ̂::∃, God::𝕋)
+    !haskey(God.ϵ̃, ϵ) && return
     d = δ(ϵ, ϵ̂)
     ϵ̃ = ∃(ϵ̂, d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.Φ)
-    ∃!(ϵ̃, GOD, ϵ̂)
-    for ϵ̃̃ = GOD.ϵ̃[ϵ]
-        copy!(ϵ̃̃, ϵ̃, GOD)
+    ∃!(ϵ̃, God, ϵ̂)
+    for ϵ̃̃ = God.ϵ̃[ϵ]
+        copy!(ϵ̃̃, ϵ̃, God)
     end
     ϵ̃
 end
@@ -171,10 +147,10 @@ function ℼ(ϵ₁::∃, ϵ₂::∃)
     if ϵ₂ ∈ α(ϵ₁)
         return ℼ(∃(ϵ₁.ϵ̂.ϵ̂, ϵ₁.d, μ̂(ϵ₁), ρ̂(ϵ₁), ϵ₁.∂, ϵ₁.Φ), ϵ₂)
     end
-    ϵ₁GOD = ℼ(ϵ₁)
-    ϵ₂GOD = ℼ(ϵ₂)
-    μ = μ̃(ϵ₁GOD.μ, ϵ₂GOD)
-    ρ = ρ̃(ϵ₁GOD.ρ, ϵ₂GOD)
+    ϵ₁God = ℼ(ϵ₁)
+    ϵ₂God = ℼ(ϵ₂)
+    μ = μ̃(ϵ₁God.μ, ϵ₂God)
+    ρ = ρ̃(ϵ₁God.ρ, ϵ₂God)
     ∃(ϵ₂, ϵ₁.d, μ, ρ, ϵ₁.∂, ϵ₁.Φ)
 end
 ⫉(ϵ, ::𝕋) = true
@@ -183,13 +159,12 @@ function ⫉(ϵ₁::∃, ϵ₂::∃)
     ϵ̂ = α(ϵ₁, ϵ₂)
     ℼ(ϵ₁, ϵ̂) ⪽ ℼ(ϵ₂, ϵ̂)
 end
-# ϵ₁,ϵ₂=ϵ, GOD
-function β(ϵ₁::∃, ϵ₂::∀, GOD::𝕋)
-    ϵ̃ = get(GOD.ϵ̃, ϵ₂, ∃[])
+function β(ϵ₁::∃, ϵ₂::∀, God::𝕋)
+    ϵ̃ = get(God.ϵ̃, ϵ₂, ∃[])
     ϵ̃₂ = filter(ϵ̃ -> ϵ̃ ≠ ϵ₁ && ϵ₁ ⫉ ϵ̃, ϵ̃)
     isempty(ϵ̃₂) && return ϵ₂
     1 < length(ϵ̃₂) && throw("Need unique fitting parent.")
-    β(ϵ₁, only(ϵ̃₂), GOD)
+    β(ϵ₁, only(ϵ̃₂), God)
 end
 function Base.:∩(zero₁, one₁, ∂₁::Tuple{Bool,Bool}, zero₂, one₂, ∂₂::Tuple{Bool,Bool})
     żero = max(zero₁, zero₂)
@@ -200,10 +175,10 @@ function Base.:∩(zero₁, one₁, ∂₁::Tuple{Bool,Bool}, zero₂, one₂, �
     ∂₀₁ = one₁ < one₂ ? ∂₁[2] : (one₂ < one₁ ? ∂₂[2] : ∂₁[2] && ∂₂[2])
     ∂₀₀ && ∂₀₁
 end
-function Base.:∩(ϵ₁::∃, ϵ₂::∃, GOD::𝕋)
+function Base.:∩(ϵ₁::∃, ϵ₂::∃, God::𝕋)
     if ϵ₁.ϵ̂ !== ϵ₂.ϵ̂
         ϵ̂ = α(ϵ₁, ϵ₂)
-        return ∩(ℼ(ϵ₁, ϵ̂), ℼ(ϵ₂, ϵ̂), GOD)
+        return ∩(ℼ(ϵ₁, ϵ̂), ℼ(ϵ₂, ϵ̂), God)
     end
     d̂ = sort(ϵ₁.d ∪ ϵ₂.d)
     if !iszero(d̂[1])
@@ -230,92 +205,86 @@ function Base.:∩(ϵ₁::∃, ϵ₂::∃, GOD::𝕋)
         (μ₁ - μ₂) * (μ₁prev - μ₂prev) < zero(T) && return true
         μ₁prev, μ₂prev = μ₁, μ₂
     end
-    ϵ̃ = GOD.ϵ̃[ϵ₂]
+    ϵ̃ = God.ϵ̃[ϵ₂]
     isempty(ϵ̃) && return true
     ϵ̂ = ℼ(ϵ₁, ϵ₂)
-    all(ϵ̃ -> ∩(ϵ̂, ϵ̃, GOD), ϵ̃)
+    all(ϵ̃ -> ∩(ϵ̂, ϵ̃, God), ϵ̃)
 end
-# function observe(ϵ::∃, ♯::NTuple)
-#     g = fill(○, ♯...)
-#     N = length(♯)
-#     Threads.@threads for idx in CartesianIndices(g)
-#         x = ntuple(i -> T(idx[i] - 1) / T(♯[i] - 1), N)
-#         g[idx] = ϵ.Φ(x)
-#     end
-#     g
-# end
-function gpu_eval(Φ, coords)
-    out = Vector{T}(undef, length(coords))
-    Threads.@threads for i in eachindex(coords)
-        out[i] = Φ(coords[i])
-    end
-    out
+@kernel function Φ!(out, Φ, coords)
+    i = @index(Global)
+    out[i] = Φ(coords[i])
 end
-idx_to_coord(idx, ♯) = ntuple(i -> T(idx[i] - 1) / T(♯[i] - 1), length(♯))
-function observe(ϵ::∃, GOD::𝕋, ♯::NTuple)
-    owners = assign_owners(ϵ, GOD, ♯)
-    grid = fill(○, ♯...)
-    
-    # group indices by owner
-    groups = Dict{∃, Vector{CartesianIndex}}()
-    for idx in CartesianIndices(owners)
-        push!(get!(groups, owners[idx], []), idx)
-    end
-    
-    # one GPU kernel per owner
-    for (owner, indices) in groups
-        # all points in this group share the same Φ
-        # launch as single kernel
-        coords = map(idx -> idx_to_coord(idx, ♯), indices)
-        values = gpu_eval(owner.Φ, coords)  # single kernel, fully parallel
-        for (i, idx) in enumerate(indices)
-            grid[idx] = values[i]
-        end
-    end
-    grid
+function gpu(Φ, x, backend=CPU())
+    out = KernelAbstractions.zeros(backend, T, length(x))
+    x̂ = KernelAbstractions.allocate(backend, typeof(x[1]), length(x))
+    copyto!(x̂, x)
+    k! = Φ!(backend, 2^2^3)
+    k!(out, Φ, x̂, ndrange=length(x))
+    KernelAbstractions.synchronize(backend)
+    Array(out)
 end
-function X(x::∃, GOD::𝕋, ϵ::∀=β(x, GOD, GOD))
-    ∂(x, ϵ) && return GOD, true
-    ϵ̃ = get(GOD.ϵ̃, ϵ, ∃[])
-    for ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, ϵ̃)
-        ∩(x, ϵ̃, GOD) && return ϵ̃, true
-        ϵ̂, found = ∃̇(x, ϵ̃, GOD)
-        found && return ϵ̂, true
-    end
-    GOD, false
-end
-function assign_owners(ϵ::∃, GOD::𝕋, ♯::NTuple)
-    Ξ = Array{∃}(undef, ♯...)
+X(i, ♯::NTuple) = ntuple(î -> T(i[î] - 1) / T(♯[î] - 1), length(♯))
+function X(ϵ::∃, God::𝕋, ♯::NTuple)
+    Ξ = Array{∀}(undef, ♯...)
+    ρ₀ = zero(ϵ.ρ)
     Threads.@threads for i in CartesianIndices(Ξ)
-        x = idx_to_coord(i, ♯)
-        ξ, _ = X(x, GOD, ϵ)
-        Ξ[i] = ξ
+        x = X(i, ♯)
+        xϵ = ∃(God, ϵ.d, SVector(x), ρ₀, ϵ.∂, ϵ.Φ)
+        Ξ[i], _ = X(xϵ, God, ϵ)
     end
     Ξ
 end
-# ϵ=ϵ̃
-# ϵ̂=β(ϵ, GOD, GOD)
-function ∃!(ϵ::∃, GOD::𝕋, ϵ̂::∀=β(ϵ, GOD, GOD))
-    lock(GOD.L)
-    ϵ̃ = get(GOD.ϵ̃, ϵ̂, ∃[])
-    any(ϵ̃ -> ∩(ϵ, ϵ̃, GOD), ϵ̃) && (unlock(GOD.L); return nothing)
+function X(x::∃, God::𝕋, ϵ::∀=β(x, God, God))
+    ∂(x, ϵ) && return God, true
+    ϵ̃ = get(God.ϵ̃, ϵ, ∃[])
+    for ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, ϵ̃)
+        ∩(x, ϵ̃, God) && return ϵ̃, true
+        ϵ̂, found = X(x, God, ϵ̃)
+        found && return ϵ̂, true
+    end
+    God, false
+end
+function ∃̇(ϵ::∃, God::𝕋, ♯::NTuple)
+    ẋ = X(ϵ, God, ♯)
+    ♯̇ = fill(○, ♯...)
+    x = Dict{∃, Vector{CartesianIndex}}()
+    for i in CartesianIndices(ẋ)
+        xᵢ = ẋ[i]
+        xᵢ === God && continue
+        push!(get!(x, xᵢ, []), i)
+    end
+    for (ẋᵢ, i) in x
+        xᵢ = map(i -> X(i, ♯), i)
+        Φ̇ = gpu(ẋᵢ.Φ, xᵢ)
+        for (i₁, i₂) in enumerate(i)
+            ♯̇[i₂] = Φ̇[i₁]
+        end
+    end
+    ♯̇
+end
+function ∃!(ϵ::∃, God::𝕋, ϵ̂::∀=β(ϵ, God, God))
+    isbitstype(typeof(ϵ.Φ)) || return nothing
+    lock(God.L)
+    ϵ̃ = get(God.ϵ̃, ϵ̂, ∃[])
+    any(ϵ̃ -> ∩(ϵ, ϵ̃, God), ϵ̃) && (unlock(God.L); return nothing)
     if ϵ̂ !== ϵ.ϵ̂
         ϵ = ∃(ϵ̂, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.Φ)
     end
-    ϵ̂ !== GOD && ∩(ϵ, ϵ̂, GOD) && (unlock(GOD.L); return nothing)
-    while Sys.free_memory() < GOD.s[] + sizeof(ϵ)
-        rm!(GOD)
+    ϵ̂ !== God && ∩(ϵ, ϵ̂, God) && (unlock(God.L); return nothing)
+    while Sys.free_memory() < God.s[] + sizeof(ϵ)
+        rm!(God)
     end
-    push!(get!(GOD.ϵ̃, ϵ̂, ∃[]), ϵ)
-    GOD.Ο[ϵ] = GOD.Ο[GOD]
-    GOD.Ο[GOD] += 1
-    unlock(GOD.L)
+    push!(get!(God.ϵ̃, ϵ̂, ∃[]), ϵ)
+    God.s[] += sizeof(ϵ)
+    God.Ο[ϵ] = God.Ο[God]
+    God.Ο[God] += 1
+    unlock(God.L)
     ϵ
 end
-function rm!(GOD::𝕋)
-    ϵ̂̂ = argmin(ϵ -> GOD.Ο[ϵ], filter(k -> k isa ∃, keys(GOD.Ο)))
-    GOD.s[] -= sizeof(ϵ̂̂)
-    filter!(ϵ -> ϵ !== ϵ̂̂, GOD.ϵ̃[ϵ̂̂.ϵ̂])
-    delete!(GOD.ϵ̃, ϵ̂̂)
-    delete!(GOD.Ο, ϵ̂̂)
+function rm!(God::𝕋)
+    ϵ̂̂ = argmin(ϵ -> God.Ο[ϵ], filter(k -> k isa ∃, keys(God.Ο)))
+    God.s[] -= sizeof(ϵ̂̂)
+    filter!(ϵ -> ϵ !== ϵ̂̂, God.ϵ̃[ϵ̂̂.ϵ̂])
+    delete!(God.ϵ̃, ϵ̂̂)
+    delete!(God.Ο, ϵ̂̂)
 end
