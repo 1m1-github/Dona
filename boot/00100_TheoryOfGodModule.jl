@@ -35,10 +35,10 @@ const God = 𝕋()
 include("00103_TheoryOfGodgod.jl")
 # include("00103_TheoryOfGodTypst.jl")
 
-# include("00090_BroadcastBrowser2Module.jl")
-# import Main.BroadcastBrowserModule: BroadcastBrowser, start
-# include("00105_TheoryOfGodgodBrowser.jl")
-# const BROWSERTASK = Threads.@spawn start(b->godBrowser(b))
+include("00090_BroadcastBrowser2Module.jl")
+import Main.BroadcastBrowserModule: BroadcastBrowser, start
+include("00105_TheoryOfGodgodBrowser.jl")
+const BROWSERTASK = Threads.@spawn start(b->godBrowser(b))
 
 # g=collect(values(godBROWSER[]))[1].g
 dimx, dimy, dimc = T(0.1),T(0.2),T(0.3)
@@ -107,3 +107,5 @@ God.Ο[God]
 # ♯ = (3,3)
 observe(g)
 any(!=(ntuple(_->one(T),4)),observe(g))
+
+e = ErrorException("setindex!(::SVector{5, Float64}, value, ::Int) is not defined.\n Hint: Use `MArray` or `SizedArray` to create a mutable static array")

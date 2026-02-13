@@ -28,7 +28,10 @@ while true
     js = "pixel=" * write(δ, g.♯[2]) * "\n" * SET_PIXELS_JS
     put!(browser.processor, js)
 end
-catch e @show e end
+catch e 
+    bt = catch_backtrace()
+    showerror(stderr, e, bt)
+end
 end
 , browser)
 function godBrowser(browser)
@@ -36,8 +39,8 @@ function godBrowser(browser)
     dimx, dimy, dimc = T(0.1),T(0.2),T(0.3)
     x, y = T(0.1),T(0.1)
     # g = god{T}(dimx, dimy, dimc, x, y, browser.width, browser.height)
-    # g = god{T}(dimx, dimy, dimc, x, y, T(200), T(100))
-    g = god(dimx, dimy, dimc, x, y, T(20), T(10))
+    g = god(dimx, dimy, dimc, x, y, Int(200), Int(100))
+    # g = god(dimx, dimy, dimc, x, y, T(20), T(10))
     gb = godBrowser(g, browser)
     push!(godBROWSER[], gb)
     gb
@@ -59,7 +62,7 @@ end
 function write(δ, height)
     result = []
     for (i, color) = δ
-        @show i, color
+        # @show i, color
         push!(result, (i[1] - 1, height - 1 - (i[2] - 1), round.(UInt8, typemax(UInt8) * color)...))
     end
     bracket(x) = "[" * x * "]"

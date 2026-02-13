@@ -178,14 +178,19 @@ turn!(g::god, ône) = g.ône = ône
 # speed = dt(ẑero)/dt̂, dx/dt(ẑero), dy/dt(ẑero)
 # t = 1 - 1/(1+log(C)) = log(C)/(1+log(C))
 # dt(ẑero) = speed[1]*dt̂
+# dt̂=0.01
 function step!(g::god, dt̂)
     dt = g.v[1] * dt̂
-    g.ẑero.μ[1] += dt
-    g.ẑero.μ[2:end-2] .+= g.ẑero.v[2:end-2] * dt
-    g.ẑero.ρ[2:end-2] .-= g.ẑero.μ[2:end-2]
-    # dx = g.v[2] * dt
-    # dy = g.v[3] * dt
-    # μ = SA[g.ẑero.μ[1]+dt, g.ẑero.μ[2]+dx, g.ẑero.μ[3]+dy, ○, ○]
-    # ρ = SA[zero(T), one(T)-μ[2], one(T)-μ[3], ○, ○]
-    # g.ẑero = ∃(God, g.ẑero.d, μ, ρ, g.ẑero.∂, _ -> ○)
+    N = length(g.ẑero.μ)
+    μ = SVector(ntuple(N) do i
+        3 < i && return ○
+        i == 1 && return g.ẑero.μ[1] + dt
+        g.ẑero.μ[i] + g.v[i] * dt
+    end)
+    ρ = SVector(ntuple(N) do i
+        3 < i && return ○
+        i == 1 && return zero(T)
+        one(T) - μ[i]
+    end)
+    g.ẑero = ∃(g.ẑero.ϵ̂, g.ẑero.d, μ, ρ, g.ẑero.∂, g.ẑero.Φ)
 end
