@@ -1,46 +1,41 @@
 mutable struct god
     ẑero::∃
     ône::∃
-    v::Tuple # dt/dt̂ ; dẑero[2:end-2]/dt
+    v::Tuple # dẑero/dt
     ♯::NTuple
     pin::UInt
 end
 const WHITE = (one(T), one(T), one(T), one(T))
-# z=∃(God, SA[zero(T),one(T)], SA[zero(T),zero(T)], SA[zero(T),zero(T)], ((true,true),(true,true)), _ -> ○)
-# o=∃(God, SA[zero(T),one(T)], SA[one(T),one(T)], SA[zero(T),zero(T)], ((true,true),(true,true)), _ -> ○)
-# o-z
-# z=∃(God, SA[zero(T),one(T)], SA[○,○], SA[○,○], ((true,true),(true,true)), _ -> ○)
-# o=∃(God, SA[zero(T),one(T)], SA[○,○], SA[○,○], ((true,true),(true,true)), _ -> ○)
-# o-z
+ρ(μ) = min(μ, 1 - μ)
 function god(dimx, dimy, dimc, x, y, nx, ny, pin=zero(UInt))
     d = SA[zero(T), dimx, dimy, dimc, one(T)]
     N = length(d)
+    ṫ = t() ; ρ̇ = ρ(ṫ)
+    μzero = SA[ṫ - ρ̇, x, y, zero(T), one(T)]
     ∂zero = ntuple(_ -> (true, false), N)
-    μzero = SA[t(), x, y, ○, one(T)]
-    ρzero = SA[zero(T), zero(T), zero(T), ○, zero(T)]
-    ẑero = ∃(God, d, μzero, ρzero, ∂zero, _ -> ○)
-    μone = SA[t(), one(T), one(T), ○, one(T)]
-    ρone = SA[zero(T), zero(T), zero(T), ○, zero(T)]
+    zeros = SVector(ntuple(_ -> zero(T), N))
+    ẑero = ∃(God, d, μzero, zeros, ∂zero, _ -> ○)
+    μone = SA[ṫ + ρ̇, one(T), one(T), one(T), one(T)]
     ∂one = ntuple(_ -> (false, true), N)
-    ône = ∃(God, d, μone, ρone, ∂one, _ -> ○)
+    ône = ∃(God, d, μone, zeros, ∂one, _ -> ○)
     ♯ = (1, nx, ny, 6, 1)
     v = ntuple(_ -> zero(T), N)
     god(ẑero, ône, v, ♯, pin)
 end
 function observe(g::god)
     ϵ = g.ône - g.ẑero
-    d₁ = 1 .< g.♯
-    d₂ = filter(i -> d₁[i], 1:length(d₁))
-    d₃ = SVector{length(d₂)}(d₂)
-    ϵ̃ = ∃(ϵ.ϵ̂, ϵ.d[d₃], ϵ.μ[d₃], ϵ.ρ[d₃], ϵ.∂[d₃], ϵ.Φ)
-    ϕ = ∃̇(ϵ̃, g.♯[d₃])
+    # d₁ = 1 .< g.♯
+    # d₂ = filter(i -> d₁[i], 1:length(d₁))
+    # d₃ = SVector{length(d₂)}(d₂)
+    # ϵ̃ = ∃(ϵ.ϵ̂, ϵ.d[d₃], ϵ.μ[d₃], ϵ.ρ[d₃], ϵ.∂[d₃], ϵ.Φ)
+    ϕ = ∃̇(ϵ, g.♯)
     pixel = fill(WHITE, g.♯[2], g.♯[3])
     # i = collect(CartesianIndices(pixel))[1]
     for i = CartesianIndices(pixel)
-        r = ϕ[1, i[1], i[2], 2, 1]
-        g = ϕ[1, i[1], i[2], 3, 1]
-        b = ϕ[1, i[1], i[2], 4, 1]
-        a = ϕ[1, i[1], i[2], 5, 1]
+        r = ϕ[1,i[1], i[2], 2,1]
+        g = ϕ[1,i[1], i[2], 3,1]
+        b = ϕ[1,i[1], i[2], 4,1]
+        a = ϕ[1,i[1], i[2], 5,1]
         pixel[i[1], i[2]] = if r == g == b == a == ○
             WHITE
         else
@@ -92,7 +87,7 @@ function step!(g::god, dt̂)
         min(g.ẑero.μ[i] + g.v[i] * dt, one(T))
     end)
     ρ = SVector(ntuple(N) do i
-        (i == 2 || i == 3) && return min(g.ẑero.ρ[i], one(T) - μ[i])
+        (i == 2 || i == 3) && return min(g.ẑero.ρ[i], μ[i], one(T) - μ[i])
         g.ẑero.ρ[i]
     end)
     g.ẑero = ∃(g.ẑero.ϵ̂, g.ẑero.d, μ, ρ, g.ẑero.∂, g.ẑero.Φ)

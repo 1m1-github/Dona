@@ -35,10 +35,10 @@ const God = 𝕋()
 include("00103_TheoryOfGodgod.jl")
 # include("00103_TheoryOfGodTypst.jl")
 
-include("00090_BroadcastBrowser2Module.jl")
-import Main.BroadcastBrowserModule: BroadcastBrowser, start
-include("00105_TheoryOfGodgodBrowser.jl")
-const BROWSERTASK = Threads.@spawn start(b->godBrowser(b))
+# include("00090_BroadcastBrowser2Module.jl")
+# import Main.BroadcastBrowserModule: BroadcastBrowser, start
+# include("00105_TheoryOfGodgodBrowser.jl")
+# const BROWSERTASK = Threads.@spawn start(b->godBrowser(b))
 
 # g=collect(values(godBROWSER[]))[1].g
 dimx, dimy, dimc = T(0.1),T(0.2),T(0.3)
@@ -59,7 +59,9 @@ God.Ο[God]
 # collect(keys(God.ϵ̃))
 ϵ̃=God.ϵ̃[God][1]
 ϵ̃.Φ((1,1,1,1,1))
-# ♯ = (3,3)
+# g.♯ = (1,3,3,6,1)
+# g.♯ = (1,4,4,6,1)
 observe(g)
 any(!=(ntuple(_->one(T),4)),observe(g))
 all(==(ntuple(_->one(T),4)),observe(g))
+# observe(g)[2:end,2:end]

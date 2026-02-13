@@ -26,7 +26,7 @@ struct 𝕋 <: ∀
     function 𝕋()
         ϵ̃ = Dict{∀,Vector{∃}}()
         Ο = Dict{∀,Int}()
-        God = new(ϵ̃, Ο, ReentrantLock(), Ref(1))
+        God = new(ϵ̃, Ο, ReentrantLock(), Ref(2))
         God.ϵ̃[God] = ∃[]
         God.Ο[God] = God.s[]
         God
@@ -241,10 +241,14 @@ X(i, ♯::NTuple) = ntuple(î -> isone(♯[î]) ? ○ : T(i[î] - 1) / T(♯[
 # x=xϵ
 # ϵ=β(x, God, God)
 # ϵ.Φ(1)
+# [0.0, 0.1, 0.2, 0.3, 1.0], [0.5, 0.6666666666666666, 0.3333333333333333, 0.2, 0.5], [0.0, 0.0, 0.0, 0.0, 0.0],
+# [0.0, 0.1, 0.2, 0.3, 1.0], [0.0, 0.55, 0.55, 0.5, 1.0], [0.0, 0.45, 0.45, 0.5, 0.0],
+# [0.1, 0.2, 0.3], [0.6666666666666666, 0.3333333333333333, 0.2], [0.0, 0.0, 0.0],
+# [0.0, 0.1, 0.2, 0.3, 1.0], [0.0, 0.55, 0.55, 0.5, 1.0], [0.0, 0.45, 0.45, 0.5, 0.0]
 function X(x::∃)
     ϵ = β(x, God)
     ϵ === God && return God, true
-    ∂(x, ϵ) && return God, true
+    ∂(x, ϵ) && return God, true 
     x ∩ ϵ && return ϵ, true # ?
     ϵ̃ = God.ϵ̃[ϵ]
     for ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, ϵ̃)
@@ -254,7 +258,7 @@ function X(x::∃)
     end
     God, false
 end
-# i = collect(CartesianIndices(Ξ))[10]
+# i = collect(CartesianIndices(Ξ))[23]
 # Ξ[i].Φ(1)
 function X(ϵ::∃, ♯::NTuple)
     Ξ = Array{∀}(undef, ♯...)
@@ -281,6 +285,9 @@ end
 # (ϵ̂, i) = collect(ϵ̂x)[1]
 # ẋᵢ.Φ(1)
 # ♯=(♯..., 5)
+# God.ϵ̃[ϵ]
+# God.Ο[ϵ]
+# ϵ=ϵ̃
 function ∃̇(ϵ::∃, ♯::NTuple)
     ϵ̂ = X(ϵ, ♯)
     ♯̇ = fill(○, ♯...)
@@ -313,8 +320,8 @@ function ∃!(ϵ::∃)
         rm!(God)
     end
     God.s[] += sizeof(ϵ)
-    God.Ο[ϵ] = God.Ο[God]
     God.Ο[God] += 1
+    God.Ο[ϵ] = God.Ο[God]
     push!(God.ϵ̃[ϵ̂], ϵ)
     God.ϵ̃[ϵ] = ∃[]
     unlock(God.L)
