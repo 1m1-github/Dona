@@ -44,7 +44,7 @@ include("00103_TheoryOfGodgod.jl")
 dimx, dimy, dimc = T(0.1),T(0.2),T(0.3)
 x, y = T(0.1),T(0.1)
 nx, ny = Int(4), Int(4)
-g = god(dimx, dimy, dimc, x, y, nx, ny)
+g = god(dimx, dimy, dimc, x, y)
 g.ône-g.ẑero
 Φ(t,x,y) = begin
     # x^2 + y^2 == 0.01 ? (T(rand()), T(rand()), T(rand()), one(T)) : (○(T), ○(T), ○(T), ○(T))
@@ -61,18 +61,21 @@ God.Ο[God]
 t()
 t(ϵ̃)
 ϵ̃.Φ((1,1,1,1,1))
-# g.♯ = (1,3,3,6,1)
-# g.♯ = (1,4,4,6,1)
-observe(g)
+♯ = (1,3,3,6,1)
+♯ = (1,4,4,6,1)
+observe(g, ♯)
 any(!=(ntuple(_->one(T),4)),observe(g))
 all(==(ntuple(_->one(T),4)),observe(g))
 # observe(g)[2:end,2:end]
+g.ẑero
 g.ône
+g.ône-g.ẑero
+step!(g)
+g.ẑero.μ[5]
+g.ône.μ[5]
 
-
-
-Do you remember our discussions on time and how they're connected between an origin and an inner world and to complexity, and that an observer can choose the consumption rate of complexity per own time and we have a formula connecting time and complexity. In this world in the beginning time jumps from zero to about 40% of total world time after the creation of the very first entity and then slows down evermore to compress, infinity until one. 
-in the origin world, we have time t̂, in the inner world time t.
-i am thinking about the implementation of step! for god (pasted) for time.
-at finite speed, we expect to not skip any time steps, meaning we should show each age integer as it increased. or maybe not, maybe speeding up time is akin to missing inbetween frames. which is it?
-we could let the speed be dt/dt̂ or skips in age observed or less sleep inbetween all time frames observations or ...
+dimx2, dimy2, dimc2 = 2dimx, 2dimy, 2dimc
+x2, y2 = 2x,2y
+g2 = god(dimx2, dimy2, dimc2, x2, y2)
+create(g2, Φ)
+g=g2
