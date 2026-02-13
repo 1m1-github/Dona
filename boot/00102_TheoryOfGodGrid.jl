@@ -1,6 +1,6 @@
 # ♯=g.♯
 # ♯ = (0,3,3,3,0)
-function ∃̇(♯::NTuple{N,Int}, ϵ::∃{N,T}, GOD::𝕋{T}) where {N,T<:Real}
+function ∃̇(♯::NTuple{N,Int}, ϵ::∃{N,T}, God::𝕋{T}) where {N,T<:Real}
     # ks = ceil.(Int, log2.(♯))
     # ks = ♯
     # d = @SVector (!).(iszero.(♯))
@@ -21,7 +21,7 @@ function ∃̇(♯::NTuple{N,Int}, ϵ::∃{N,T}, GOD::𝕋{T}) where {N,T<:Real}
     ρ = @SVector zeros(T,N)
     x = ∃{N,T}(ϵ, "", ϵ.d, ϵ.μ, ρ, ntuple(_->(true, true), N), ϵ.Φ)
     # grid[center] = ϵ.Φ(center, T[], CartesianIndex{N}[])
-    _, grid[center], _ = ∃̇(x, ϵ, GOD, T[], CartesianIndex{N}[])
+    _, grid[center], _ = ∃̇(x, ϵ, God, T[], CartesianIndex{N}[])
 
     for b in 0:(1<<N)-1
         ci = CartesianIndex(ntuple(d -> 1 + (Ns[d] - 1) * ((b >> (d - 1)) & 1), N))

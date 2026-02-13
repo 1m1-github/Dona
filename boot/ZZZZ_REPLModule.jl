@@ -23,7 +23,7 @@ atreplinit() do _
         prompt_text="> ",
         prompt_color=:light_cyan,
         start_key="\\C-g",
-        mode_name="GOD",
+        mode_name="God",
     )
     write(stdin.buffer, "\x07")
 end

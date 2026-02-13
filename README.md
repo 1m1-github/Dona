@@ -14,4 +14,4 @@ A friend, an assistant, a teacher, whatever ...
 
 * Run `julia --quiet --interactive --threads NUM_THREADS Dona.jl` (1 < NUM_THREADS).
 
-\> GOD REPL gives backend access to the virtual machine
+\> God REPL gives backend access to the virtual machine

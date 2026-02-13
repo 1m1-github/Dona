@@ -26,14 +26,13 @@ using StaticArrays, KernelAbstractions
 const T = Float64
 
 include("00101_TheoryOfGod∃.jl")
-# include("00102_TheoryOfGodGrid.jl")
 
-const GOD = 𝕋()
+const God = 𝕋()
 
 # end
 
 # in LoopOS
-# include("00103_TheoryOfGodgod.jl")
+include("00103_TheoryOfGodgod.jl")
 # include("00103_TheoryOfGodTypst.jl")
 
 # include("00090_BroadcastBrowser2Module.jl")
@@ -42,9 +41,34 @@ const GOD = 𝕋()
 # const BROWSERTASK = Threads.@spawn start(b->godBrowser(b))
 
 # g=collect(values(godBROWSER[]))[1].g
-# dimx, dimy, dimc = T(0.1),T(0.2),T(0.3)
-# x, y = T(0.1),T(0.1)
-# g = god{T}(dimx, dimy, dimc, x, y, T(2^3), T(2^3))
+dimx, dimy, dimc = T(0.1),T(0.2),T(0.3)
+x, y = T(0.1),T(0.1)
+nx, ny = Int(4), Int(4)
+g = god(dimx, dimy, dimc, x, y, nx, ny)
+# ôned = SA[zero(T), ○, one(T)]
+# ôneμ = @SVector ones(T, length(ôned))
+# ôneρ = @SVector zeros(T, length(ôned))
+# ône∂ = ntuple(_ -> (false, true), length(ôned))
+# ône = ∃(God, ôned, ôneμ, ôneρ, ône∂, _ -> ○)
+# μρ(ône,zero(T))
+# μρ(ône,○)
+# μρ(ône,one(T))
+# ẑerod = SA[zero(T), ○, one(T)]
+# ẑeroμ = @SVector [t(God), zero(T)]
+# ẑeroμ = @SVector zeros(T, length(ẑerod))
+# ẑeroρ = @SVector zeros(T, length(ẑerod))
+# ẑero∂ = ntuple(_ -> (true, false), length(ẑerod))
+# ẑero = ∃(God, ẑerod, ẑeroμ, ẑeroρ, ẑero∂, _ -> ○)
+# μρ(ẑero,zero(T))
+# μρ(ẑero,○)
+# μρ(ẑero,one(T))
+# -(ône, ẑero, God)
+# ♯ = ()
+# v = ntuple(_ -> zero(T), length(ẑerod))
+# v = ((zero(T),zero(T)),)
+# g=god(ẑero, ône, v, (4,4))
+# god(♯, ẑero, ône, v)
+
 # # dt = 0.01
 # # step(g, dt)
 # g.ẑero.μ
@@ -56,19 +80,30 @@ const GOD = 𝕋()
 # x, y = T(0.1),T(0.1)
 # g = god{T}(dimx, dimy, dimc, x, y, T(3), T(3))
 # N=5
-name="circle"
+# name="circle"
+# t(God)
 # d = g.ẑero.d
-# μ = SA[zero(T), T(0.1), T(0.1), ○(T), zero(T)]
-# ρ = SA[zero(T), T(0.1), T(0.1), ○(T), zero(T)]
-# ϵ=∃{N,T}(GOD,name, d, μ, ρ, ntuple(_->(false,false), 5), (_,_,_)->○(T))
-# create(g, name, (t, x, y) -> begin
-# # @show "hi"
-#     # @show name, t, x, y, x^2 + y^2
-#     # x^2 + y^2 == 0.01 ? (T(rand()), T(rand()), T(rand()), one(T)) : (○(T), ○(T), ○(T), ○(T))
-#     # @show name, t, x, y
-#     T(rand()), T(rand()), T(rand()), one(T)
-# end,ϵ)
-# collect(keys(GOD.ϵ̃))
-# GOD.Ο[GOD]
-
-# observe(g)
+# μ = SA[zero(T), T(0.1), T(0.1), ○, zero(T)]
+# ρ = SA[zero(T), T(0.1), T(0.1), ○, zero(T)]
+# ϵ=∃(God,d, μ, ρ, ntuple(_->(false,false), 5), _->○)
+Φ(t,x,y) = begin
+# @show "hi"
+    # @show name, t, x, y, x^2 + y^2
+    # x^2 + y^2 == 0.01 ? (T(rand()), T(rand()), T(rand()), one(T)) : (○(T), ○(T), ○(T), ○(T))
+    # @show name, t, x, y
+    # T(rand()), T(rand()), T(rand()), one(T)
+    # T(rand()), T(rand()), T(rand())
+    ntuple(_ -> rand(), 4)
+    # T(rand())
+end
+# const God = 𝕋()
+# Φ(1)
+create(g, Φ)
+# g.ẑero
+# collect(keys(God.ϵ̃))
+God.Ο[God]
+# ϵ̃=God.ϵ̃[God][1]
+# ϵ̃.Φ(1)
+# ♯ = (3,3)
+observe(g)
+any(!=(ntuple(_->one(T),4)),observe(g))

@@ -19,7 +19,7 @@ while true
     t̂ = time()
     dt = t̂ - t
     t = t̂
-    step(g, dt)
+    step!(g, dt)
     p̂ixel = observe(g)
     @show p̂ixel
     δ = Δ(pixel, p̂ixel)
@@ -37,7 +37,7 @@ function godBrowser(browser)
     x, y = T(0.1),T(0.1)
     # g = god{T}(dimx, dimy, dimc, x, y, browser.width, browser.height)
     # g = god{T}(dimx, dimy, dimc, x, y, T(200), T(100))
-    g = god{T}(dimx, dimy, dimc, x, y, T(2^3), T(2^3))
+    g = god(dimx, dimy, dimc, x, y, T(20), T(10))
     gb = godBrowser(g, browser)
     push!(godBROWSER[], gb)
     gb
