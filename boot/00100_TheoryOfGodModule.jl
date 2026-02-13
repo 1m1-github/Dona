@@ -45,67 +45,21 @@ dimx, dimy, dimc = T(0.1),T(0.2),T(0.3)
 x, y = T(0.1),T(0.1)
 nx, ny = Int(4), Int(4)
 g = god(dimx, dimy, dimc, x, y, nx, ny)
-# ôned = SA[zero(T), ○, one(T)]
-# ôneμ = @SVector ones(T, length(ôned))
-# ôneρ = @SVector zeros(T, length(ôned))
-# ône∂ = ntuple(_ -> (false, true), length(ôned))
-# ône = ∃(God, ôned, ôneμ, ôneρ, ône∂, _ -> ○)
-# μρ(ône,zero(T))
-# μρ(ône,○)
-# μρ(ône,one(T))
-# ẑerod = SA[zero(T), ○, one(T)]
-# ẑeroμ = @SVector [t(God), zero(T)]
-# ẑeroμ = @SVector zeros(T, length(ẑerod))
-# ẑeroρ = @SVector zeros(T, length(ẑerod))
-# ẑero∂ = ntuple(_ -> (true, false), length(ẑerod))
-# ẑero = ∃(God, ẑerod, ẑeroμ, ẑeroρ, ẑero∂, _ -> ○)
-# μρ(ẑero,zero(T))
-# μρ(ẑero,○)
-# μρ(ẑero,one(T))
-# -(ône, ẑero, God)
-# ♯ = ()
-# v = ntuple(_ -> zero(T), length(ẑerod))
-# v = ((zero(T),zero(T)),)
-# g=god(ẑero, ône, v, (4,4))
-# god(♯, ẑero, ône, v)
-
-# # dt = 0.01
-# # step(g, dt)
-# g.ẑero.μ
-# pixel = fill((one(T),one(T),one(T),one(T)), g.♯.n[2],g.♯.n[3])
-# @time p̂ixel = observe(g)
-# δ = Δ(pixel, p̂ixel)
-# isempty(δ)
-# dimx, dimy, dimc = T(0.1),T(0.2),T(0.3)
-# x, y = T(0.1),T(0.1)
-# g = god{T}(dimx, dimy, dimc, x, y, T(3), T(3))
-# N=5
-# name="circle"
-# t(God)
-# d = g.ẑero.d
-# μ = SA[zero(T), T(0.1), T(0.1), ○, zero(T)]
-# ρ = SA[zero(T), T(0.1), T(0.1), ○, zero(T)]
-# ϵ=∃(God,d, μ, ρ, ntuple(_->(false,false), 5), _->○)
+g.ône-g.ẑero
 Φ(t,x,y) = begin
-# @show "hi"
-    # @show name, t, x, y, x^2 + y^2
     # x^2 + y^2 == 0.01 ? (T(rand()), T(rand()), T(rand()), one(T)) : (○(T), ○(T), ○(T), ○(T))
-    # @show name, t, x, y
-    # T(rand()), T(rand()), T(rand()), one(T)
-    # T(rand()), T(rand()), T(rand())
     ntuple(_ -> rand(), 4)
-    # T(rand())
 end
 # const God = 𝕋()
 # Φ(1)
+God.Ο[God]
 create(g, Φ)
+God.Ο[God]
 # g.ẑero
 # collect(keys(God.ϵ̃))
-God.Ο[God]
-# ϵ̃=God.ϵ̃[God][1]
-# ϵ̃.Φ(1)
+ϵ̃=God.ϵ̃[God][1]
+ϵ̃.Φ((1,1,1,1,1))
 # ♯ = (3,3)
 observe(g)
 any(!=(ntuple(_->one(T),4)),observe(g))
-
-e = ErrorException("setindex!(::SVector{5, Float64}, value, ::Int) is not defined.\n Hint: Use `MArray` or `SizedArray` to create a mutable static array")
+all(==(ntuple(_->one(T),4)),observe(g))

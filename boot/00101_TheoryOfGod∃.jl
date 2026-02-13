@@ -100,12 +100,13 @@ function Base.:(⊆)(zero₁, one₁, ∂₁::Tuple{Bool,Bool}, zero₂, one₂,
     ȯne = one₁ < one₂ || (one₁ == one₂ && (!∂₁[2] || ∂₂[2]))
     żero && ȯne
 end
+# (i₂, d₂) = collect(enumerate(ϵ₂.d))[4]
 function ⪽(ϵ₁::∃, ϵ₂::∃)
     x = true
     for (i₂, d₂) = enumerate(ϵ₂.d)
         ρ₂ = ϵ₂.ρ[i₂]
         iszero(ρ₂) && continue
-        x = false
+        x && ( x = false )
         μ₂ = ϵ₂.μ[i₂]
         μ₁, ρ₁, ∂₁ = μρ(ϵ₁, d₂)
         zero₁, one₁ = μ₁ - ρ₁, μ₁ + ρ₁
@@ -139,7 +140,7 @@ function ℼ(ϵ::∃)
     ϵ̂̂ = ∃(ϵ̂.ϵ̂, ϵ.d, μ̂(ϵ), ρ̂(ϵ), ϵ.∂, ϵ.Φ)
     ℼ(ϵ̂̂)
 end
-ℼ(ϵ, ::Nothing) = ℼ(ϵ)
+ℼ(ϵ, ::𝕋) = ℼ(ϵ)
 function ℼ(ϵ₁::∃, ϵ₂::∃)
     ○̂ = fill(○, length(ϵ₁.d))
     ϵ₁ === ϵ₂ && return ∃(ϵ₂, ϵ₁.d, ○̂, ○̂, ϵ₁.∂, ϵ₁.Φ)
@@ -154,11 +155,18 @@ function ℼ(ϵ₁::∃, ϵ₂::∃)
     ∃(ϵ₂, ϵ₁.d, μ, ρ, ϵ₁.∂, ϵ₁.Φ)
 end
 ⫉(ϵ, ::𝕋) = true
+# ϵ₁ , ϵ₂ = ϵ₁,ϵ̃
 function ⫉(ϵ₁::∃, ϵ₂::∃)
-    ϵ₁.ϵ̂ === ϵ₂.ϵ̂ && return ⪽(ϵ₁, ϵ₂)
+    ϵ₁.ϵ̂ === ϵ₂.ϵ̂ && return ϵ₁ ⪽ ϵ₂
     ϵ̂ = α(ϵ₁, ϵ₂)
     ℼ(ϵ₁, ϵ̂) ⪽ ℼ(ϵ₂, ϵ̂)
 end
+# [0.0, 0.1, 0.2, 0.3, 1.0], [0.5, 0.3333333333333333, 0.6666666666666666, 0.0, 0.5], [0.0, 0.0, 0.0, 0.0, 0.0], ((true, true), (true, true), (true, true), (true, true), (true, true))
+# [0.0, 0.1, 0.2, 0.3, 1.0], [0.5, 0.55, 0.55, 0.75, 0.75], [0.5, 0.45, 0.45, 0.25, 0.25], ((true, true), (true, true), (true, true), (true, true), (true, true))
+# ϵ₁=x
+# ϵ₂=God
+# ϵ̃ = filter(ϵ̃ -> ϵ̃ ≠ ϵ₁, ϵ̃)[1]
+# ϵ₁ ⫉ ϵ̃
 function β(ϵ₁::∃, ϵ₂::∀)
     ϵ̃ = God.ϵ̃[ϵ₂]
     ϵ̃₂ = filter(ϵ̃ -> ϵ̃ ≠ ϵ₁ && ϵ₁ ⫉ ϵ̃, ϵ̃)
@@ -246,7 +254,7 @@ function X(x::∃)
     end
     God, false
 end
-# i = collect(CartesianIndices(Ξ))[5]
+# i = collect(CartesianIndices(Ξ))[10]
 # Ξ[i].Φ(1)
 function X(ϵ::∃, ♯::NTuple)
     Ξ = Array{∀}(undef, ♯...)
@@ -268,6 +276,7 @@ end
 # size(ẋ)
 # first(ẋ)
 # any(a->a!=first(ϵ̂),ϵ̂)
+# all(ϵ -> ϵ isa ∀, ϵ̂)
 # ẋ[2,2] !== God
 # (ϵ̂, i) = collect(ϵ̂x)[1]
 # ẋᵢ.Φ(1)
