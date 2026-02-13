@@ -26,14 +26,16 @@ struct 𝕋 <: ∀
     function 𝕋()
         ϵ̃ = Dict{∀,Vector{∃}}()
         Ο = Dict{∀,Int}()
-        God = new(ϵ̃, Ο, ReentrantLock(), Ref(2))
+        God = new(ϵ̃, Ο, ReentrantLock(), Ref(1))
         God.ϵ̃[God] = ∃[]
         God.Ο[God] = God.s[]
         God
     end
 end
 Base.hash(::𝕋, h::UInt) = hash(:God, h)
-t() = one(T) - one(T) / (one(T) + T(log(God.Ο[God])))
+Ο(t::T) = exp(t / (1 - t))
+t(Ο::Int) = one(T) - one(T) / (one(T) + T(log(Ο)))
+t(ϵ::∀=God) = t(God.Ο[ϵ])
 # δ(ϵ, ϵ)
 # function δ(ϵ::∃, ϵ̂::∃)
 #     nϵ̂ = length(ϵ.ϵ̂.d)
@@ -161,8 +163,6 @@ function ⫉(ϵ₁::∃, ϵ₂::∃)
     ϵ̂ = α(ϵ₁, ϵ₂)
     ℼ(ϵ₁, ϵ̂) ⪽ ℼ(ϵ₂, ϵ̂)
 end
-# [0.0, 0.1, 0.2, 0.3, 1.0], [0.5, 0.3333333333333333, 0.6666666666666666, 0.0, 0.5], [0.0, 0.0, 0.0, 0.0, 0.0], ((true, true), (true, true), (true, true), (true, true), (true, true))
-# [0.0, 0.1, 0.2, 0.3, 1.0], [0.5, 0.55, 0.55, 0.75, 0.75], [0.5, 0.45, 0.45, 0.25, 0.25], ((true, true), (true, true), (true, true), (true, true), (true, true))
 # ϵ₁=x
 # ϵ₂=God
 # ϵ̃ = filter(ϵ̃ -> ϵ̃ ≠ ϵ₁, ϵ̃)[1]
@@ -241,10 +241,6 @@ X(i, ♯::NTuple) = ntuple(î -> isone(♯[î]) ? ○ : T(i[î] - 1) / T(♯[
 # x=xϵ
 # ϵ=β(x, God, God)
 # ϵ.Φ(1)
-# [0.0, 0.1, 0.2, 0.3, 1.0], [0.5, 0.6666666666666666, 0.3333333333333333, 0.2, 0.5], [0.0, 0.0, 0.0, 0.0, 0.0],
-# [0.0, 0.1, 0.2, 0.3, 1.0], [0.0, 0.55, 0.55, 0.5, 1.0], [0.0, 0.45, 0.45, 0.5, 0.0],
-# [0.1, 0.2, 0.3], [0.6666666666666666, 0.3333333333333333, 0.2], [0.0, 0.0, 0.0],
-# [0.0, 0.1, 0.2, 0.3, 1.0], [0.0, 0.55, 0.55, 0.5, 1.0], [0.0, 0.45, 0.45, 0.5, 0.0]
 function X(x::∃)
     ϵ = β(x, God)
     ϵ === God && return God, true
@@ -265,27 +261,17 @@ function X(ϵ::∃, ♯::NTuple)
     ρ₀ = zero(ϵ.ρ)
     # Threads.@threads 
     for i in CartesianIndices(Ξ)
-        # @show i, "1"
         x = X(i, ♯)
         xϵ = ∃(God, ϵ.d, SVector(x), ρ₀, ϵ.∂, ϵ.Φ)
-        # Ξ[i], _ = X(xϵ, God, ϵ)
         Ξ[i], _ = X(xϵ)
-        # @show i, "2"
     end
     Ξ
 end
-# God=God
-# only(only(values(God.ϵ̃)))
 # ♯=g.♯
-# size(ẋ)
-# first(ẋ)
-# any(a->a!=first(ϵ̂),ϵ̂)
 # all(ϵ -> ϵ isa ∀, ϵ̂)
 # ẋ[2,2] !== God
 # (ϵ̂, i) = collect(ϵ̂x)[1]
 # ẋᵢ.Φ(1)
-# ♯=(♯..., 5)
-# God.ϵ̃[ϵ]
 # God.Ο[ϵ]
 # ϵ=ϵ̃
 function ∃̇(ϵ::∃, ♯::NTuple)

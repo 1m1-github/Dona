@@ -2,7 +2,7 @@ mutable struct god
     ẑero::∃
     ône::∃
     v::Tuple # dẑero/dt
-    ♯::NTuple
+    # ♯::NTuple
     pin::UInt
 end
 const WHITE = (one(T), one(T), one(T), one(T))
@@ -24,10 +24,6 @@ function god(dimx, dimy, dimc, x, y, nx, ny, pin=zero(UInt))
 end
 function observe(g::god)
     ϵ = g.ône - g.ẑero
-    # d₁ = 1 .< g.♯
-    # d₂ = filter(i -> d₁[i], 1:length(d₁))
-    # d₃ = SVector{length(d₂)}(d₂)
-    # ϵ̃ = ∃(ϵ.ϵ̂, ϵ.d[d₃], ϵ.μ[d₃], ϵ.ρ[d₃], ϵ.∂[d₃], ϵ.Φ)
     ϕ = ∃̇(ϵ, g.♯)
     pixel = fill(WHITE, g.♯[2], g.♯[3])
     # i = collect(CartesianIndices(pixel))[1]
@@ -78,8 +74,14 @@ turn!(g::god, ône) = g.ône = ône
 # t = 1 - 1/(1+log(C)) = log(C)/(1+log(C))
 # dt(ẑero) = speed[1]*dt̂
 # dt̂=0.01
+# step!(g, dt̂)
+# wip
 function step!(g::god, dt̂)
     dt = g.v[1] * dt̂
+    # g.ẑero.μ[1] += dt
+    # dt = Ο(g.ẑero.μ[1] + g.v[1])
+    # Ο(0.40938)
+    # t(1)
     N = length(g.ẑero.μ)
     μ = SVector(ntuple(N) do i
         3 < i && return g.ẑero.μ[i]

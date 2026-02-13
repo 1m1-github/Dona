@@ -58,6 +58,8 @@ God.Ο[God]
 # g.ẑero
 # collect(keys(God.ϵ̃))
 ϵ̃=God.ϵ̃[God][1]
+t()
+t(ϵ̃)
 ϵ̃.Φ((1,1,1,1,1))
 # g.♯ = (1,3,3,6,1)
 # g.♯ = (1,4,4,6,1)
@@ -65,3 +67,12 @@ observe(g)
 any(!=(ntuple(_->one(T),4)),observe(g))
 all(==(ntuple(_->one(T),4)),observe(g))
 # observe(g)[2:end,2:end]
+g.ône
+
+
+
+Do you remember our discussions on time and how they're connected between an origin and an inner world and to complexity, and that an observer can choose the consumption rate of complexity per own time and we have a formula connecting time and complexity. In this world in the beginning time jumps from zero to about 40% of total world time after the creation of the very first entity and then slows down evermore to compress, infinity until one. 
+in the origin world, we have time t̂, in the inner world time t.
+i am thinking about the implementation of step! for god (pasted) for time.
+at finite speed, we expect to not skip any time steps, meaning we should show each age integer as it increased. or maybe not, maybe speeding up time is akin to missing inbetween frames. which is it?
+we could let the speed be dt/dt̂ or skips in age observed or less sleep inbetween all time frames observations or ...
