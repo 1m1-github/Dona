@@ -20,7 +20,6 @@ god observes or creates, God iterates.
 
 export ∃, ∃̇, ∃!
 
-# Main.@install StaticArrays, KernelAbstractions
 using StaticArrays, KernelAbstractions
 
 const T = Float64
@@ -39,19 +38,18 @@ include("00103_TheoryOfGodgod.jl")
 # import Main.BroadcastBrowserModule: BroadcastBrowser, start
 # include("00105_TheoryOfGodgodBrowser.jl")
 # const BROWSERTASK = Threads.@spawn start(b->godBrowser(b))
-
 # g=collect(values(godBROWSER[]))[1].g
-dimx, dimy, dimc = T(0.1),T(0.2),T(0.3)
-x, y = T(0.1),T(0.1)
-nx, ny = Int(4), Int(4)
-g = god(dimx, dimy, dimc, x, y)
-g.ône-g.ẑero
-Φ(t,x,y) = begin
+
+g=god((T(0.1),T(0.2)), (T(0.1),T(0.1)))
+g.ẑero
+g.ône
+g.ône-g.ẑero
+Φ(t,x,y,z) = begin
     # x^2 + y^2 == 0.01 ? (T(rand()), T(rand()), T(rand()), one(T)) : (○(T), ○(T), ○(T), ○(T))
-    ntuple(_ -> rand(), 4)
+    # ntuple(_ -> rand(), 4)
+    (T(0.7),T(0.8),T(0.9),one(T))
 end
 # const God = 𝕋()
-# Φ(1)
 God.Ο[God]
 create(g, Φ)
 God.Ο[God]
@@ -60,22 +58,9 @@ God.Ο[God]
 ϵ̃=God.ϵ̃[God][1]
 t()
 t(ϵ̃)
-ϵ̃.Φ((1,1,1,1,1))
-♯ = (1,3,3,6,1)
-♯ = (1,4,4,6,1)
+ϵ̃.Φ(zeros(7))
+♯ = (1,1,1,6,3,3,1)
+# ♯ = (1,1,1,6,4,4,1)
 observe(g, ♯)
-any(!=(ntuple(_->one(T),4)),observe(g))
-all(==(ntuple(_->one(T),4)),observe(g))
-# observe(g)[2:end,2:end]
-g.ẑero
-g.ône
-g.ône-g.ẑero
+all(==(ntuple(_->one(T),4)),observe(g,♯))
 step!(g)
-g.ẑero.μ[5]
-g.ône.μ[5]
-
-dimx2, dimy2, dimc2 = 2dimx, 2dimy, 2dimc
-x2, y2 = 2x,2y
-g2 = god(dimx2, dimy2, dimc2, x2, y2)
-create(g2, Φ)
-g=g2
