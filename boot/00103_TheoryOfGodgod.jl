@@ -59,12 +59,6 @@ function god(spatial_dims::NTuple, spatial_pos::NTuple, owner=zero(UInt), secret
     # god(ẑero, ône, zero(T), ℼ, ℼ̂, owner, secret, true, false, false)
     god(ẑero, ône, zero(T), owner, secret, true, false, false)
 end
-function grid_coord(i, ♯; near=T(0.01))
-    isone(♯) && return ○
-    t = (T(i) - one(T)) / T(♯ - 1)  # linear [0,1]
-    near * (one(T) / near)^t        # geometric expansion
-end
-# grid_coord(2, 5)
 function observe(g::god, ♯)
     ϵ = g.ône - g.ẑero
     ϕ = ∃̇(ϵ, ♯)
@@ -136,19 +130,18 @@ end
 #     end)
 #     g.ẑero = ∃(g.ẑero.ϵ̂, g.ẑero.d, μ, ρ, g.ẑero.∂, g.ẑero.Φ)
 # end
-function step!(g::god, dt̂=one(T))
+function step(g::god, dt̂=one(T))
     if g.present
         ṫ = t()
-        N = length(g.ẑero.μ)
-        μ = SVector(ntuple(i -> i == 1 ? ṫ : g.ẑero.μ[i], N))
-        g.ẑero = ∃(God, g.ẑero.d, μ, g.ẑero.ρ, g.ẑero.∂, g.ẑero.Φ)
+        μ = SVector(ntuple(i -> i == 1 ? ṫ : g.ẑero.μ[i], length(g.ẑero.μ)))
     else
         δμ = g.ône.μ .- g.ẑero.μ
-        any(d -> !iszero(d), δμ) || return
+        # any(d -> !iszero(d), δμ) || return
         α = clamp(g.v * dt̂, zero(T), one(T))
-        μ = g.ẑero.μ .+ α .* diff
-        g.ẑero = ∃(God, g.ẑero.d, μ, g.ẑero.ρ, g.ẑero.∂, g.ẑero.Φ)
+        μ = g.ẑero.μ .+ α .* δμ
     end
+    ẑero = ∃(God, g.ẑero.d, μ, g.ẑero.ρ, g.ẑero.∂, g.ẑero.Φ)
+    god(ẑero, g.ône, g.v, g.owner, g.secret, g.present, g.visible, g.border)
     # g.visible && present!(g)
 end
 # function present!(g::god, scale=T(0.1))

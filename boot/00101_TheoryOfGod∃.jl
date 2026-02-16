@@ -248,7 +248,7 @@ end
 function X(ϵ::∃, ♯::NTuple)
     Ξ = Array{∀}(undef, ♯...)
     ρ₀ = zero(ϵ.ρ)
-    # Threads.@threads 
+    # Threads.@threads
     for i in CartesianIndices(Ξ)
         x = X(i, ♯)
         xϵ = ∃(God, ϵ.d, SVector(x), ρ₀, ϵ.∂, ϵ.Φ)
