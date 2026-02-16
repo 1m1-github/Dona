@@ -22,17 +22,24 @@ export ∃, ∃̇, ∃!
 
 using StaticArrays, KernelAbstractions
 
-const T = Float64
+const T = Float32
 
 include("00101_TheoryOfGod∃.jl")
 
 const God = 𝕋()
+
+struct Named
+    ϵ::∃
+    T::Type
+end
+const names = Dict{String,Named}()
 
 # end
 
 # in LoopOS
 include("00103_TheoryOfGodgod.jl")
 # include("00103_TheoryOfGodTypst.jl")
+
 
 # include("00090_BroadcastBrowser2Module.jl")
 # import Main.BroadcastBrowserModule: BroadcastBrowser, start

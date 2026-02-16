@@ -33,7 +33,6 @@ struct 𝕋 <: ∀
     end
 end
 Base.hash(::𝕋, h::UInt) = hash(:God, h)
-Ο(t::T) = exp(t / (1 - t))
 t(Ο::Int) = one(T) - one(T) / (one(T) + T(log(Ο)))
 t(ϵ::∀=God) = t(God.Ο[ϵ])
 # δ(ϵ, ϵ)
@@ -227,32 +226,42 @@ end
     out[i] = Φ(coords[i])
 end
 X(i, ♯::NTuple) = ntuple(î -> isone(♯[î]) ? ○ : T(i[î] - 1) / T(♯[î] - 1), length(♯))
+function √(ϵ::∃)
+    n = 0
+    p = ϵ
+    while p.ϵ̂ !== p
+        p = p.ϵ̂
+        n += 1
+    end
+    p, n
+end
 # x=xϵ
 # ϵ=β(x, God, God)
 # ϵ.Φ(1)
-function X(x::∃)
+function X(x::∃, ∇)
     ϵ = β(x, God)
     ϵ === God && return God, true
     ∂(x, ϵ) && return God, true 
     x ∩ ϵ && return ϵ, true # ?
+    _, n = √(ϵ) ; ∇ < n && return God, false
     ϵ̃ = God.ϵ̃[ϵ]
     for ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, ϵ̃)
         x ∩ ϵ̃ && return ϵ̃, true
-        ϵ̂, found = X(x)
+        ϵ̂, found = X(x, ∇)
         found && return ϵ̂, true
     end
     God, false
 end
 # i = collect(CartesianIndices(Ξ))[23]
 # Ξ[i].Φ(1)
-function X(ϵ::∃, ♯::NTuple)
+function X(ϵ::∃, ♯::NTuple, ∇)
     Ξ = Array{∀}(undef, ♯...)
     ρ₀ = zero(ϵ.ρ)
     # Threads.@threads
     for i in CartesianIndices(Ξ)
         x = X(i, ♯)
         xϵ = ∃(God, ϵ.d, SVector(x), ρ₀, ϵ.∂, ϵ.Φ)
-        Ξ[i], _ = X(xϵ)
+        Ξ[i], _ = X(xϵ, ∇)
     end
     Ξ
 end
@@ -263,8 +272,8 @@ end
 # ẋᵢ.Φ(1)
 # God.Ο[ϵ]
 # ϵ=ϵ̃
-function ∃̇(ϵ::∃, ♯::NTuple)
-    ϵ̂ = X(ϵ, ♯)
+function ∃̇(ϵ::∃, ♯::NTuple, ∇=typemax(Int))
+    ϵ̂ = X(ϵ, ♯, ∇)
     ♯̇ = fill(○, ♯...)
     ϵ̂x = Dict{∃, Vector{CartesianIndex}}()
     for i = CartesianIndices(ϵ̂)
@@ -291,7 +300,6 @@ function ∃!(ϵ::∃)
     if ϵ̂ !== ϵ.ϵ̂
         ϵ = ∃(ϵ̂, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.Φ)
     end
-    ϵ̂ !== God && ϵ ∩ ϵ̂ && (unlock(God.L); return nothing)
     while Sys.free_memory() < God.s[] + sizeof(ϵ)
         rm!(God)
     end

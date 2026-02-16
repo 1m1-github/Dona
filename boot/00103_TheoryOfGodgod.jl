@@ -1,68 +1,57 @@
 struct god
-    # {F,FI}
     ẑero::∃
     ône::∃
+    ∂t₀::Bool
     v::T
-    # ℼ::F
-    # ℼ̂::FI
-    owner::UInt
-    secret::UInt
-    present::Bool
-    visible::Bool
-    border::Bool
+    ρ::T
+    Ω::𝕋
+    ⚷::UInt
 end
-function secret_dims(secret::UInt)
-    iszero(secret) && return rand(T), rand(T)
-    h = hash(secret)
-    m = T(typemax(typeof(secret)))
-    T(h >> 32) / m, T(h & m) / m
+isreal(ϵ::∃) = √(ϵ) === God
+function dh(⚷, g, n)
+    powermod(g, ⚷, n)
 end
-function scramble_index(i, secret::UInt, ♯)
+function ⚷⚷(⚷, dh)
+    powermod(dh, ⚷, DH_N)
+end
+function ⚷i(i, ⚷, ♯)
     ntuple(length(♯)) do d
-        mod1(i[d] + secret, ♯[d])
+        mod1(i[d] + ⚷, ♯[d])
     end
 end
-function unscramble_index(i, secret::UInt, ♯)
+function i⚷(i, ⚷, ♯)
     ntuple(length(♯)) do d
-        mod1(i[d] + ♯[d] - secret, ♯[d])
+        effective = mod(⚷, ♯[d])
+        mod1(i[d] + ♯[d] - effective, ♯[d])
     end
 end
-# secret = UInt(8);
-# grid = [1 2 3;
-#         4 5 6;
-#         7 8 9];
-# scrambled = similar(grid);
-# for i in CartesianIndices(grid)
-#     j = CartesianIndex(scramble_index(Tuple(i), secret, ♯))
-#     scrambled[j] = grid[i]
-# end
-# scrambled
-# recovered = similar(grid);
-# for i in CartesianIndices(scrambled)
-#     j = CartesianIndex(scramble_index(Tuple(i), secret, ♯))
-#     recovered[i] = scrambled[j]
-# end
-# recovered
 const WHITE = (one(T), one(T), one(T), one(T))
-# ρ(μ) = min(μ, 1 - μ)
-function god(spatial_dims::NTuple, spatial_pos::NTuple, owner=zero(UInt), secret=zero(UInt), Φ=_ -> ○)
-    doverlay₁, doverlay₂ = secret_dims(secret)
-    d = SVector(zero(T), doverlay₁, doverlay₂, ○, spatial_dims..., one(T))
-    N = length(d)
-    μzero = SA[t(), zero(T), zero(T), zero(T), spatial_pos..., zero(T)]
-    ∂zero = ntuple(_ -> (true, false), N)
+function god(d::NTuple, μ::NTuple, ⚷=zero(UInt), Φ=_ -> ○)
+    d̂ = SVector(zero(T), d..., one(T))
+    N = length(d̂)
+    μ₀ = SA[t(), μ..., zero(T)]
+    ∂₀ = ntuple(_ -> (true, false), N)
     zeros = SVector(ntuple(_ -> zero(T), N))
-    ẑero = ∃(God, d, μzero, zeros, ∂zero, Φ)
-    μone = SVector(ntuple(_ -> one(T), N))
-    ∂one = ntuple(_ -> (false, true), N)
-    ône = ∃(God, d, μone, zeros, ∂one, _ -> ○)
-    # god(ẑero, ône, zero(T), ℼ, ℼ̂, owner, secret, true, false, false)
-    god(ẑero, ône, zero(T), owner, secret, true, false, false)
+    ẑero = ∃(God, d̂, μ₀, zeros, ∂₀, Φ)
+    μ₁ = SVector(ntuple(_ -> one(T), N))
+    ∂₁ = ntuple(_ -> (false, true), N)
+    ône = ∃(God, d̂, μ₁, zeros, ∂₁, _ -> ○)
+    god(ẑero, ône, true, zero(T), zero(T), 𝕋(), ⚷)
 end
-function observe(g::god, ♯)
-    ϵ = g.ône - g.ẑero
-    ϕ = ∃̇(ϵ, ♯)
-    ℼ̂(ϕ)
+# function log_z_grid(N::Int; z_near=0.01, z_far=1.0)
+#     ratio = z_far / z_near
+#     Float32[z_near * ratio ^ (i / (N - 1)) for i in 0:(N-1)]
+# end
+function ∃̇(g::god, ♯, ∇=typemax(Int))
+    ϵᵩ = g.ône - g.ẑero
+    ϕᵩ = ∃̇(ϵᵩ, ♯, ∇)
+    pixels = ℼ̂(ϕᵩ)
+    for ϵ = g.Ω
+        isreal(ϵ) || continue
+        ϕ = ∃̇(ϵ, ♯)
+        composite!(pixels, ϕ, ♯)
+    end
+    pixels
 end
 ℼ(Φ) = x -> begin
     t, _, _, c, ẋ... = x
@@ -130,8 +119,9 @@ end
 #     end)
 #     g.ẑero = ∃(g.ẑero.ϵ̂, g.ẑero.d, μ, ρ, g.ẑero.∂, g.ẑero.Φ)
 # end
+# ρ(μ) = min(μ, 1 - μ)
 function step(g::god, dt̂=one(T))
-    if g.present
+    if g.∂t₀
         ṫ = t()
         μ = SVector(ntuple(i -> i == 1 ? ṫ : g.ẑero.μ[i], length(g.ẑero.μ)))
     else
@@ -141,8 +131,8 @@ function step(g::god, dt̂=one(T))
         μ = g.ẑero.μ .+ α .* δμ
     end
     ẑero = ∃(God, g.ẑero.d, μ, g.ẑero.ρ, g.ẑero.∂, g.ẑero.Φ)
-    god(ẑero, g.ône, g.v, g.owner, g.secret, g.present, g.visible, g.border)
-    # g.visible && present!(g)
+    god(ẑero, g.ône, g.∂t₀, g.v, g.ρ, g.Ω, g.⚷)
+    # present!(g)
 end
 # function present!(g::god, scale=T(0.1))
 #     N = length(g.ẑero.μ)
