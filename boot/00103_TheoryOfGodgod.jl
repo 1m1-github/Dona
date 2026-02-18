@@ -42,6 +42,7 @@ end
 #     ratio = z_far / z_near
 #     Float32[z_near * ratio ^ (i / (N - 1)) for i in 0:(N-1)]
 # end
+# ϵ=ϵᵩ
 function ∃̇(g::god, ♯, ∇=typemax(Int))
     ϵᵩ = g.ône - g.ẑero
     ϕᵩ = ∃̇(ϵᵩ, ♯, ∇)
@@ -53,10 +54,13 @@ function ∃̇(g::god, ♯, ∇=typemax(Int))
     end
     pixels
 end
-ℼ(Φ) = x -> begin
-    t, _, _, c, ẋ... = x
-    r, g, b, a = Φ(t, ẋ...)
+struct ℼStruct{F}
+    Φ::F
+end
+@inline function (p::ℼStruct)(t, x, y, z, c)
+    r, g, b, a = p.Φ(t, x, y, z)
     r == g == b == a == ○ && return one(T)
+    c∂ = one(T) / T(4)
     c∂ = one(T) / 4
     if c < c∂
         r
@@ -68,14 +72,30 @@ end
         a
     end
 end
+ℼ(Φ) = ℼStruct(Φ)
+# ℼ(Φ) = ẋ -> begin
+#     t, x, y, z, c = ẋ
+#     r, g, b, a = Φ(t, x, y, z)
+#     r == g == b == a == ○ && return one(T)
+#     c∂ = one(T) / 4
+#     if c < c∂
+#         r
+#     elseif c < 2 * c∂
+#         g
+#     elseif c < 3 * c∂
+#         b
+#     else
+#         a
+#     end
+# end
 ℼ̂(ϕ) = begin
-    pixel = fill(WHITE, size(ϕ, 5), size(ϕ, 6))
+    pixel = fill(WHITE, size(ϕ, 2), size(ϕ, 3))
     # i = collect(CartesianIndices(pixel))[1]
     for i = CartesianIndices(pixel)
-        r = ϕ[1, 1, 1, 2, Tuple(i)..., 1]
-        g = ϕ[1, 1, 1, 3, Tuple(i)..., 1]
-        b = ϕ[1, 1, 1, 4, Tuple(i)..., 1]
-        a = ϕ[1, 1, 1, 5, Tuple(i)..., 1]
+        r = ϕ[1, Tuple(i)..., 2]
+        g = ϕ[1, Tuple(i)..., 3]
+        b = ϕ[1, Tuple(i)..., 4]
+        a = ϕ[1, Tuple(i)..., 5]
         pixel[i] = r == g == b == a == ○ ? WHITE : (r, g, b, a)
     end
     pixel

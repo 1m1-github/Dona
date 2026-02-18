@@ -20,7 +20,9 @@ god observes or creates, God iterates.
 
 export ∃, ∃̇, ∃!
 
-using StaticArrays, KernelAbstractions
+using StaticArrays, KernelAbstractions, Metal
+# using CUDA
+const GPU_BACKEND = MetalBackend() # CUDABackend()
 
 const T = Float32
 
@@ -28,11 +30,11 @@ include("00101_TheoryOfGod∃.jl")
 
 const God = 𝕋()
 
-struct Named
-    ϵ::∃
-    T::Type
-end
-const names = Dict{String,Named}()
+# struct Named
+#     ϵ::∃
+#     T::Type
+# end
+# const names = Dict{String,Named}()
 
 # end
 
@@ -47,16 +49,47 @@ include("00103_TheoryOfGodgod.jl")
 # const BROWSERTASK = Threads.@spawn start(b->godBrowser(b))
 # g=collect(values(godBROWSER[]))[1].g
 
-g=god((T(0.1),T(0.2)), (T(0.1),T(0.1)))
+g=god((T(0.1),T(0.2),T(0.3)), (T(0.1),T(0.1),T(0.1)))
 g.ẑero
 g.ône
 g.ône-g.ẑero
-Φ(t,x,y,z) = begin
-    # x^2 + y^2 == 0.01 ? (T(rand()), T(rand()), T(rand()), one(T)) : (○(T), ○(T), ○(T), ○(T))
-    # ntuple(_ -> rand(), 4)
-    (T(0.7),T(0.8),T(0.9),one(T))
+struct Π{F}
+    Φ::F
 end
-# const God = 𝕋()
+@inline function (p::Π)(t, x, y, z, c)
+    r, g, b, a = p.Φ(t, x, y, z)
+    r == g == b == a == ○ && return one(T)
+    c∂ = one(T) / T(4)
+    c∂ = one(T) / 4
+    if c < c∂
+        r
+    elseif c < 2 * c∂
+        g
+    elseif c < 3 * c∂
+        b
+    else
+        a
+    end
+end
+ℼ(Φ) = Π(Φ)
+Φ(t,x,y,z) = (T(0.78),T(0.8),T(0.9),one(T))
+ϵ = g.ône - g.ẑero
+ϵ = ∃(ϵ, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ℼ(Φ))
+ℼ(Φ) === ϵ.Φ
+y = KernelAbstractions.zeros(GPU_BACKEND, T, 1)
+@kernel function κ!(y, Φ)
+    i = @index(Global)
+    # y[1],y[2],y[3],y[4] = Φ(T(i),T(i),T(i),T(i),T(i))
+    y[1] = Φ(T(i),T(i),T(i),T(i),T(i))
+end
+κ!(GPU_BACKEND, 2)(
+    y,
+    # ℼ(Φ),
+    ϵ.Φ,
+    ndrange=1
+)
+y
+create(g, Φ_solid)
 God.Ο[God]
 create(g, Φ)
 God.Ο[God]
@@ -66,8 +99,7 @@ God.Ο[God]
 t()
 t(ϵ̃)
 ϵ̃.Φ(zeros(7))
-♯ = (1,1,1,6,3,3,1)
-# ♯ = (1,1,1,6,4,4,1)
-observe(g, ♯)
+♯ = (1,3,3,3,6)
+∃̇(g, ♯)
 all(==(ntuple(_->one(T),4)),observe(g,♯))
 step(g)

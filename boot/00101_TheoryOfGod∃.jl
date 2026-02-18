@@ -10,6 +10,7 @@ struct ∃{N,F,P<:∀} <: ∀
     h::UInt
     function ∃(ϵ̂::∀, d::SVector{N,T}, μ::SVector{N,T}, ρ::SVector{N,T}, ∂::NTuple{N,Tuple{Bool,Bool}}, Φ::F) where {N,F}
         @assert 1 ≤ N
+        @assert all(zero(T) ≤ d ≤ one(T)) ; @assert all(zero(T) ≤ μ ≤ one(T)) ; @assert all(zero(T) ≤ ρ ≤ one(T))
         p = sortperm(d)
         d, μ, ρ = map(x -> x[p], (d, μ, ρ))
         ∂ = ntuple(i -> ∂[p[i]], N)
@@ -109,7 +110,7 @@ function ⪽(ϵ₁::∃, ϵ₂::∃)
     for (i₂, d₂) = enumerate(ϵ₂.d)
         ρ₂ = ϵ₂.ρ[i₂]
         iszero(ρ₂) && continue
-        x && ( x = false )
+        x && (x = false)
         μ₂ = ϵ₂.μ[i₂]
         μ₁, ρ₁, ∂₁ = μρ(ϵ₁, d₂)
         zero₁, one₁ = μ₁ - ρ₁, μ₁ + ρ₁
@@ -145,7 +146,7 @@ function ℼ(ϵ::∃)
 end
 ℼ(ϵ, ::𝕋) = ℼ(ϵ)
 function ℼ(ϵ₁::∃, ϵ₂::∃)
-    ○̂ = SVector(ntuple(_->○, length(ϵ₁.d)))
+    ○̂ = SVector(ntuple(_ -> ○, length(ϵ₁.d)))
     ϵ₁ === ϵ₂ && return ∃(ϵ₂, ϵ₁.d, ○̂, ○̂, ϵ₁.∂, ϵ₁.Φ)
     ϵ₁.ϵ̂ === ϵ₂ && return ϵ₁
     if ϵ₂ ∈ α(ϵ₁)
@@ -225,6 +226,7 @@ end
     i = @index(Global)
     out[i] = Φ(coords[i])
 end
+# X(i, ♯::NTuple) = SVector{length(♯)}([isone(♯[î]) ? ○ : T(i[î] - 1) / T(♯[î] - 1) for î = eachindex(♯)])
 X(i, ♯::NTuple) = ntuple(î -> isone(♯[î]) ? ○ : T(i[î] - 1) / T(♯[î] - 1), length(♯))
 function √(ϵ::∃)
     n = 0
@@ -241,9 +243,10 @@ end
 function X(x::∃, ∇)
     ϵ = β(x, God)
     ϵ === God && return God, true
-    ∂(x, ϵ) && return God, true 
+    ∂(x, ϵ) && return God, true
     x ∩ ϵ && return ϵ, true # ?
-    _, n = √(ϵ) ; ∇ < n && return God, false
+    _, n = √(ϵ)
+    ∇ < n && return God, false
     ϵ̃ = God.ϵ̃[ϵ]
     for ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, ϵ̃)
         x ∩ ϵ̃ && return ϵ̃, true
@@ -260,39 +263,60 @@ function X(ϵ::∃, ♯::NTuple, ∇)
     # Threads.@threads
     for i in CartesianIndices(Ξ)
         x = X(i, ♯)
+        # xϵ = ∃(God, ϵ.d, x, ρ₀, ϵ.∂, ϵ.Φ)
         xϵ = ∃(God, ϵ.d, SVector(x), ρ₀, ϵ.∂, ϵ.Φ)
         Ξ[i], _ = X(xϵ, ∇)
     end
     Ξ
 end
 # ♯=g.♯
-# all(ϵ -> ϵ isa ∀, ϵ̂)
+# all(ϵ -> ϵ isa 𝕋, ϵ̂)
+# all(iszero,î)
+# sum(î)
 # ẋ[2,2] !== God
 # (ϵ̂, i) = collect(ϵ̂x)[1]
 # ẋᵢ.Φ(1)
 # God.Ο[ϵ]
 # ϵ=ϵ̃
+# i
+# a=collect(CartesianIndices(ϵ̂))
+# size(a)
+# length(a)
+# a[4]
+# k=collect(keys(ϵ̂x))[1]
+# i=ϵ̂x[k][1]
+# i = collect(CartesianIndices(ϵ̂))[14]
 function ∃̇(ϵ::∃, ♯::NTuple, ∇=typemax(Int))
     ϵ̂ = X(ϵ, ♯, ∇)
-    ♯̇ = fill(○, ♯...)
-    ϵ̂x = Dict{∃, Vector{CartesianIndex}}()
+    î = fill(zero(UInt), size(ϵ̂))
+    # ϵ̂x = Dict{∃, Vector{CartesianIndex}}()
+    ϵ∃ = filter(ϵ -> ϵ !== God, ϵ̂)
+    unique!(t, ϵ∃)
+    sort!(ϵ∃, by=t)
+    ϵΠ = map(ϵ -> ϵ.Φ, ϵ∃)
+    ϵt = map(t, ϵ∃)
     for i = CartesianIndices(ϵ̂)
         ϵ̂ᵢ = ϵ̂[i]
         ϵ̂ᵢ === God && continue
-        push!(get!(ϵ̂x, ϵ̂ᵢ, []), i)
+        # @show i, ϵ̂ᵢ
+        # push!(get!(ϵ̂x, ϵ̂ᵢ, []), i)
+        ϵ̂ᵢt = t(ϵ̂ᵢ)
+        î[i] = findfirst(t -> t == ϵ̂ᵢt, ϵt)
     end
-    for (ϵ̂, i) = ϵ̂x
-        x = map(i -> X(i, ♯), i)
-        Φ̇ = gpu(ϵ̂.Φ, x)
-        for (i₁, i₂) = enumerate(i)
-            ♯̇[i₂] = Φ̇[i₁]
-        end
+    ♯̇ = fill(○, ♯...)
+    # for (ϵ̂, i) = ϵ̂x
+    x = map(i -> X(i, ♯), CartesianIndices(ϵ̂))
+    # x = map(i -> X(i, ♯), i)
+    Φ̇ = gpu(ϵΠ, î, x, ♯)
+    for (i₁, i₂) = enumerate(i)
+        ♯̇[i₂] = Φ̇[i₁]
     end
+    # end
     ♯̇
 end
 # ϵ=ϵ̂
 function ∃!(ϵ::∃)
-    gpu_safe(ϵ.Φ, [zeros(length(ϵ.d))]) || return nothing
+    gpu_safe(ϵ) || return nothing
     lock(God.L)
     ϵ̂ = β(ϵ, God)
     ϵ̃ = God.ϵ̃[ϵ̂]
@@ -343,20 +367,66 @@ end
 # x = ẋᵢ
 # backend = CPU()
 # Φ(1)
-function gpu(Φ, x, backend=CPU())
-    out = KernelAbstractions.zeros(backend, T, length(x))
-    ẋ = KernelAbstractions.allocate(backend, typeof(x[1]), length(x))
-    copyto!(ẋ, x)
-    k! = Φ!(backend, 2^2^3)
-    k!(out, Φ, ẋ, ndrange=length(x))
-    KernelAbstractions.synchronize(backend)
-    Array(out)
+# Φ, i, x, ♯=ϵΠ, î, x, ♯
+# i, x, ♯=î, x, ♯
+# i, x, ♯ = zeros(UInt, 1), zeros(T, 4), ntuple(_ -> 1, 4)
+# function gpu(Φ, i, x, ♯)
+function gpu(Φ, i, ♯)
+    rgba = KernelAbstractions.zeros(GPU_BACKEND, T, 4, ♯[2:end-2]...)
+    # ẋ = KernelAbstractions.allocate(GPU_BACKEND, T, size(x)..., 5)
+    # copyto!(ẋ, x)
+    i̇ = KernelAbstractions.allocate(GPU_BACKEND, T, size(i))
+    copyto!(i̇, i)
+    κ!(GPU_BACKEND, 2^2^3)(
+        # rgba, Φ, i̇, ẋ, ♯,
+        rgba, Φ, i̇, ♯,
+        ndrange=(♯[2], ♯[3])
+    )
+    KernelAbstractions.synchronize(GPU_BACKEND)
+    Array(rgba)
 end
-function gpu_safe(Φ, x, backend=CPU())
+# gpu_safe(ϵ)
+function gpu_safe(ϵ)
     try
-        gpu(Φ, x, backend)
+        i = ones(UInt, length(ϵ.d))
+        ♯ = ntuple(_ -> 1, length(ϵ.d))
+        gpu((ϵ.Φ), i, ♯)
+        # x = zeros(T, length(ϵ.d))
+        # gpu(ϵ.Φ, i, x, ♯)
         true
     catch
         false
     end
+end
+struct GPUΦ{Φ}
+    ϕ::Φ
+end
+@inline (Φ::GPUΦ)(x) = Φ.ϕ(x)
+@kernel function κ!(rgba, Φ, Φi, ♯)
+    xi, yi = @index(Global, NTuple)
+    x = isone(♯[2]) ? ○ : T(xi - 1) / T(♯[2] - 1)
+    y = isone(♯[3]) ? ○ : T(yi - 1) / T(♯[3] - 1)
+    r,g,b,a = zero(T), zero(T), zero(T), zero(T)
+    for zi = 1:♯[4]
+        one(T) ≤ a && break
+        z = isone(♯[4]) ? ○ : T(zi - 1) / T(♯[4] - 1)
+        Φi̇ = Φi[1,xi,yi,zi,1]
+        iszero(Φi̇) && continue
+        Φ̃ = Φ[Φi̇]
+        for ci = 1:6
+            c = T(ci - 1) / 5
+    #         ṙ,ġ,ḃ,ȧ = Φ̃(zero(T),x,y,z,c)
+            ṙ,ġ,ḃ,ȧ = zero(T), zero(T), zero(T), zero(T)
+            iszero(ȧ) && continue
+            rem = one(T) - a
+            r += ṙ * ȧ * rem
+            g += ġ * ȧ * rem
+            b += ḃ * ȧ * rem
+            a += ȧ * rem
+        end
+    end
+    rgba[1, xi, yi] = r
+    rgba[2, xi, yi] = g
+    rgba[3, xi, yi] = b
+    rgba[4, xi, yi] = a
 end
