@@ -9,17 +9,18 @@ struct god
     ♯::NTuple
     ∇::UInt
 end
-function god(; d, μ, ⚷=zero(UInt), Φ=○̂, ♯=(1, 1, 1), ∇=typemax(UInt))
+function god(; d, μ, ρ, ⚷=zero(UInt), Φ=○̂, ♯=(1, 1, 1), ∇=typemax(UInt))
     @assert zero(T) ∉ d
     @assert one(T) ∉ d
     d̂ = SA[zero(T), d..., one(T)]
     N = length(d̂)
     μ₀ = SA[t(), μ..., zero(T)]
+    ρ₀ = SA[zero(T), ρ..., zero(T)]
     ∂₀ = ntuple(_ -> (true, false), N)
-    zeros = @SVector zeros(T, N)
-    ẑero = ∃(God, d̂, μ₀, zeros, ∂₀, Φ)
+    ẑero = ∃(God, d̂, μ₀, ρ₀, ∂₀, Φ)
     μ₁ = @SVector ones(T, N)
     ∂₁ = ntuple(_ -> (false, true), N)
+    zeros = @SVector zeros(T, N)
     ône = ∃(God, d̂, μ₁, zeros, ∂₁, ○̂)
     ♯̂ = (1, ♯..., 6)
     god(ẑero, ône, true, zero(T), zero(T), 𝕋(), ⚷, ♯̂, ∇)
@@ -266,7 +267,7 @@ X(i, ♯) = ntuple(î -> begin
 #     ratio = z_far / z_near
 #     Float32[z_near * ratio ^ (i / (N - 1)) for i in 0:(N-1)]
 # end
-# i = collect(CartesianIndices(Ξ))[23]
+# i = collect(CartesianIndices(Ξ))[24]
 # Ξ[i].Φ(1)
 function X(ϵ::∃, ♯::NTuple, ∇)
     Ξ = Array{∀}(undef, ♯...)

@@ -51,7 +51,10 @@ include("00103_TheoryOfGodgod.jl")
 
 d = SA[T(0.1),T(0.2),T(0.3)]
 μ = SA[T(0.1),T(0.1),T(0.1)]
-g=god(d=d, μ=μ,♯=(3,3,3))
+ρ = SA[T(0.05),T(0.05),T(0.05)]
+♯=(3,3,3)
+Φ(x...) = x
+g=god(d=d, μ=μ,ρ=ρ,♯=♯,Φ=Φ)
 g.ẑero
 g.ône
 ϵ = g.ône-g.ẑero
@@ -62,15 +65,13 @@ g.ône
 # end)
 
 God.Ο[God]
-Φ(x...) = x
-create(g, Φ)
+# Φ(x...) = x/2
+# create(g, Φ)
 God.Ο[God]
 # collect(keys(God.ϵ̃))
 # ϵ̃=God.ϵ̃[God][1]
 # t()
 # t(ϵ̃)
 ϕ = ∃̇(g)
-
-ϕ[:,2,2]
 # all(==(ntuple(_->one(T),4)),observe(g))
-# step(g)
+step(g)
