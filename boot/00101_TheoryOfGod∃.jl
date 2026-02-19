@@ -1,6 +1,7 @@
 using StaticArrays
 
 const ○ = one(T) / (one(T) + one(T))
+const ○̂ = _ -> ○
 abstract type ∀ end
 struct ∃{N,F,P<:∀} <: ∀
     ϵ̂::P
@@ -151,8 +152,8 @@ function ℼ(ϵ::∃)
 end
 ℼ(ϵ, ::𝕋) = ℼ(ϵ)
 function ℼ(ϵ₁::∃, ϵ₂::∃)
-    ○̂ = SVector(ntuple(_ -> ○, length(ϵ₁.d)))
-    ϵ₁ === ϵ₂ && return ∃(ϵ₂, ϵ₁.d, ○̂, ○̂, ϵ₁.∂, ϵ₁.Φ)
+    ○̂̂ = SVector(ntuple(○̂, length(ϵ₁.d)))
+    ϵ₁ === ϵ₂ && return ∃(ϵ₂, ϵ₁.d, ○̂̂, ○̂̂, ϵ₁.∂, ϵ₁.Φ)
     ϵ₁.ϵ̂ === ϵ₂ && return ϵ₁
     if ϵ₂ ∈ α(ϵ₁)
         return ℼ(∃(ϵ₁.ϵ̂.ϵ̂, ϵ₁.d, μ̂(ϵ₁), ρ̂(ϵ₁), ϵ₁.∂, ϵ₁.Φ), ϵ₂)

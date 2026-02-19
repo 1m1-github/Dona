@@ -9,8 +9,7 @@ struct god
     ♯::NTuple
     ∇::UInt
 end
-# const WHITE = (one(T), one(T), one(T), one(T))
-function god(; d, μ, ⚷=zero(UInt), Φ=_ -> ○, ♯=(1, 1, 1), ∇=typemax(UInt))
+function god(; d, μ, ⚷=zero(UInt), Φ=○̂, ♯=(1, 1, 1), ∇=typemax(UInt))
     @assert zero(T) ∉ d
     @assert one(T) ∉ d
     d̂ = SA[zero(T), d..., one(T)]
@@ -21,7 +20,7 @@ function god(; d, μ, ⚷=zero(UInt), Φ=_ -> ○, ♯=(1, 1, 1), ∇=typemax(UI
     ẑero = ∃(God, d̂, μ₀, zeros, ∂₀, Φ)
     μ₁ = @SVector ones(T, N)
     ∂₁ = ntuple(_ -> (false, true), N)
-    ône = ∃(God, d̂, μ₁, zeros, ∂₁, _ -> ○)
+    ône = ∃(God, d̂, μ₁, zeros, ∂₁, ○̂)
     ♯̂ = (1, ♯..., 6)
     god(ẑero, ône, true, zero(T), zero(T), 𝕋(), ⚷, ♯̂, ∇)
 end
@@ -66,14 +65,14 @@ function ∃̇(g::god)
         î[i] = findfirst(t -> t == ϵ̂ᵢt, ϵt)
     end
     # ♯̇ = fill(○, ♯...)
-    Φ̇ = gpu(ϵΠ, î, g.♯)
+    ϕ = gpu(ϵΠ, î, g.♯)
     # Threads.@threads
     # for (i₁, i₂) = enumerate(i)
     #     ♯̇[i₂] = Φ̇[i₁]
     # end
     # end
     # ♯̇
-    # pixels = ℼ̂(ϕ)
+    pixels = ℼ̂(ϕ)
     # for ϵ̃ = g.Ω
     #     isreal(ϵ̃) || continue
     #     ϕ = ∃̇(ϵ̃, ♯)
@@ -95,18 +94,23 @@ end
 #         a
 #     end
 # end
-# ℼ̂(ϕ) = begin
-#     pixel = fill(WHITE, size(ϕ, 2), size(ϕ, 3))
-#     # i = collect(CartesianIndices(pixel))[1]
-#     for i = CartesianIndices(pixel)
-#         r = ϕ[1, Tuple(i)..., 2]
-#         g = ϕ[1, Tuple(i)..., 3]
-#         b = ϕ[1, Tuple(i)..., 4]
-#         a = ϕ[1, Tuple(i)..., 5]
-#         pixel[i] = r == g == b == a == ○ ? WHITE : (r, g, b, a)
-#     end
-#     pixel
-# end
+const WHITE = (one(T), one(T), one(T), one(T))
+ℼ̂(ϕ) = begin
+    pixel = fill(WHITE, size(ϕ, 2), size(ϕ, 3))
+    # i = collect(CartesianIndices(pixel))[1]
+    for i = CartesianIndices(pixel)
+        r = ϕ[1, Tuple(i)...]
+        g = ϕ[1, Tuple(i)...]
+        b = ϕ[1, Tuple(i)...]
+        a = ϕ[1, Tuple(i)...]
+        # r = ϕ[1, Tuple(i)..., 2]
+        # g = ϕ[1, Tuple(i)..., 3]
+        # b = ϕ[1, Tuple(i)..., 4]
+        # a = ϕ[1, Tuple(i)..., 5]
+        pixel[i] = r == g == b == a == ○ ? WHITE : (r, g, b, a)
+    end
+    pixel
+end
 # accelerate!(g::god, v) = g.v = v
 # jerk!(g::god, j) = accelerate(g, g.v^j) # ?
 # stop!(g::god) = accelerate(g, ntuple(_ -> zero(g.T), 3))
@@ -142,34 +146,20 @@ end
 #     g.ẑero = ∃(g.ẑero.ϵ̂, g.ẑero.d, μ, ρ, g.ẑero.∂, g.ẑero.Φ)
 # end
 # ρ(μ) = min(μ, 1 - μ)
-# function step(g::god, dt̂=one(T))
-#     if g.∂t₀
-#         ṫ = t()
-#         μ = SVector(ntuple(i -> i == 1 ? ṫ : g.ẑero.μ[i], length(g.ẑero.μ)))
-#     else
-#         δμ = g.ône.μ .- g.ẑero.μ
-#         # any(d -> !iszero(d), δμ) || return
-#         α = clamp(g.v * dt̂, zero(T), one(T))
-#         μ = g.ẑero.μ .+ α .* δμ
-#     end
-#     ẑero = ∃(God, g.ẑero.d, μ, g.ẑero.ρ, g.ẑero.∂, g.ẑero.Φ)
-#     god(ẑero, g.ône, g.∂t₀, g.v, g.ρ, g.Ω, g.⚷, g.♯, g.∇)
-#     # present!(g)
-# end
-# function present!(g::god, scale=T(0.1))
-#     N = length(g.ẑero.μ)
-#     dir = g.ône.μ .- g.ẑero.μ
-#     μ_self = g.ẑero.μ .+ scale .* dir
-#     ṫ = t()
-#     ṫ_next = t(God.Ο[God] + 1)
-#     ρ_self = SVector(ntuple(N) do i
-#         i == 1 && return (ṫ_next - ṫ) / 2
-#         scale * abs(dir[i]) / 2
-#     end)
-#     avatar = ∃(God, g.ẑero.d, μ_self, ρ_self,
-#                ntuple(_ -> (true, true), N), Φ̃(g.Φ))
-#     ∃!(avatar)
-# end
+function step(g::god, dt̂=one(T))
+    if g.∂t₀
+        ṫ = t()
+        μ = SVector(ntuple(i -> i == 1 ? ṫ : g.ẑero.μ[i], length(g.ẑero.μ)))
+    else
+        δμ = g.ône.μ .- g.ẑero.μ
+        # any(d -> !iszero(d), δμ) || return
+        α = clamp(g.v * dt̂, zero(T), one(T))
+        μ = g.ẑero.μ .+ α .* δμ
+    end
+    ẑero = ∃(God, g.ẑero.d, μ, g.ẑero.ρ, g.ẑero.∂, g.ẑero.Φ)
+    god(ẑero, g.ône, g.∂t₀, g.v, g.ρ, g.Ω, g.⚷, g.♯, g.∇)
+    g.ẑero !== ○̂ && ∃!(g.ẑero)
+end
 # function observe(g::god, ♯::NTuple)
 #     ϵ = g.ône - g.ẑero
 #     ϕ = ∃̇(ϵ, ♯)
