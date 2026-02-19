@@ -238,7 +238,7 @@ end
 function √(ϵ::∃)
     n = 0
     p = ϵ
-    while p.ϵ̂ !== p
+    while !(p.ϵ̂ isa 𝕋)
         p = p.ϵ̂
         n += 1
     end

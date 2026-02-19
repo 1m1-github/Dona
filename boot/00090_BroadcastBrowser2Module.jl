@@ -59,6 +59,7 @@ sse.onmessage = (e) => eval(e.data)
 
 function safe_write(stream, js)
     try
+        @show "safe_write", js
         write(stream, js)
         flush(stream)
         true

@@ -14,14 +14,14 @@ put!(browser.processor, JS(g.♯[2], g.♯[3]))
 t = time()
 pixel = fill((one(T),one(T),one(T),one(T)), g.♯[2],g.♯[3])
 while true
-    sleep(5)
+    sleep(10)
     yield()
     t̂ = time()
     dt = t̂ - t
     t = t̂
-    step!(g, dt)
-    p̂ixel = observe(g)
-    # @show p̂ixel
+    # step(g, dt)
+    p̂ixel = ∃̇(g)
+    @show p̂ixel
     δ = Δ(pixel, p̂ixel)
     # @show δ
     @show isempty(δ)
@@ -37,10 +37,11 @@ end
 , browser)
 function godBrowser(browser)
     @show "godBrowser"
-    dimx, dimy, dimc = T(0.1),T(0.2),T(0.3)
-    x, y = T(0.1),T(0.1)
+    dimx, dimy, dimz = T(0.1),T(0.2),T(0.3)
+    x, y, z = T(0.1),T(0.1),T(0.1)
+    const Φ(x...) = x
+    g = god(Φ=Φ,d=SA[dimx, dimy, dimz], μ=SA[x, y, z], ρ=SA[T(0.05), T(0.05), T(0.05)], ♯=(Int(3), Int(3), Int(3)))
     # g = god{T}(dimx, dimy, dimc, x, y, browser.width, browser.height)
-    g = god(dimx, dimy, dimc, x, y, Int(200), Int(100))
     # g = god(dimx, dimy, dimc, x, y, T(20), T(10))
     gb = godBrowser(g, browser)
     push!(godBROWSER[], gb)
@@ -48,6 +49,11 @@ function godBrowser(browser)
 end
 # put!(::godBrowser) = nothing # todo ?
 const godBROWSER = Ref(Set{godBrowser}())
+
+# all(==(ntuple(_->one(T),4)),p̂ixel)
+# g=gb.g
+# gb=only(values(godBROWSER[]))
+# browser=gb.browser
 
 function Δ(pixel, p̂ixel)
     δ = Tuple{CartesianIndex{2},Tuple{T,T,T,T}}[]
@@ -59,12 +65,14 @@ function Δ(pixel, p̂ixel)
     end
     δ
 end
-
+# height=g.♯[2]
+# color=δ[1][2]
+# typemax(UInt8) .* color
 function write(δ, height)
     result = []
     for (i, color) = δ
         # @show i, color
-        push!(result, (i[1] - 1, height - 1 - (i[2] - 1), round.(UInt8, typemax(UInt8) * color)...))
+        push!(result, (i[1] - 1, height - 1 - (i[2] - 1), round.(UInt8, typemax(UInt8) .* color)...))
     end
     bracket(x) = "[" * x * "]"
     bracket(join(map(r -> bracket(join(r, ',')), result), ','))

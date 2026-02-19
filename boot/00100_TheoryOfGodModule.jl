@@ -43,21 +43,28 @@ const God = 𝕋()
 include("00103_TheoryOfGodgod.jl")
 # include("00103_TheoryOfGodTypst.jl")
 
-# include("00090_BroadcastBrowser2Module.jl")
-# import Main.BroadcastBrowserModule: BroadcastBrowser, start
-# include("00105_TheoryOfGodgodBrowser.jl")
-# const BROWSERTASK = Threads.@spawn start(b->godBrowser(b))
-# g=collect(values(godBROWSER[]))[1].g
+include("00090_BroadcastBrowser2Module.jl")
+import Main.BroadcastBrowserModule: BroadcastBrowser, start
+include("00105_TheoryOfGodgodBrowser.jl")
+const BROWSERTASK = Threads.@spawn start(b->godBrowser(b))
+g=collect(values(godBROWSER[]))[1].g
 
-d = SA[T(0.1),T(0.2),T(0.3)]
-μ = SA[T(0.1),T(0.1),T(0.1)]
-ρ = SA[T(0.05),T(0.05),T(0.05)]
-♯=(3,3,3)
-Φ(x...) = x
-g=god(d=d, μ=μ,ρ=ρ,♯=♯,Φ=Φ)
-g.ẑero
-g.ône
-ϵ = g.ône-g.ẑero
+const Φ(x...) = x
+const Φ2(x...) = x./2
+
+dimx, dimy, dimz = T(0.1),T(0.2),T(0.3)
+x, y, z = T(0.1),T(0.1),T(0.1)
+g = god(d=SA[dimx, dimy, dimz], μ=SA[x, y, z], ρ=SA[T(0.05), T(0.05), T(0.05)], ♯=(Int(3), Int(3), Int(3)))
+    
+# d = SA[T(0.1),T(0.2),T(0.3)]
+# μ = SA[T(0.1),T(0.1),T(0.1)]
+# ρ = SA[T(0.05),T(0.05),T(0.05)]
+# ♯=(3,3,3)
+# Φ(x...) = x
+# g=god(d=d, μ=μ,ρ=ρ,♯=♯,Φ=Φ)
+# g.ẑero
+# g.ône
+# ϵ = g.ône-g.ẑero
 # ϵ=∃(God, SA[T(0.1)], SA[T(0.1)], SA[T(0.1)], ((true,true),), _->one(T))
 # ϵ=∃(God, SA[T(0.1)], SA[T(0.1)], SA[T(0.1)], ((true,true),), _->rand(T))
 # ϵ=∃(God, SA[T(0.1)], SA[T(0.1)], SA[T(0.1)], ((true,true),), _->begin
@@ -65,13 +72,21 @@ g.ône
 # end)
 
 God.Ο[God]
-# Φ(x...) = x/2
-# create(g, Φ)
-God.Ο[God]
+create(g, Φ)
+create(g, Φ2)
+# God.Ο[God]
 # collect(keys(God.ϵ̃))
-# ϵ̃=God.ϵ̃[God][1]
+ϵ=God.ϵ̃[God][1]
 # t()
 # t(ϵ̃)
+# Before launching the kernel, from the thread that fails:
+# @show typeof(ϵ.Φ)
+# @show fieldnames(typeof(ϵ.Φ))
+# @show fieldtypes(typeof(ϵ.Φ))
+# isconcretetype(typeof(ϵ.Φ))
+# Look for Any, abstract types, or types that contain pointers/heap objects
 ϕ = ∃̇(g)
-# all(==(ntuple(_->one(T),4)),observe(g))
-step(g)
+# all(==(ntuple(_->zero(T),4)),ϕ)
+# map(sum,ϕ)
+# all(==(ntuple(_->one(T),4)),ϕ)
+# step(g)

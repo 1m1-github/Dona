@@ -11,18 +11,17 @@ struct god
 end
 function god(; d, μ, ρ, ⚷=zero(UInt), Φ=○̂, ♯=(1, 1, 1), ∇=typemax(UInt))
     @assert zero(T) ∉ d
-    @assert one(T) ∉ d
-    d̂ = SA[zero(T), d..., one(T)]
+    d̂ = SA[zero(T), d...]
     N = length(d̂)
-    μ₀ = SA[t(), μ..., zero(T)]
-    ρ₀ = SA[zero(T), ρ..., zero(T)]
+    μ₀ = SA[t(), μ...]
+    ρ₀ = SA[zero(T), ρ...]
     ∂₀ = ntuple(_ -> (true, false), N)
     ẑero = ∃(God, d̂, μ₀, ρ₀, ∂₀, Φ)
     μ₁ = @SVector ones(T, N)
     ∂₁ = ntuple(_ -> (false, true), N)
     zeros = @SVector zeros(T, N)
     ône = ∃(God, d̂, μ₁, zeros, ∂₁, ○̂)
-    ♯̂ = (1, ♯..., 6)
+    ♯̂ = (1, ♯...)
     god(ẑero, ône, true, zero(T), zero(T), 𝕋(), ⚷, ♯̂, ∇)
 end
 isreal(ϵ::∃) = √(ϵ) === God
@@ -49,15 +48,17 @@ function create(g::god, Φ, Ω=God)
     # ϵ = ∃(ϵ, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ℼ(Φ))
     ∃!(ϵ, Ω)
 end
+const WHITE = (one(T), one(T), one(T), one(T))
 function ∃̇(g::god)
     ϵ = g.ône - g.ẑero
     ϵ̂ = X(ϵ, g.♯, g.∇)
-    î = fill(zero(UInt), size(ϵ̂))
     ϵ∃ = filter(ϵ -> ϵ !== God, ϵ̂)
+    isempty(ϵ∃) && return fill(WHITE, g.♯[2], g.♯[3])
     unique!(t, ϵ∃)
     sort!(ϵ∃, by=t)
-    ϵΠ = ntuple(i -> ϵ∃[1].Φ, length(ϵ∃))
+    ϵΠ = ntuple(i -> ϵ∃[i].Φ, length(ϵ∃))
     ϵt = map(t, ϵ∃)
+    î = fill(zero(UInt), size(ϵ̂))
     # Threads.@threads
     for i = CartesianIndices(ϵ̂)
         ϵ̂ᵢ = ϵ̂[i]
@@ -95,15 +96,14 @@ end
 #         a
 #     end
 # end
-const WHITE = (one(T), one(T), one(T), one(T))
 ℼ̂(ϕ) = begin
     pixel = fill(WHITE, size(ϕ, 2), size(ϕ, 3))
     # i = collect(CartesianIndices(pixel))[1]
     for i = CartesianIndices(pixel)
         r = ϕ[1, Tuple(i)...]
-        g = ϕ[1, Tuple(i)...]
-        b = ϕ[1, Tuple(i)...]
-        a = ϕ[1, Tuple(i)...]
+        g = ϕ[2, Tuple(i)...]
+        b = ϕ[3, Tuple(i)...]
+        a = ϕ[4, Tuple(i)...]
         # r = ϕ[1, Tuple(i)..., 2]
         # g = ϕ[1, Tuple(i)..., 3]
         # b = ϕ[1, Tuple(i)..., 4]
@@ -212,9 +212,13 @@ end
 # ♯=g.♯
 # Φ̇ = gpu(ϵΠ, î, g.♯)
 function gpu(ϵΠ, î, ♯)
-    rgba = KernelAbstractions.zeros(GPU_BACKEND, T, 4, ♯[2:end-2]...)
+    rgba = KernelAbstractions.zeros(GPU_BACKEND, T, 4, ♯[2], ♯[3])
     i̇ = KernelAbstractions.allocate(GPU_BACKEND, UInt32, size(î))
     copyto!(i̇, î)
+    @show typeof(ϵΠ[1])
+    @show fieldnames(typeof(ϵΠ[1]))
+    @show fieldtypes(typeof(ϵΠ[1]))
+    @show isconcretetype(typeof(ϵΠ[1]))
     κ!(GPU_BACKEND, GPU_BACKEND_WORKGROUPSIZE)(
         rgba, ϵΠ, i̇, ♯,
         ndrange=(♯[2], ♯[3])
@@ -233,8 +237,8 @@ end
     for zi = 1:♯[4]
         one(T) ≤ a && break
         z = isone(♯[4]) ? ○ : T(zi - 1) / T(♯[4] - 1)
-        Φi̇ = Φi[1, xi, yi, zi, 2]
-        # Φi̇ = î[1, xi, yi, zi, 2]
+        Φi̇ = Φi[1, xi, yi, zi]
+        # Φi̇ = î[1, xi, yi, zi]
         iszero(Φi̇) && continue
         Φ̃ = Φ[Φi̇]
         # for ci = 1:6
