@@ -1,3 +1,5 @@
+using StaticArrays
+
 const ○ = one(T) / (one(T) + one(T))
 abstract type ∀ end
 struct ∃{N,F,P<:∀} <: ∀
@@ -10,7 +12,10 @@ struct ∃{N,F,P<:∀} <: ∀
     h::UInt
     function ∃(ϵ̂::∀, d::SVector{N,T}, μ::SVector{N,T}, ρ::SVector{N,T}, ∂::NTuple{N,Tuple{Bool,Bool}}, Φ::F) where {N,F}
         @assert 1 ≤ N
-        @assert all(zero(T) ≤ d ≤ one(T)) ; @assert all(zero(T) ≤ μ ≤ one(T)) ; @assert all(zero(T) ≤ ρ ≤ one(T))
+        @assert all(zero(T) .≤ d .≤ one(T))
+        @assert all(zero(T) .≤ μ .≤ one(T))
+        @assert all(zero(T) .≤ ρ .≤ one(T))
+        @assert gpu_safe(Φ)
         p = sortperm(d)
         d, μ, ρ = map(x -> x[p], (d, μ, ρ))
         ∂ = ntuple(i -> ∂[p[i]], N)
@@ -58,8 +63,6 @@ t(ϵ::∀=God) = t(God.Ο[ϵ])
 # end
 ρ̂(ϵ::∃) = 2 .* ϵ.ϵ̂.ρ .* ϵ.ρ
 μ̂(ϵ::∃) = ϵ.ϵ̂.μ .- ϵ.ϵ̂.ρ .+ 2 .* ϵ.ϵ̂.ρ .* ϵ.μ
-# μ̂(ϵ::∃) = ϵ.μ : ϵ.μ .- ϵ.ρ .+ 2 .* ϵ.ρ .* ϵ.ϵ̂.μ
-# ρ̂(ϵ::∃) = ϵ.ρ : 2 .* ϵ.ϵ̂.ρ .* ϵ.ρ
 μ̃(ϵ::∃, μ) = (μ .- (ϵ.μ .- ϵ.ρ)) ./ ϵ.ρ ./ 2
 ρ̃(ϵ::∃, ρ) = ρ ./ ϵ.ρ ./ 2
 function μρ(ϵ::∃, d)
@@ -92,6 +95,7 @@ function ∂(x::∃, ::𝕋)
 end
 function ∂(x::∃, ϵ::∃)
     zeroμ, oneμ = ϵ.μ .- ϵ.ρ, ϵ.μ .+ ϵ.ρ
+    # Threads.@threads
     for (i, d) = enumerate(ϵ.d)
         iszero(ϵ.ρ[i]) && continue
         μₓ, _ = μρ(x, d)
@@ -107,6 +111,7 @@ end
 # (i₂, d₂) = collect(enumerate(ϵ₂.d))[4]
 function ⪽(ϵ₁::∃, ϵ₂::∃)
     x = true
+    # Threads.@threads
     for (i₂, d₂) = enumerate(ϵ₂.d)
         ρ₂ = ϵ₂.ρ[i₂]
         iszero(ρ₂) && continue
@@ -166,12 +171,19 @@ function ⫉(ϵ₁::∃, ϵ₂::∃)
     ℼ(ϵ₁, ϵ̂) ⪽ ℼ(ϵ₂, ϵ̂)
 end
 # ϵ₁=x
+# ϵ₁=ϵ
+# ϵ̂ = β(ϵ, Ω)
 # ϵ₂=God
 # ϵ̃ = filter(ϵ̃ -> ϵ̃ ≠ ϵ₁, ϵ̃)[1]
 # ϵ₁ ⫉ ϵ̃
+# God.ϵ̃[ϵ₁]
+# hash(ϵ)
+# hash(ϵ̃[1])
+Base.:(==)(ϵ₁::∃, ϵ₂::∃) = ϵ₁.d==ϵ₂.d && ϵ₁.μ==ϵ₂.μ && ϵ₁.ρ==ϵ₂.ρ && ϵ₁.∂==ϵ₂.∂
+Base.:(==)(::∃, ::𝕋) = false
 function β(ϵ₁::∃, ϵ₂::∀)
     ϵ̃ = God.ϵ̃[ϵ₂]
-    ϵ̃₂ = filter(ϵ̃ -> ϵ̃ ≠ ϵ₁ && ϵ₁ ⫉ ϵ̃, ϵ̃)
+    ϵ̃₂ = filter(ϵ -> ϵ ≠ ϵ₁ && ϵ₁ ⫉ ϵ, ϵ̃)
     isempty(ϵ̃₂) && return ϵ₂
     β(ϵ₁, only(ϵ̃₂))
 end
@@ -222,12 +234,6 @@ function Base.:∩(ϵ₁::∃, ϵ₂::∃)
     ϵ̂ = ℼ(ϵ₁, ϵ₂)
     all(ϵ̃ -> ϵ̂ ∩ ϵ̃, ϵ̃)
 end
-@kernel function Φ!(out, Φ, coords)
-    i = @index(Global)
-    out[i] = Φ(coords[i])
-end
-# X(i, ♯::NTuple) = SVector{length(♯)}([isone(♯[î]) ? ○ : T(i[î] - 1) / T(♯[î] - 1) for î = eachindex(♯)])
-X(i, ♯::NTuple) = ntuple(î -> isone(♯[î]) ? ○ : T(i[î] - 1) / T(♯[î] - 1), length(♯))
 function √(ϵ::∃)
     n = 0
     p = ϵ
@@ -248,6 +254,7 @@ function X(x::∃, ∇)
     _, n = √(ϵ)
     ∇ < n && return God, false
     ϵ̃ = God.ϵ̃[ϵ]
+    # Threads.@threads
     for ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, ϵ̃)
         x ∩ ϵ̃ && return ϵ̃, true
         ϵ̂, found = X(x, ∇)
@@ -255,84 +262,24 @@ function X(x::∃, ∇)
     end
     God, false
 end
-# i = collect(CartesianIndices(Ξ))[23]
-# Ξ[i].Φ(1)
-function X(ϵ::∃, ♯::NTuple, ∇)
-    Ξ = Array{∀}(undef, ♯...)
-    ρ₀ = zero(ϵ.ρ)
-    # Threads.@threads
-    for i in CartesianIndices(Ξ)
-        x = X(i, ♯)
-        # xϵ = ∃(God, ϵ.d, x, ρ₀, ϵ.∂, ϵ.Φ)
-        xϵ = ∃(God, ϵ.d, SVector(x), ρ₀, ϵ.∂, ϵ.Φ)
-        Ξ[i], _ = X(xϵ, ∇)
-    end
-    Ξ
-end
-# ♯=g.♯
-# all(ϵ -> ϵ isa 𝕋, ϵ̂)
-# all(iszero,î)
-# sum(î)
-# ẋ[2,2] !== God
-# (ϵ̂, i) = collect(ϵ̂x)[1]
-# ẋᵢ.Φ(1)
-# God.Ο[ϵ]
-# ϵ=ϵ̃
-# i
-# a=collect(CartesianIndices(ϵ̂))
-# size(a)
-# length(a)
-# a[4]
-# k=collect(keys(ϵ̂x))[1]
-# i=ϵ̂x[k][1]
-# i = collect(CartesianIndices(ϵ̂))[14]
-function ∃̇(ϵ::∃, ♯::NTuple, ∇=typemax(Int))
-    ϵ̂ = X(ϵ, ♯, ∇)
-    î = fill(zero(UInt), size(ϵ̂))
-    # ϵ̂x = Dict{∃, Vector{CartesianIndex}}()
-    ϵ∃ = filter(ϵ -> ϵ !== God, ϵ̂)
-    unique!(t, ϵ∃)
-    sort!(ϵ∃, by=t)
-    ϵΠ = map(ϵ -> ϵ.Φ, ϵ∃)
-    ϵt = map(t, ϵ∃)
-    for i = CartesianIndices(ϵ̂)
-        ϵ̂ᵢ = ϵ̂[i]
-        ϵ̂ᵢ === God && continue
-        # @show i, ϵ̂ᵢ
-        # push!(get!(ϵ̂x, ϵ̂ᵢ, []), i)
-        ϵ̂ᵢt = t(ϵ̂ᵢ)
-        î[i] = findfirst(t -> t == ϵ̂ᵢt, ϵt)
-    end
-    ♯̇ = fill(○, ♯...)
-    # for (ϵ̂, i) = ϵ̂x
-    x = map(i -> X(i, ♯), CartesianIndices(ϵ̂))
-    # x = map(i -> X(i, ♯), i)
-    Φ̇ = gpu(ϵΠ, î, x, ♯)
-    for (i₁, i₂) = enumerate(i)
-        ♯̇[i₂] = Φ̇[i₁]
-    end
-    # end
-    ♯̇
-end
 # ϵ=ϵ̂
-function ∃!(ϵ::∃)
-    gpu_safe(ϵ) || return nothing
-    lock(God.L)
-    ϵ̂ = β(ϵ, God)
-    ϵ̃ = God.ϵ̃[ϵ̂]
-    any(ϵ̃ -> ϵ ∩ ϵ̃, ϵ̃) && (unlock(God.L); return nothing)
+function ∃!(ϵ::∃, Ω=God)
+    lock(Ω.L)
+    ϵ̂ = β(ϵ, Ω)
+    ϵ̃ = Ω.ϵ̃[ϵ̂]
+    any(ϵ̃ -> ϵ ∩ ϵ̃, ϵ̃) && (unlock(Ω.L); return nothing)
     if ϵ̂ !== ϵ.ϵ̂
         ϵ = ∃(ϵ̂, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ϵ.Φ)
     end
-    while Sys.free_memory() < God.s[] + sizeof(ϵ)
-        rm!(God)
+    while Sys.free_memory() < Ω.s[] + sizeof(ϵ)
+        rm!(Ω)
     end
-    God.s[] += sizeof(ϵ)
-    God.Ο[God] += 1
-    God.Ο[ϵ] = God.Ο[God]
-    push!(God.ϵ̃[ϵ̂], ϵ)
-    God.ϵ̃[ϵ] = ∃[]
-    unlock(God.L)
+    Ω.s[] += sizeof(ϵ)
+    Ω.Ο[Ω] += 1
+    Ω.Ο[ϵ] = Ω.Ο[Ω]
+    push!(Ω.ϵ̃[ϵ̂], ϵ)
+    Ω.ϵ̃[ϵ] = ∃[]
+    unlock(Ω.L)
     ϵ
 end
 function rm!(God::𝕋)
@@ -350,6 +297,7 @@ function Base.:(-)(ϵ₁::∃, ϵ₂::∃)
     μ = MVector{N,T}(undef)
     ρ = MVector{N,T}(undef)
     ∂out = Vector{Tuple{Bool,Bool}}(undef, N)
+    # Threads.@threads
     for (i, d) in enumerate(d̂)
         ϵ₂μ, ϵ₂ρ, ϵ₂∂ = μρ(ϵ₂, d)
         ϵ₁μ, ϵ₁ρ, ϵ₁∂ = μρ(ϵ₁, d)
@@ -362,71 +310,12 @@ function Base.:(-)(ϵ₁::∃, ϵ₂::∃)
     ϵ̂ = α(ϵ₁, ϵ₂)
     ∃(ϵ̂, SVector{N}(d̂), SVector{N}(μ), SVector{N}(ρ), NTuple{N}(∂out), ϵ₁.Φ)
 end
-# ϵ̂.Φ, x
-# Φ = ẋᵢ.Φ
-# x = ẋᵢ
-# backend = CPU()
-# Φ(1)
-# Φ, i, x, ♯=ϵΠ, î, x, ♯
-# i, x, ♯=î, x, ♯
-# i, x, ♯ = zeros(UInt, 1), zeros(T, 4), ntuple(_ -> 1, 4)
-# function gpu(Φ, i, x, ♯)
-function gpu(Φ, i, ♯)
-    rgba = KernelAbstractions.zeros(GPU_BACKEND, T, 4, ♯[2:end-2]...)
-    # ẋ = KernelAbstractions.allocate(GPU_BACKEND, T, size(x)..., 5)
-    # copyto!(ẋ, x)
-    i̇ = KernelAbstractions.allocate(GPU_BACKEND, T, size(i))
-    copyto!(i̇, i)
-    κ!(GPU_BACKEND, 2^2^3)(
-        # rgba, Φ, i̇, ẋ, ♯,
-        rgba, Φ, i̇, ♯,
-        ndrange=(♯[2], ♯[3])
-    )
-    KernelAbstractions.synchronize(GPU_BACKEND)
-    Array(rgba)
-end
-# gpu_safe(ϵ)
-function gpu_safe(ϵ)
+function gpu_safe(Φ)
     try
-        i = ones(UInt, length(ϵ.d))
-        ♯ = ntuple(_ -> 1, length(ϵ.d))
-        gpu((ϵ.Φ), i, ♯)
-        # x = zeros(T, length(ϵ.d))
-        # gpu(ϵ.Φ, i, x, ♯)
+        @kernel gpu(Φ, x) = Φ(x)
+        gpu(GPU_BACKEND, GPU_BACKEND_WORKGROUPSIZE)(Φ, zero(T), ndrange=1)
         true
     catch
         false
     end
-end
-struct GPUΦ{Φ}
-    ϕ::Φ
-end
-@inline (Φ::GPUΦ)(x) = Φ.ϕ(x)
-@kernel function κ!(rgba, Φ, Φi, ♯)
-    xi, yi = @index(Global, NTuple)
-    x = isone(♯[2]) ? ○ : T(xi - 1) / T(♯[2] - 1)
-    y = isone(♯[3]) ? ○ : T(yi - 1) / T(♯[3] - 1)
-    r,g,b,a = zero(T), zero(T), zero(T), zero(T)
-    for zi = 1:♯[4]
-        one(T) ≤ a && break
-        z = isone(♯[4]) ? ○ : T(zi - 1) / T(♯[4] - 1)
-        Φi̇ = Φi[1,xi,yi,zi,1]
-        iszero(Φi̇) && continue
-        Φ̃ = Φ[Φi̇]
-        for ci = 1:6
-            c = T(ci - 1) / 5
-    #         ṙ,ġ,ḃ,ȧ = Φ̃(zero(T),x,y,z,c)
-            ṙ,ġ,ḃ,ȧ = zero(T), zero(T), zero(T), zero(T)
-            iszero(ȧ) && continue
-            rem = one(T) - a
-            r += ṙ * ȧ * rem
-            g += ġ * ȧ * rem
-            b += ḃ * ȧ * rem
-            a += ȧ * rem
-        end
-    end
-    rgba[1, xi, yi] = r
-    rgba[2, xi, yi] = g
-    rgba[3, xi, yi] = b
-    rgba[4, xi, yi] = a
 end

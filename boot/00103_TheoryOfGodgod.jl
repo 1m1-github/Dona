@@ -6,6 +6,24 @@ struct god
     ρ::T
     Ω::𝕋
     ⚷::UInt
+    ♯::NTuple
+    ∇::UInt
+end
+# const WHITE = (one(T), one(T), one(T), one(T))
+function god(; d, μ, ⚷=zero(UInt), Φ=_ -> ○, ♯=(1, 1, 1), ∇=typemax(UInt))
+    @assert zero(T) ∉ d
+    @assert one(T) ∉ d
+    d̂ = SA[zero(T), d..., one(T)]
+    N = length(d̂)
+    μ₀ = SA[t(), μ..., zero(T)]
+    ∂₀ = ntuple(_ -> (true, false), N)
+    zeros = @SVector zeros(T, N)
+    ẑero = ∃(God, d̂, μ₀, zeros, ∂₀, Φ)
+    μ₁ = @SVector ones(T, N)
+    ∂₁ = ntuple(_ -> (false, true), N)
+    ône = ∃(God, d̂, μ₁, zeros, ∂₁, _ -> ○)
+    ♯̂ = (1, ♯..., 6)
+    god(ẑero, ône, true, zero(T), zero(T), 𝕋(), ⚷, ♯̂, ∇)
 end
 isreal(ϵ::∃) = √(ϵ) === God
 function dh(⚷, g, n)
@@ -21,61 +39,50 @@ function ⚷i(i, ⚷, ♯)
 end
 function i⚷(i, ⚷, ♯)
     ntuple(length(♯)) do d
-        effective = mod(⚷, ♯[d])
-        mod1(i[d] + ♯[d] - effective, ♯[d])
+        î = mod(⚷, ♯[d])
+        mod1(i[d] + ♯[d] - î, ♯[d])
     end
 end
-const WHITE = (one(T), one(T), one(T), one(T))
-function god(d::NTuple, μ::NTuple, ⚷=zero(UInt), Φ=_ -> ○)
-    d̂ = SVector(zero(T), d..., one(T))
-    N = length(d̂)
-    μ₀ = SA[t(), μ..., zero(T)]
-    ∂₀ = ntuple(_ -> (true, false), N)
-    zeros = SVector(ntuple(_ -> zero(T), N))
-    ẑero = ∃(God, d̂, μ₀, zeros, ∂₀, Φ)
-    μ₁ = SVector(ntuple(_ -> one(T), N))
-    ∂₁ = ntuple(_ -> (false, true), N)
-    ône = ∃(God, d̂, μ₁, zeros, ∂₁, _ -> ○)
-    god(ẑero, ône, true, zero(T), zero(T), 𝕋(), ⚷)
+function create(g::god, Φ, Ω=God)
+    ϵ = g.ône - g.ẑero
+    ϵ = ∃(ϵ, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, Φ)
+    # ϵ = ∃(ϵ, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ℼ(Φ))
+    ∃!(ϵ, Ω)
 end
-# function log_z_grid(N::Int; z_near=0.01, z_far=1.0)
-#     ratio = z_far / z_near
-#     Float32[z_near * ratio ^ (i / (N - 1)) for i in 0:(N-1)]
-# end
-# ϵ=ϵᵩ
-function ∃̇(g::god, ♯, ∇=typemax(Int))
-    ϵᵩ = g.ône - g.ẑero
-    ϕᵩ = ∃̇(ϵᵩ, ♯, ∇)
-    pixels = ℼ̂(ϕᵩ)
-    for ϵ = g.Ω
-        isreal(ϵ) || continue
-        ϕ = ∃̇(ϵ, ♯)
-        composite!(pixels, ϕ, ♯)
+function ∃̇(g::god)
+    ϵ = g.ône - g.ẑero
+    ϵ̂ = X(ϵ, g.♯, g.∇)
+    î = fill(zero(UInt), size(ϵ̂))
+    ϵ∃ = filter(ϵ -> ϵ !== God, ϵ̂)
+    unique!(t, ϵ∃)
+    sort!(ϵ∃, by=t)
+    ϵΠ = ntuple(i -> ϵ∃[1].Φ, length(ϵ∃))
+    ϵt = map(t, ϵ∃)
+    # Threads.@threads
+    for i = CartesianIndices(ϵ̂)
+        ϵ̂ᵢ = ϵ̂[i]
+        ϵ̂ᵢ === God && continue
+        ϵ̂ᵢt = t(ϵ̂ᵢ)
+        î[i] = findfirst(t -> t == ϵ̂ᵢt, ϵt)
     end
-    pixels
+    # ♯̇ = fill(○, ♯...)
+    Φ̇ = gpu(ϵΠ, î, g.♯)
+    # Threads.@threads
+    # for (i₁, i₂) = enumerate(i)
+    #     ♯̇[i₂] = Φ̇[i₁]
+    # end
+    # end
+    # ♯̇
+    # pixels = ℼ̂(ϕ)
+    # for ϵ̃ = g.Ω
+    #     isreal(ϵ̃) || continue
+    #     ϕ = ∃̇(ϵ̃, ♯)
+    #     composite!(pixels, ϕ, ♯)
+    # end
+    # pixels
 end
-struct ℼStruct{F}
-    Φ::F
-end
-@inline function (p::ℼStruct)(t, x, y, z, c)
-    r, g, b, a = p.Φ(t, x, y, z)
-    r == g == b == a == ○ && return one(T)
-    c∂ = one(T) / T(4)
-    c∂ = one(T) / 4
-    if c < c∂
-        r
-    elseif c < 2 * c∂
-        g
-    elseif c < 3 * c∂
-        b
-    else
-        a
-    end
-end
-ℼ(Φ) = ℼStruct(Φ)
 # ℼ(Φ) = ẋ -> begin
-#     t, x, y, z, c = ẋ
-#     r, g, b, a = Φ(t, x, y, z)
+#     r, g, b, a = Φ(ẋ[1], ẋ[2], ẋ[3], ẋ[4])
 #     r == g == b == a == ○ && return one(T)
 #     c∂ = one(T) / 4
 #     if c < c∂
@@ -88,23 +95,18 @@ end
 #         a
 #     end
 # end
-ℼ̂(ϕ) = begin
-    pixel = fill(WHITE, size(ϕ, 2), size(ϕ, 3))
-    # i = collect(CartesianIndices(pixel))[1]
-    for i = CartesianIndices(pixel)
-        r = ϕ[1, Tuple(i)..., 2]
-        g = ϕ[1, Tuple(i)..., 3]
-        b = ϕ[1, Tuple(i)..., 4]
-        a = ϕ[1, Tuple(i)..., 5]
-        pixel[i] = r == g == b == a == ○ ? WHITE : (r, g, b, a)
-    end
-    pixel
-end
-function create(g::god, Φ)
-    ϵ = g.ône - g.ẑero
-    ϵ = ∃(ϵ, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ℼ(Φ))
-    ∃!(ϵ)
-end
+# ℼ̂(ϕ) = begin
+#     pixel = fill(WHITE, size(ϕ, 2), size(ϕ, 3))
+#     # i = collect(CartesianIndices(pixel))[1]
+#     for i = CartesianIndices(pixel)
+#         r = ϕ[1, Tuple(i)..., 2]
+#         g = ϕ[1, Tuple(i)..., 3]
+#         b = ϕ[1, Tuple(i)..., 4]
+#         a = ϕ[1, Tuple(i)..., 5]
+#         pixel[i] = r == g == b == a == ○ ? WHITE : (r, g, b, a)
+#     end
+#     pixel
+# end
 # accelerate!(g::god, v) = g.v = v
 # jerk!(g::god, j) = accelerate(g, g.v^j) # ?
 # stop!(g::god) = accelerate(g, ntuple(_ -> zero(g.T), 3))
@@ -140,20 +142,20 @@ end
 #     g.ẑero = ∃(g.ẑero.ϵ̂, g.ẑero.d, μ, ρ, g.ẑero.∂, g.ẑero.Φ)
 # end
 # ρ(μ) = min(μ, 1 - μ)
-function step(g::god, dt̂=one(T))
-    if g.∂t₀
-        ṫ = t()
-        μ = SVector(ntuple(i -> i == 1 ? ṫ : g.ẑero.μ[i], length(g.ẑero.μ)))
-    else
-        δμ = g.ône.μ .- g.ẑero.μ
-        # any(d -> !iszero(d), δμ) || return
-        α = clamp(g.v * dt̂, zero(T), one(T))
-        μ = g.ẑero.μ .+ α .* δμ
-    end
-    ẑero = ∃(God, g.ẑero.d, μ, g.ẑero.ρ, g.ẑero.∂, g.ẑero.Φ)
-    god(ẑero, g.ône, g.∂t₀, g.v, g.ρ, g.Ω, g.⚷)
-    # present!(g)
-end
+# function step(g::god, dt̂=one(T))
+#     if g.∂t₀
+#         ṫ = t()
+#         μ = SVector(ntuple(i -> i == 1 ? ṫ : g.ẑero.μ[i], length(g.ẑero.μ)))
+#     else
+#         δμ = g.ône.μ .- g.ẑero.μ
+#         # any(d -> !iszero(d), δμ) || return
+#         α = clamp(g.v * dt̂, zero(T), one(T))
+#         μ = g.ẑero.μ .+ α .* δμ
+#     end
+#     ẑero = ∃(God, g.ẑero.d, μ, g.ẑero.ρ, g.ẑero.∂, g.ẑero.Φ)
+#     god(ẑero, g.ône, g.∂t₀, g.v, g.ρ, g.Ω, g.⚷, g.♯, g.∇)
+#     # present!(g)
+# end
 # function present!(g::god, scale=T(0.1))
 #     N = length(g.ẑero.μ)
 #     dir = g.ône.μ .- g.ẑero.μ
@@ -207,9 +209,84 @@ end
 #     g.ône = ∃(God, g.ône.d, SVector(μ), g.ône.ρ, g.ône.∂, g.ône.Φ)
 #     dim == 1 && (g.present = false)
 # end
-
 # speed!(g::god, v) = g.v = clamp(T(v), zero(T), one(T))
 # appear!(g::god, Φ::Function) = g.Φ = Φ
 # show!(g::god) = g.visible = true
 # hide!(g::god) = g.visible = false
 # home!(g::god) = (g.edge = true; g.v = zero(T))
+
+# ϵΠ
+# î
+# all(iszero.(î))
+# ♯=g.♯
+# Φ̇ = gpu(ϵΠ, î, g.♯)
+function gpu(ϵΠ, î, ♯)
+    rgba = KernelAbstractions.zeros(GPU_BACKEND, T, 4, ♯[2:end-2]...)
+    i̇ = KernelAbstractions.allocate(GPU_BACKEND, UInt32, size(î))
+    copyto!(i̇, î)
+    κ!(GPU_BACKEND, GPU_BACKEND_WORKGROUPSIZE)(
+        rgba, ϵΠ, i̇, ♯,
+        ndrange=(♯[2], ♯[3])
+    )
+    KernelAbstractions.synchronize(GPU_BACKEND)
+    Array(rgba)
+end
+@kernel function κ!(rgba, Φ, Φi, ♯)
+    xi, yi = @index(Global, NTuple)
+    # xi, yi=2,2
+    t = ○
+    x = isone(♯[2]) ? ○ : (T(xi) - 1) / T(♯[2] - 1)
+    y = isone(♯[3]) ? ○ : (T(yi) - 1) / T(♯[3] - 1)
+    r, g, b, a = zero(T), zero(T), zero(T), zero(T)
+    # zi = collect(1:♯[4])[2]
+    for zi = 1:♯[4]
+        one(T) ≤ a && break
+        z = isone(♯[4]) ? ○ : T(zi - 1) / T(♯[4] - 1)
+        Φi̇ = Φi[1, xi, yi, zi, 2]
+        # Φi̇ = î[1, xi, yi, zi, 2]
+        iszero(Φi̇) && continue
+        Φ̃ = Φ[Φi̇]
+        # for ci = 1:6
+            # c = T(ci - 1) / 5
+            # ṙ, ġ, ḃ, ȧ = Φ̃(t, x, y, z, c)
+            ṙ, ġ, ḃ, ȧ = Φ̃(t, x, y, z)
+            # ϕ = Φ̃(t, x, y, z, c)
+            iszero(ȧ) && continue
+            rem = one(T) - a
+            r += ṙ * ȧ * rem
+            g += ġ * ȧ * rem
+            b += ḃ * ȧ * rem
+            a += ȧ * rem
+        # end
+    end
+    rgba[1, xi, yi] = r
+    rgba[2, xi, yi] = g
+    rgba[3, xi, yi] = b
+    rgba[4, xi, yi] = a
+end
+# X(i, ♯::NTuple) = SVector{length(♯)}([isone(♯[î]) ? ○ : T(i[î] - 1) / T(♯[î] - 1) for î = eachindex(♯)])
+X(i, ♯) = ntuple(î -> begin
+        isone(♯[î]) && return ○
+        # î == 4 && return # todo depth log spacing
+        T(i[î] - 1) / T(♯[î] - 1)
+        # T(i[î]) / T(♯[î] + 1)
+    end, length(♯))
+# X((1,1,1,1,1), (1,2,3,4,6))
+# function log_z_grid(N::Int; z_near=0.01, z_far=1.0)
+#     ratio = z_far / z_near
+#     Float32[z_near * ratio ^ (i / (N - 1)) for i in 0:(N-1)]
+# end
+# i = collect(CartesianIndices(Ξ))[23]
+# Ξ[i].Φ(1)
+function X(ϵ::∃, ♯::NTuple, ∇)
+    Ξ = Array{∀}(undef, ♯...)
+    ρ₀ = zero(ϵ.ρ)
+    # Threads.@threads
+    for i in CartesianIndices(Ξ)
+        x = X(i, ♯)
+        # xϵ = ∃(God, ϵ.d, x, ρ₀, ϵ.∂, ϵ.Φ)
+        xϵ = ∃(God, ϵ.d, SVector(x), ρ₀, ϵ.∂, ϵ.Φ)
+        Ξ[i], _ = X(xϵ, ∇)
+    end
+    Ξ
+end

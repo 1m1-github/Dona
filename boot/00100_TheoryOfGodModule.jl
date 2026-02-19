@@ -20,9 +20,10 @@ god observes or creates, God iterates.
 
 export ∃, ∃̇, ∃!
 
-using StaticArrays, KernelAbstractions, Metal
-# using CUDA
-const GPU_BACKEND = MetalBackend() # CUDABackend()
+using KernelAbstractions
+using Metal ; const GPU_BACKEND = MetalBackend()
+# using CUDA ; const GPU_BACKEND = CUDABackend()
+const GPU_BACKEND_WORKGROUPSIZE = 2^2^3
 
 const T = Float32
 
@@ -42,64 +43,34 @@ const God = 𝕋()
 include("00103_TheoryOfGodgod.jl")
 # include("00103_TheoryOfGodTypst.jl")
 
-
 # include("00090_BroadcastBrowser2Module.jl")
 # import Main.BroadcastBrowserModule: BroadcastBrowser, start
 # include("00105_TheoryOfGodgodBrowser.jl")
 # const BROWSERTASK = Threads.@spawn start(b->godBrowser(b))
 # g=collect(values(godBROWSER[]))[1].g
 
-g=god((T(0.1),T(0.2),T(0.3)), (T(0.1),T(0.1),T(0.1)))
+d = SA[T(0.1),T(0.2),T(0.3)]
+μ = SA[T(0.1),T(0.1),T(0.1)]
+g=god(d=d, μ=μ,♯=(3,3,3))
 g.ẑero
 g.ône
-g.ône-g.ẑero
-struct Π{F}
-    Φ::F
-end
-@inline function (p::Π)(t, x, y, z, c)
-    r, g, b, a = p.Φ(t, x, y, z)
-    r == g == b == a == ○ && return one(T)
-    c∂ = one(T) / T(4)
-    c∂ = one(T) / 4
-    if c < c∂
-        r
-    elseif c < 2 * c∂
-        g
-    elseif c < 3 * c∂
-        b
-    else
-        a
-    end
-end
-ℼ(Φ) = Π(Φ)
-Φ(t,x,y,z) = (T(0.78),T(0.8),T(0.9),one(T))
-ϵ = g.ône - g.ẑero
-ϵ = ∃(ϵ, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ℼ(Φ))
-ℼ(Φ) === ϵ.Φ
-y = KernelAbstractions.zeros(GPU_BACKEND, T, 1)
-@kernel function κ!(y, Φ)
-    i = @index(Global)
-    # y[1],y[2],y[3],y[4] = Φ(T(i),T(i),T(i),T(i),T(i))
-    y[1] = Φ(T(i),T(i),T(i),T(i),T(i))
-end
-κ!(GPU_BACKEND, 2)(
-    y,
-    # ℼ(Φ),
-    ϵ.Φ,
-    ndrange=1
-)
-y
-create(g, Φ_solid)
+ϵ = g.ône-g.ẑero
+# ϵ=∃(God, SA[T(0.1)], SA[T(0.1)], SA[T(0.1)], ((true,true),), _->one(T))
+# ϵ=∃(God, SA[T(0.1)], SA[T(0.1)], SA[T(0.1)], ((true,true),), _->rand(T))
+# ϵ=∃(God, SA[T(0.1)], SA[T(0.1)], SA[T(0.1)], ((true,true),), _->begin
+#     f=open("w.jl");close(f)
+# end)
+
 God.Ο[God]
+Φ(x...) = x
 create(g, Φ)
 God.Ο[God]
-# g.ẑero
 # collect(keys(God.ϵ̃))
-ϵ̃=God.ϵ̃[God][1]
-t()
-t(ϵ̃)
-ϵ̃.Φ(zeros(7))
-♯ = (1,3,3,3,6)
-∃̇(g, ♯)
-all(==(ntuple(_->one(T),4)),observe(g,♯))
-step(g)
+# ϵ̃=God.ϵ̃[God][1]
+# t()
+# t(ϵ̃)
+ϕ = ∃̇(g)
+
+ϕ[:,2,2]
+# all(==(ntuple(_->one(T),4)),observe(g))
+# step(g)
