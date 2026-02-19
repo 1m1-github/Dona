@@ -37,8 +37,6 @@ const God = 𝕋()
 # end
 # const names = Dict{String,Named}()
 
-# end
-
 # in LoopOS
 include("00103_TheoryOfGodgod.jl")
 # include("00103_TheoryOfGodTypst.jl")
@@ -49,13 +47,12 @@ include("00105_TheoryOfGodgodBrowser.jl")
 const BROWSERTASK = Threads.@spawn start(b->godBrowser(b))
 g=collect(values(godBROWSER[]))[1].g
 
-const Φ(x...) = x
-const Φ2(x...) = x./2
+# Φ(x...) = x
 
-dimx, dimy, dimz = T(0.1),T(0.2),T(0.3)
-x, y, z = T(0.1),T(0.1),T(0.1)
-g = god(d=SA[dimx, dimy, dimz], μ=SA[x, y, z], ρ=SA[T(0.05), T(0.05), T(0.05)], ♯=(Int(3), Int(3), Int(3)))
-    
+# dimx, dimy, dimz = T(0.1),T(0.2),T(0.3)
+# x, y, z = T(0.1),T(0.1),T(0.1)
+# g = god(d=SA[dimx, dimy, dimz], μ=SA[x, y, z], ρ=SA[T(0.05), T(0.05), T(0.05)], ♯=(Int(3), Int(3), Int(3)))
+
 # d = SA[T(0.1),T(0.2),T(0.3)]
 # μ = SA[T(0.1),T(0.1),T(0.1)]
 # ρ = SA[T(0.05),T(0.05),T(0.05)]
@@ -73,10 +70,10 @@ g = god(d=SA[dimx, dimy, dimz], μ=SA[x, y, z], ρ=SA[T(0.05), T(0.05), T(0.05)]
 
 God.Ο[God]
 create(g, Φ)
-create(g, Φ2)
+# create(g, Φ2)
 # God.Ο[God]
 # collect(keys(God.ϵ̃))
-ϵ=God.ϵ̃[God][1]
+# ϵ=God.ϵ̃[God][1]
 # t()
 # t(ϵ̃)
 # Before launching the kernel, from the thread that fails:
@@ -85,8 +82,22 @@ create(g, Φ2)
 # @show fieldtypes(typeof(ϵ.Φ))
 # isconcretetype(typeof(ϵ.Φ))
 # Look for Any, abstract types, or types that contain pointers/heap objects
-ϕ = ∃̇(g)
+# ϕ = ∃̇(g)
 # all(==(ntuple(_->zero(T),4)),ϕ)
 # map(sum,ϕ)
 # all(==(ntuple(_->one(T),4)),ϕ)
 # step(g)
+
+function sierpinski3d(x)
+    mask = UInt32(0x007FFFFF)
+    ix = reinterpret(UInt32, x[2]) & mask
+    iy = reinterpret(UInt32, x[3]) & mask
+    iz = reinterpret(UInt32, x[4]) & mask
+    (ix ⊻ iy ⊻ iz) == zero(UInt32)  # just return Bool
+end
+d1 = SA[T(0.1),T(0.2),T(0.3)]
+μ1 = SA[○,○,○]
+ρ1 = SA[T(0.1),T(0.1),T(0.1)]
+∂1 = ntuple(_->(true,true), length(d1))
+ϵ1 = ∃(God, d1, μ1, ρ1, ∂1, sierpinski3d)
+∃!(ϵ1, God)

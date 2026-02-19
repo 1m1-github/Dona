@@ -16,7 +16,7 @@ struct ∃{N,F,P<:∀} <: ∀
         @assert all(zero(T) .≤ d .≤ one(T))
         @assert all(zero(T) .≤ μ .≤ one(T))
         @assert all(zero(T) .≤ ρ .≤ one(T))
-        @assert gpu_safe(Φ)
+        @assert gpu_safe(Φ, N)
         p = sortperm(d)
         d, μ, ρ = map(x -> x[p], (d, μ, ρ))
         ∂ = ntuple(i -> ∂[p[i]], N)
@@ -311,10 +311,11 @@ function Base.:(-)(ϵ₁::∃, ϵ₂::∃)
     ϵ̂ = α(ϵ₁, ϵ₂)
     ∃(ϵ̂, SVector{N}(d̂), SVector{N}(μ), SVector{N}(ρ), NTuple{N}(∂out), ϵ₁.Φ)
 end
-function gpu_safe(Φ)
+function gpu_safe(Φ, N)
     try
         @kernel gpu(Φ, x) = Φ(x)
-        gpu(GPU_BACKEND, GPU_BACKEND_WORKGROUPSIZE)(Φ, zero(T), ndrange=1)
+        x = KernelAbstractions.zeros(GPU_BACKEND, T, N)
+        gpu(GPU_BACKEND, GPU_BACKEND_WORKGROUPSIZE)(Φ, x, ndrange=1)
         true
     catch
         false

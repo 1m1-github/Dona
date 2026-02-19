@@ -21,10 +21,10 @@ while true
     t = t̂
     # step(g, dt)
     p̂ixel = ∃̇(g)
-    @show p̂ixel
+    # @show p̂ixel
     δ = Δ(pixel, p̂ixel)
     # @show δ
-    @show isempty(δ)
+    # @show isempty(δ)
     isempty(δ) && continue
     js = "pixel=" * write(δ, g.♯[2]) * "\n" * SET_PIXELS_JS
     put!(browser.processor, js)
@@ -36,11 +36,13 @@ end
 end
 , browser)
 function godBrowser(browser)
-    @show "godBrowser"
-    dimx, dimy, dimz = T(0.1),T(0.2),T(0.3)
-    x, y, z = T(0.1),T(0.1),T(0.1)
-    const Φ(x...) = x
-    g = god(Φ=Φ,d=SA[dimx, dimy, dimz], μ=SA[x, y, z], ρ=SA[T(0.05), T(0.05), T(0.05)], ♯=(Int(3), Int(3), Int(3)))
+    # @show "godBrowser"
+    dx, dy, dz = T(0.1),T(0.2),T(0.3)
+    μx, μy, μz = T(0.1),T(0.1),T(0.1)
+    ρx, ρy, ρz = T(0.05), T(0.05), T(0.05)
+    ♯x, ♯y, ♯z  = Int(browser.width), Int(browser.height), Int(8)
+    # ♯x, ♯y, ♯z  = Int(3), Int(3), Int(3)
+    g = god(d=SA[dx, dy, dz], μ=SA[μx, μy, μz], ρ=SA[ρx, ρy, ρz], ♯=(♯x, ♯y, ♯z))
     # g = god{T}(dimx, dimy, dimc, x, y, browser.width, browser.height)
     # g = god(dimx, dimy, dimc, x, y, T(20), T(10))
     gb = godBrowser(g, browser)

@@ -49,53 +49,36 @@ function create(g::god, Φ, Ω=God)
     ∃!(ϵ, Ω)
 end
 const WHITE = (one(T), one(T), one(T), one(T))
+const BLACK = (zero(T), zero(T), zero(T), one(T))
 function ∃̇(g::god)
-    ϵ = g.ône - g.ẑero
+    ϵ = g.ône - g.ẑero
     ϵ̂ = X(ϵ, g.♯, g.∇)
-    ϵ∃ = filter(ϵ -> ϵ !== God, ϵ̂)
+    
+    ϵ∃ = filter(ϵ -> ϵ !== God, vec(ϵ̂))
     isempty(ϵ∃) && return fill(WHITE, g.♯[2], g.♯[3])
-    unique!(t, ϵ∃)
+    
+    # Deduplicate and sort by t (front-to-back for compositing)
+    unique!(x -> t(x), ϵ∃)
     sort!(ϵ∃, by=t)
-    ϵΠ = ntuple(i -> ϵ∃[i].Φ, length(ϵ∃))
     ϵt = map(t, ϵ∃)
-    î = fill(zero(UInt), size(ϵ̂))
-    # Threads.@threads
-    for i = CartesianIndices(ϵ̂)
+    
+    # Tag by t-order (tag 1 = frontmost)
+    t_to_tag = Dict(ϵt[i] => UInt32(i) for i in eachindex(ϵt))
+    
+    # Build tag grid
+    Φi = zeros(UInt32, g.♯[2], g.♯[3], g.♯[4])
+    for i in CartesianIndices(ϵ̂)
         ϵ̂ᵢ = ϵ̂[i]
         ϵ̂ᵢ === God && continue
-        ϵ̂ᵢt = t(ϵ̂ᵢ)
-        î[i] = findfirst(t -> t == ϵ̂ᵢt, ϵt)
+        Φi[i[2], i[3], i[4]] = t_to_tag[t(ϵ̂ᵢ)]
     end
-    # ♯̇ = fill(○, ♯...)
-    ϕ = gpu(ϵΠ, î, g.♯)
-    # Threads.@threads
-    # for (i₁, i₂) = enumerate(i)
-    #     ♯̇[i₂] = Φ̇[i₁]
-    # end
-    # end
-    # ♯̇
-    pixels = ℼ̂(ϕ)
-    # for ϵ̃ = g.Ω
-    #     isreal(ϵ̃) || continue
-    #     ϕ = ∃̇(ϵ̃, ♯)
-    #     composite!(pixels, ϕ, ♯)
-    # end
-    # pixels
+    
+    # ΦSet ordered by t — same entities in view = same tuple type = cached
+    φ = ΦSet(ntuple(i -> ϵ∃[i].Φ, length(ϵ∃)))
+    
+    rgba = render(φ, Φi, g.♯)
+    ℼ̂(rgba)
 end
-# ℼ(Φ) = ẋ -> begin
-#     r, g, b, a = Φ(ẋ[1], ẋ[2], ẋ[3], ẋ[4])
-#     r == g == b == a == ○ && return one(T)
-#     c∂ = one(T) / 4
-#     if c < c∂
-#         r
-#     elseif c < 2 * c∂
-#         g
-#     elseif c < 3 * c∂
-#         b
-#     else
-#         a
-#     end
-# end
 ℼ̂(ϕ) = begin
     pixel = fill(WHITE, size(ϕ, 2), size(ϕ, 3))
     # i = collect(CartesianIndices(pixel))[1]
@@ -104,10 +87,6 @@ end
         g = ϕ[2, Tuple(i)...]
         b = ϕ[3, Tuple(i)...]
         a = ϕ[4, Tuple(i)...]
-        # r = ϕ[1, Tuple(i)..., 2]
-        # g = ϕ[1, Tuple(i)..., 3]
-        # b = ϕ[1, Tuple(i)..., 4]
-        # a = ϕ[1, Tuple(i)..., 5]
         pixel[i] = r == g == b == a == ○ ? WHITE : (r, g, b, a)
     end
     pixel
@@ -161,33 +140,6 @@ function step(g::god, dt̂=one(T))
     god(ẑero, g.ône, g.∂t₀, g.v, g.ρ, g.Ω, g.⚷, g.♯, g.∇)
     g.ẑero !== ○̂ && ∃!(g.ẑero)
 end
-# function observe(g::god, ♯::NTuple)
-#     ϵ = g.ône - g.ẑero
-#     ϕ = ∃̇(ϵ, ♯)
-#     @show ϕ[1, 2, 2, :, 1]
-#     pixel = fill(WHITE, ♯[2], ♯[3])
-#     for i = CartesianIndices(pixel)
-#         r = ϕ[1, i[1], i[2], 2, 1]
-#         ġ = ϕ[1, i[1], i[2], 3, 1]
-#         b = ϕ[1, i[1], i[2], 4, 1]
-#         a = ϕ[1, i[1], i[2], 5, 1]
-#         pixel[i[1], i[2]] = r == ġ == b == a == ○ ? WHITE : (r, ġ, b, a)
-#     end
-#     # if show_borders
-#     #     Ξ = X(ϵ, ♯)
-#     #     for i = CartesianIndices(pixel)
-#     #         for δ in (CartesianIndex(1, 0), CartesianIndex(0, 1))
-#     #             j = i + δ
-#     #             checkbounds(Bool, Ξ, 1, j[1], j[2], 1, 1) || continue
-#     #             if Ξ[1, i[1], i[2], 1, 1] !== Ξ[1, j[1], j[2], 1, 1]
-#     #                 pixel[i[1], i[2]] = (zero(T), zero(T), zero(T), one(T))
-#     #                 break
-#     #             end
-#     #         end
-#     #     end
-#     # end
-#     pixel
-# end
 # function move_zero!(g::god, dim::Int, val)
 #     μ = MVector(g.ẑero.μ)
 #     μ[dim] = clamp(T(val), zero(T), one(T))
@@ -205,59 +157,64 @@ end
 # show!(g::god) = g.visible = true
 # hide!(g::god) = g.visible = false
 # home!(g::god) = (g.edge = true; g.v = zero(T))
-
-# ϵΠ
-# î
-# all(iszero.(î))
-# ♯=g.♯
-# Φ̇ = gpu(ϵΠ, î, g.♯)
-function gpu(ϵΠ, î, ♯)
-    rgba = KernelAbstractions.zeros(GPU_BACKEND, T, 4, ♯[2], ♯[3])
-    i̇ = KernelAbstractions.allocate(GPU_BACKEND, UInt32, size(î))
-    copyto!(i̇, î)
-    @show typeof(ϵΠ[1])
-    @show fieldnames(typeof(ϵΠ[1]))
-    @show fieldtypes(typeof(ϵΠ[1]))
-    @show isconcretetype(typeof(ϵΠ[1]))
-    κ!(GPU_BACKEND, GPU_BACKEND_WORKGROUPSIZE)(
-        rgba, ϵΠ, i̇, ♯,
-        ndrange=(♯[2], ♯[3])
-    )
-    KernelAbstractions.synchronize(GPU_BACKEND)
-    Array(rgba)
+struct ΦSet{Fs}
+    fs::Fs  # Tuple of Φ functions
 end
-@kernel function κ!(rgba, Φ, Φi, ♯)
+# eval_Φ(φ,1,0.5,0.5,0.5,0.4)
+@generated function eval_Φ(φ::ΦSet{Fs}, idx, t, x, y, z) where Fs
+    N = length(Fs.parameters)
+    branches = []
+    for i in 1:N
+        push!(branches, quote
+            if idx == $i
+                return φ.fs[$i](t, x, y, z)
+            end
+        end)
+    end
+    quote
+        $(branches...)
+        return (zero(T), zero(T), zero(T), zero(T))
+    end
+end
+@kernel function κ!(rgba, φ::ΦSet, Φi, ♯)
     xi, yi = @index(Global, NTuple)
-    # xi, yi=2,2
-    t = ○
-    x = isone(♯[2]) ? ○ : (T(xi) - 1) / T(♯[2] - 1)
-    y = isone(♯[3]) ? ○ : (T(yi) - 1) / T(♯[3] - 1)
+    # xi, yi = 2,2
+    _, W, H, D = ♯
+    x = isone(W) ? ○ : (T(xi) - 1) / T(W - 1)
+    y = isone(H) ? ○ : (T(yi) - 1) / T(H - 1)
     r, g, b, a = zero(T), zero(T), zero(T), zero(T)
-    # zi = collect(1:♯[4])[2]
-    for zi = 1:♯[4]
+    # zi = collect(1:D)[2]
+    for zi = 1:D
         one(T) ≤ a && break
-        z = isone(♯[4]) ? ○ : T(zi - 1) / T(♯[4] - 1)
-        Φi̇ = Φi[1, xi, yi, zi]
-        # Φi̇ = î[1, xi, yi, zi]
-        iszero(Φi̇) && continue
-        Φ̃ = Φ[Φi̇]
-        # for ci = 1:6
-            # c = T(ci - 1) / 5
-            # ṙ, ġ, ḃ, ȧ = Φ̃(t, x, y, z, c)
-            ṙ, ġ, ḃ, ȧ = Φ̃(t, x, y, z)
-            # ϕ = Φ̃(t, x, y, z, c)
-            iszero(ȧ) && continue
-            rem = one(T) - a
-            r += ṙ * ȧ * rem
-            g += ġ * ȧ * rem
-            b += ḃ * ȧ * rem
-            a += ȧ * rem
-        # end
+        z = isone(D) ? ○ : T(zi - 1) / T(D - 1)
+        idx = Φi[xi, yi, zi]
+        iszero(idx) && continue
+        ṙ, ġ, ḃ, ȧ = eval_Φ(φ, idx, ○, x, y, z)
+        iszero(ȧ) && continue
+        rem = one(T) - a
+        r += ṙ * ȧ * rem
+        g += ġ * ȧ * rem
+        b += ḃ * ȧ * rem
+        a += ȧ * rem
     end
     rgba[1, xi, yi] = r
     rgba[2, xi, yi] = g
     rgba[3, xi, yi] = b
     rgba[4, xi, yi] = a
+end
+# ♯=g.♯
+function render(φ::ΦSet, Φi, ♯)
+    rgba = KernelAbstractions.zeros(GPU_BACKEND, T, 4, ♯[2], ♯[3])
+    i̇ = KernelAbstractions.allocate(GPU_BACKEND, UInt32, size(Φi))
+    copyto!(i̇, Φi)
+    Base.invokelatest() do
+        κ!(GPU_BACKEND, GPU_BACKEND_WORKGROUPSIZE)(
+            rgba, φ, i̇, ♯,
+            ndrange=(♯[2], ♯[3])
+        )
+    end
+    KernelAbstractions.synchronize(GPU_BACKEND)
+    Array(rgba)
 end
 # X(i, ♯::NTuple) = SVector{length(♯)}([isone(♯[î]) ? ○ : T(i[î] - 1) / T(♯[î] - 1) for î = eachindex(♯)])
 X(i, ♯) = ntuple(î -> begin
