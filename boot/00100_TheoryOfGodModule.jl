@@ -1,3 +1,6 @@
+import Pkg
+Pkg.activate("gpu")
+
 """
 TheoryOfGod
 
@@ -21,31 +24,59 @@ god observes or creates, God iterates.
 export ∃, ∃̇, ∃!
 
 using KernelAbstractions
-using Metal;
-const GPU_BACKEND = MetalBackend();
+using Metal ; const GPU_BACKEND = MetalBackend()
 # using CUDA ; const GPU_BACKEND = CUDABackend()
 const GPU_BACKEND_WORKGROUPSIZE = 2^2^3
 
 const T = Float32
 
 include("00101_TheoryOfGod∃.jl")
-
 const God = 𝕋()
-
-# struct Named
-#     ϵ::∃
-#     T::Type
-# end
-# const names = Dict{String,Named}()
-
-# in LoopOS
+const name = Dict{∃, String}()
 include("00103_TheoryOfGodgod.jl")
+
+d = SA[zero(T), T(one(T)/MathConstants.φ), T(one(T)/MathConstants.φ^2), T(one(T)/MathConstants.φ^3)]
+μ = SA[t(), ○, ○, ○]
+ρ = SA[zero(T), zero(T), zero(T), zero(T)]
+♯ = (1, 2560, 1600, 2^3)
+g = god(d=d, μ=μ, ρ=ρ, ♯=♯)
+
+using REPL
+function game_loop_raw()
+    term = REPL.Terminals.TTYTerminal("", stdin, stdout, stderr)
+    REPL.Terminals.raw!(term, true)
+    try
+        while true
+            yield()
+            if bytesavailable(stdin) > 0
+                c = read(stdin, String)
+                c == "q" && break
+                println("Key: $c ($(Int(c)))")
+                key(c)
+            end
+        end
+    finally
+        REPL.Terminals.raw!(term, false)
+    end
+end
+const KEYBOARDTASK = @async game_loop_raw()
+function key(k)
+    k == "w" && return println("w")
+    k == "s" && return println("s")
+    k == "a" && return println("a")
+    k == "d" && return println("d")
+    k == "\e[A" && return println("\e[A")
+    k == "\e[B" && return println("\e[B")
+    k == "\e[C" && return println("\e[C")
+    k == "\e[D" && return println("\e[D")
+end
+
 # include("00103_TheoryOfGodTypst.jl")
 
-include("00090_BroadcastBrowser2Module.jl")
-import Main.BroadcastBrowserModule: BroadcastBrowser, start
-include("00105_TheoryOfGodgodBrowser.jl")
-const BROWSERTASK = Threads.@spawn start(b -> godBrowser(b))
+# include("00090_BroadcastBrowser2Module.jl")
+# import Main.BroadcastBrowserModule: BroadcastBrowser, start
+# include("00105_TheoryOfGodgodBrowser.jl")
+# const BROWSERTASK = Threads.@spawn start(b -> godBrowser(b))
 # g=collect(values(godBROWSER[]))[1].g
 
 # Φ(x...) = x
@@ -69,7 +100,6 @@ const BROWSERTASK = Threads.@spawn start(b -> godBrowser(b))
 #     f=open("w.jl");close(f)
 # end)
 
-God.Ο[God]
 # create(g, Φ)
 # create(g, Φ2)
 # God.Ο[God]
@@ -95,16 +125,31 @@ function sierpinski3d(x)
     iz = reinterpret(UInt32, x[4]) & mask
     (ix ⊻ iy ⊻ iz) == zero(UInt32) ? WHITE : BLACK
 end
-d1 = SA[zero(T), T(0.1), T(0.2), T(0.3)]
-μ1 = SA[○, ○, ○, ○]
-ρ1 = SA[T(0.1), T(0.1), T(0.1), T(0.1)]
-∂1 = ntuple(_ -> (true, true), length(d1))
-ϵ1 = ∃(God, d1, μ1, ρ1, ∂1, sierpinski3d)
-∃!(ϵ1, God)
+# d1 = SA[zero(T), T(0.1), T(0.2), T(0.3)]
+# μ1 = SA[○, ○, ○, ○]
+# ρ1 = SA[T(0.1), T(0.1), T(0.1), T(0.1)]
+# ∂1 = ntuple(_ -> (true, true), length(d1))
+# ϵ1 = ∃(God, d1, μ1, ρ1, ∂1, sierpinski3d)
+# ∃!(ϵ1, God)
 # ♯ = (1,3,3,3)
 # ∇ = 10
 # ∃̇(ϵ1, ♯, ∇)
 # ϵ=ϵ1
+create(g, sierpinski3d)
+God.Ο[God]
+
+using MiniFB
+
+window = mfb_open_ex("tog", ♯[1], ♯[2], MiniFB.WF_RESIZABLE)
+buffer = zeros(UInt32, prod(♯))
+MINIFBTASK = @async while true
+    yield()
+    state = mfb_update(window, buffer)
+    state != MiniFB.STATE_OK && break
+end
+
+ϕ = ∃̇(g)
+buffer = mfb_rgb(ϕ)
 
 # using KernelAbstractions
 # using Metal ; const GPU_BACKEND = MetalBackend()

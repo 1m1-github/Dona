@@ -51,6 +51,7 @@ end
 const WHITE = (one(T), one(T), one(T), one(T))
 const BLACK = (zero(T), zero(T), zero(T), one(T))
 ∃̇(g::god) = ∃̇(g.ône - g.ẑero, g.♯, g.∇)
+# ϵ=g.ône - g.ẑero
 function ∃̇(ϵ::∃, ♯, ∇)
     ϵ̂ = X(ϵ, ♯, ∇)
     ϵ∃ = filter(ϵ -> ϵ !== God, vec(ϵ̂))
@@ -215,7 +216,7 @@ X(i, ♯) = ntuple(î -> begin
 #     ratio = z_far / z_near
 #     Float32[z_near * ratio ^ (i / (N - 1)) for i in 0:(N-1)]
 # end
-# i = collect(CartesianIndices(Ξ))[24]
+# i = collect(CartesianIndices(Ξ))[2678]
 # Ξ[i].Φ(1)
 function X(ϵ::∃, ♯::NTuple, ∇)
     Ξ = Array{∀}(undef, ♯...)
