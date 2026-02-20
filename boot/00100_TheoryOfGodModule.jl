@@ -21,7 +21,8 @@ god observes or creates, God iterates.
 export ∃, ∃̇, ∃!
 
 using KernelAbstractions
-using Metal ; const GPU_BACKEND = MetalBackend()
+using Metal;
+const GPU_BACKEND = MetalBackend();
 # using CUDA ; const GPU_BACKEND = CUDABackend()
 const GPU_BACKEND_WORKGROUPSIZE = 2^2^3
 
@@ -44,8 +45,8 @@ include("00103_TheoryOfGodgod.jl")
 include("00090_BroadcastBrowser2Module.jl")
 import Main.BroadcastBrowserModule: BroadcastBrowser, start
 include("00105_TheoryOfGodgodBrowser.jl")
-const BROWSERTASK = Threads.@spawn start(b->godBrowser(b))
-g=collect(values(godBROWSER[]))[1].g
+const BROWSERTASK = Threads.@spawn start(b -> godBrowser(b))
+# g=collect(values(godBROWSER[]))[1].g
 
 # Φ(x...) = x
 
@@ -69,7 +70,7 @@ g=collect(values(godBROWSER[]))[1].g
 # end)
 
 God.Ο[God]
-create(g, Φ)
+# create(g, Φ)
 # create(g, Φ2)
 # God.Ο[God]
 # collect(keys(God.ϵ̃))
@@ -87,17 +88,71 @@ create(g, Φ)
 # map(sum,ϕ)
 # all(==(ntuple(_->one(T),4)),ϕ)
 # step(g)
-
 function sierpinski3d(x)
     mask = UInt32(0x007FFFFF)
     ix = reinterpret(UInt32, x[2]) & mask
     iy = reinterpret(UInt32, x[3]) & mask
     iz = reinterpret(UInt32, x[4]) & mask
-    (ix ⊻ iy ⊻ iz) == zero(UInt32)  # just return Bool
+    (ix ⊻ iy ⊻ iz) == zero(UInt32) ? WHITE : BLACK
 end
-d1 = SA[T(0.1),T(0.2),T(0.3)]
-μ1 = SA[○,○,○]
-ρ1 = SA[T(0.1),T(0.1),T(0.1)]
-∂1 = ntuple(_->(true,true), length(d1))
+d1 = SA[zero(T), T(0.1), T(0.2), T(0.3)]
+μ1 = SA[○, ○, ○, ○]
+ρ1 = SA[T(0.1), T(0.1), T(0.1), T(0.1)]
+∂1 = ntuple(_ -> (true, true), length(d1))
 ϵ1 = ∃(God, d1, μ1, ρ1, ∂1, sierpinski3d)
 ∃!(ϵ1, God)
+# ♯ = (1,3,3,3)
+# ∇ = 10
+# ∃̇(ϵ1, ♯, ∇)
+# ϵ=ϵ1
+
+# using KernelAbstractions
+# using Metal ; const GPU_BACKEND = MetalBackend()
+# const GPU_BACKEND_WORKGROUPSIZE = 2^2^3
+# const T = Float32
+# function sierpinski3d(x)
+#     mask = UInt32(0x007FFFFF)
+#     ix = reinterpret(UInt32, x[2]) & mask
+#     iy = reinterpret(UInt32, x[3]) & mask
+#     iz = reinterpret(UInt32, x[4]) & mask
+#     (ix ⊻ iy ⊻ iz) == zero(UInt32)  # just return Bool
+# end
+# struct ΦSet{Fs}
+#     fs::Fs
+# end
+# @generated function eval_Φ(φ::ΦSet{Fs}, idx, x) where Fs
+#     N = length(Fs.parameters)
+#     branches = []
+#     for i in 1:N
+#         push!(branches, quote
+#             if idx == $i
+#                 return φ.fs[$i](x)
+#             end
+#         end)
+#     end
+#     quote
+#         $(branches...)
+#         return (zero(T), zero(T), zero(T), zero(T))
+#     end
+# end
+# @kernel function κ!(rgba, φ::ΦSet, Φi, ♯)
+#     eval_Φ(φ, 1, (zero(T),zero(T),zero(T),zero(T)))
+# end
+# function render(φ::ΦSet, Φi, ♯)
+#     rgba = KernelAbstractions.zeros(GPU_BACKEND, T, 4, ♯[2], ♯[3])
+#     i̇ = KernelAbstractions.allocate(GPU_BACKEND, UInt32, size(Φi))
+#     copyto!(i̇, Φi)
+#     Base.invokelatest() do
+#         κ!(GPU_BACKEND, GPU_BACKEND_WORKGROUPSIZE)(
+#             rgba, φ, i̇, ♯,
+#             ndrange=(♯[2], ♯[3])
+#         )
+#     end
+#     KernelAbstractions.synchronize(GPU_BACKEND)
+#     Array(rgba)
+# end
+# φ = ΦSet((sierpinski3d,))
+# ♯ = (1,3,3,3)
+# Φi = zeros(UInt32, ♯)
+# Φi[1,2,2,2] = 1
+# render(φ, Φi, ♯)

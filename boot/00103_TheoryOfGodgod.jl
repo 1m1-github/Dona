@@ -50,33 +50,23 @@ function create(g::god, Φ, Ω=God)
 end
 const WHITE = (one(T), one(T), one(T), one(T))
 const BLACK = (zero(T), zero(T), zero(T), one(T))
-function ∃̇(g::god)
-    ϵ = g.ône - g.ẑero
-    ϵ̂ = X(ϵ, g.♯, g.∇)
-    
+∃̇(g::god) = ∃̇(g.ône - g.ẑero, g.♯, g.∇)
+function ∃̇(ϵ::∃, ♯, ∇)
+    ϵ̂ = X(ϵ, ♯, ∇)
     ϵ∃ = filter(ϵ -> ϵ !== God, vec(ϵ̂))
-    isempty(ϵ∃) && return fill(WHITE, g.♯[2], g.♯[3])
-    
-    # Deduplicate and sort by t (front-to-back for compositing)
-    unique!(x -> t(x), ϵ∃)
+    isempty(ϵ∃) && return fill(WHITE, ♯[2], ♯[3])
+    unique!(t, ϵ∃)
     sort!(ϵ∃, by=t)
     ϵt = map(t, ϵ∃)
-    
-    # Tag by t-order (tag 1 = frontmost)
     t_to_tag = Dict(ϵt[i] => UInt32(i) for i in eachindex(ϵt))
-    
-    # Build tag grid
-    Φi = zeros(UInt32, g.♯[2], g.♯[3], g.♯[4])
+    Φi = zeros(UInt32, ♯[2], ♯[3], ♯[4])
     for i in CartesianIndices(ϵ̂)
         ϵ̂ᵢ = ϵ̂[i]
         ϵ̂ᵢ === God && continue
         Φi[i[2], i[3], i[4]] = t_to_tag[t(ϵ̂ᵢ)]
     end
-    
-    # ΦSet ordered by t — same entities in view = same tuple type = cached
     φ = ΦSet(ntuple(i -> ϵ∃[i].Φ, length(ϵ∃)))
-    
-    rgba = render(φ, Φi, g.♯)
+    rgba = render(φ, Φi, ♯)
     ℼ̂(rgba)
 end
 ℼ̂(ϕ) = begin
@@ -91,12 +81,6 @@ end
     end
     pixel
 end
-# accelerate!(g::god, v) = g.v = v
-# jerk!(g::god, j) = accelerate(g, g.v^j) # ?
-# stop!(g::god) = accelerate(g, ntuple(_ -> zero(g.T), 3))
-# turn!(g::god, ône) = g.ône = ône
-# # scale!(g::god, ♯) = g.♯ = ♯
-
 # # ∇(t) = t*g.ône-(1-t)*g.ẑero
 # # ∇(0) = g.ẑero
 # # ∇(1) = g.ône
@@ -132,42 +116,43 @@ function step(g::god, dt̂=one(T))
         μ = SVector(ntuple(i -> i == 1 ? ṫ : g.ẑero.μ[i], length(g.ẑero.μ)))
     else
         δμ = g.ône.μ .- g.ẑero.μ
-        # any(d -> !iszero(d), δμ) || return
+        all(d -> iszero(d), δμ) && return
         α = clamp(g.v * dt̂, zero(T), one(T))
         μ = g.ẑero.μ .+ α .* δμ
     end
-    ẑero = ∃(God, g.ẑero.d, μ, g.ẑero.ρ, g.ẑero.∂, g.ẑero.Φ)
-    god(ẑero, g.ône, g.∂t₀, g.v, g.ρ, g.Ω, g.⚷, g.♯, g.∇)
+    g = move(g, μ)
     g.ẑero !== ○̂ && ∃!(g.ẑero)
 end
-# function move_zero!(g::god, dim::Int, val)
-#     μ = MVector(g.ẑero.μ)
-#     μ[dim] = clamp(T(val), zero(T), one(T))
-#     g.ẑero = ∃(God, g.ẑero.d, SVector(μ), g.ẑero.ρ, g.ẑero.∂, g.ẑero.Φ)
-#     dim == 1 && (g.present = false)
-# end
-# function move_one!(g::god, dim::Int, val)
-#     μ = MVector(g.ône.μ)
-#     μ[dim] = clamp(T(val), zero(T), one(T))
-#     g.ône = ∃(God, g.ône.d, SVector(μ), g.ône.ρ, g.ône.∂, g.ône.Φ)
-#     dim == 1 && (g.present = false)
-# end
-# speed!(g::god, v) = g.v = clamp(T(v), zero(T), one(T))
-# appear!(g::god, Φ::Function) = g.Φ = Φ
-# show!(g::god) = g.visible = true
-# hide!(g::god) = g.visible = false
-# home!(g::god) = (g.edge = true; g.v = zero(T))
+speed(g::god, v) = god(g.ẑero, g.ône, g.∂t₀, clamp(T(v), zero(T), one(T)), g.ρ, g.Ω, g.⚷, g.♯, g.∇)
+stop(g::god) = god(g.ẑero, g.ône, g.∂t₀, zero(T), g.ρ, g.Ω, g.⚷, g.♯, g.∇)
+stoptime(g::god) = god(g.ẑero, g.ône, g.∂t₀, SA[zero(T), g.v[2:end]...], g.ρ, g.Ω, g.⚷, g.♯, g.∇)
+scale!(g::god, ♯) = god(g.ẑero, g.ône, g.∂t₀, g.v, g.ρ, g.Ω, g.⚷, ♯, g.∇)
+move(g::god, ẑeroμ) =
+    god(
+        ∃(g.ẑero.ϵ̂, g.ẑero.d, ẑeroμ, g.ẑero.ρ, g.ẑero.∂, g.ẑero.Φ),
+        g.ône, g.∂t₀, g.v, g.ρ, g.Ω, g.⚷, g.♯, g.∇
+    )
+focus(g::god, ôneμ) =
+    god(
+        g.ẑero,
+        ∃(g.ône.ϵ̂, g.ône.d, ôneμ, g.ône.ρ, g.ône.∂, g.ône.Φ),
+        g.∂t₀, g.v, g.ρ, g.Ω, g.⚷, g.♯, g.∇
+    )
+home(g::god) = god(g.ẑero, g.ône, true, zero(T), g.ρ, g.Ω, g.⚷, g.♯, g.∇)
+
 struct ΦSet{Fs}
     fs::Fs  # Tuple of Φ functions
 end
 # eval_Φ(φ,1,0.5,0.5,0.5,0.4)
-@generated function eval_Φ(φ::ΦSet{Fs}, idx, t, x, y, z) where Fs
+# @generated function eval_Φ(φ::ΦSet{Fs}, idx, t, x, y, z) where Fs
+@generated function eval_Φ(φ::ΦSet{Fs}, idx, x) where Fs
     N = length(Fs.parameters)
     branches = []
     for i in 1:N
         push!(branches, quote
             if idx == $i
-                return φ.fs[$i](t, x, y, z)
+                # return φ.fs[$i](t, x, y, z)
+                return φ.fs[$i](x)
             end
         end)
     end
@@ -189,7 +174,8 @@ end
         z = isone(D) ? ○ : T(zi - 1) / T(D - 1)
         idx = Φi[xi, yi, zi]
         iszero(idx) && continue
-        ṙ, ġ, ḃ, ȧ = eval_Φ(φ, idx, ○, x, y, z)
+        # ṙ, ġ, ḃ, ȧ = eval_Φ(φ, idx, ○, x, y, z)
+        ṙ, ġ, ḃ, ȧ = eval_Φ(φ, idx, (○, x, y, z))
         iszero(ȧ) && continue
         rem = one(T) - a
         r += ṙ * ȧ * rem
@@ -203,6 +189,7 @@ end
     rgba[4, xi, yi] = a
 end
 # ♯=g.♯
+# φ, Φi, ♯
 function render(φ::ΦSet, Φi, ♯)
     rgba = KernelAbstractions.zeros(GPU_BACKEND, T, 4, ♯[2], ♯[3])
     i̇ = KernelAbstractions.allocate(GPU_BACKEND, UInt32, size(Φi))

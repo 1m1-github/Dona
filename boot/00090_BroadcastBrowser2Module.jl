@@ -90,7 +90,7 @@ function freeport(hint)
 end
 
 function start(root::Function, port=freeport(8888))
-    @show port
+    # @show port
     HTTP.serve("0.0.0.0", port; stream=true) do stream
         target = stream.message.target
         if target == "/"

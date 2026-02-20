@@ -21,10 +21,10 @@ while true
     t = t̂
     # step(g, dt)
     p̂ixel = ∃̇(g)
-    # @show p̂ixel
+    @show p̂ixel
     δ = Δ(pixel, p̂ixel)
     # @show δ
-    # @show isempty(δ)
+    @show isempty(δ)
     isempty(δ) && continue
     js = "pixel=" * write(δ, g.♯[2]) * "\n" * SET_PIXELS_JS
     put!(browser.processor, js)
