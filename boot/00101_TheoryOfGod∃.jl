@@ -8,7 +8,7 @@ struct ∃{N,F,P<:∀} <: ∀
     d::SVector{N,T}
     μ::SVector{N,T}
     ρ::SVector{N,T}
-    ∂::NTuple{N,Tuple{Bool,Bool}}
+    ∂::NTuple{N,Tuple{Bool,Bool}} # SVector{N,Tuple{Bool,Bool}} ?
     Φ::F
     h::UInt
     function ∃(ϵ̂::∀, d::SVector{N,T}, μ::SVector{N,T}, ρ::SVector{N,T}, ∂::NTuple{N,Tuple{Bool,Bool}}, Φ::F) where {N,F}
@@ -16,7 +16,7 @@ struct ∃{N,F,P<:∀} <: ∀
         @assert all(zero(T) .≤ d .≤ one(T))
         @assert all(zero(T) .≤ μ .≤ one(T))
         @assert all(zero(T) .≤ ρ .≤ one(T))
-        @assert gpu_safe(Φ, N)
+        # @assert gpu_safe(Φ, N)
         p = sortperm(d)
         d, μ, ρ = map(x -> x[p], (d, μ, ρ))
         ∂ = ntuple(i -> ∂[p[i]], N)
@@ -96,8 +96,9 @@ function ∂(x::∃, ::𝕋)
 end
 function ∂(x::∃, ϵ::∃)
     zeroμ, oneμ = ϵ.μ .- ϵ.ρ, ϵ.μ .+ ϵ.ρ
-    # Threads.@threads
-    for (i, d) = enumerate(ϵ.d)
+    # for (i, d) = enumerate(ϵ.d)
+    Threads.@threads for i = eachindex(ϵ.d)
+        d = ϵ.d[i]
         iszero(ϵ.ρ[i]) && continue
         μₓ, _ = μρ(x, d)
         (μₓ == zeroμ[i] || μₓ == oneμ[i]) && return true
@@ -109,21 +110,25 @@ function Base.:(⊆)(zero₁, one₁, ∂₁::Tuple{Bool,Bool}, zero₂, one₂,
     ȯne = one₁ < one₂ || (one₁ == one₂ && (!∂₁[2] || ∂₂[2]))
     żero && ȯne
 end
-# (i₂, d₂) = collect(enumerate(ϵ₂.d))[4]
+# (i₂, d₂) = collect(enumerate(ϵ₂.d))[1]
 function ⪽(ϵ₁::∃, ϵ₂::∃)
-    x = true
-    # Threads.@threads
-    for (i₂, d₂) = enumerate(ϵ₂.d)
+    found = Threads.Atomic{Bool}(false)
+    result = Threads.Atomic{Bool}(true)
+    Threads.@threads for i₂ in eachindex(ϵ₂.d)
+        d₂ = ϵ₂.d[i₂]
         ρ₂ = ϵ₂.ρ[i₂]
         iszero(ρ₂) && continue
-        x && (x = false)
+        Threads.atomic_or!(found, true)
+        result[] || continue  # skip work if already false
         μ₂ = ϵ₂.μ[i₂]
         μ₁, ρ₁, ∂₁ = μρ(ϵ₁, d₂)
         zero₁, one₁ = μ₁ - ρ₁, μ₁ + ρ₁
         zero₂, one₂ = μ₂ - ρ₂, μ₂ + ρ₂
-        !⊆(zero₁, one₁, ∂₁, zero₂, one₂, ϵ₂.∂[i₂]) && return false
+        if !⊆(zero₁, one₁, ∂₁, zero₂, one₂, ϵ₂.∂[i₂])
+            Threads.atomic_and!(result, false)
+        end
     end
-    !x
+    found[] && result[]
 end
 function α(ϵ)
     αϵ = Set{∃}([ϵ])
@@ -173,6 +178,7 @@ function ⫉(ϵ₁::∃, ϵ₂::∃)
 end
 # ϵ₁=x
 # ϵ₁=ϵ
+# ϵ₁=view
 # ϵ̂ = β(ϵ, Ω)
 # ϵ₂=God
 # ϵ̃ = filter(ϵ̃ -> ϵ̃ ≠ ϵ₁, ϵ̃)[1]
@@ -255,13 +261,24 @@ function X(x::∃, ∇)
     _, n = √(ϵ)
     ∇ < n && return God, false
     ϵ̃ = God.ϵ̃[ϵ]
-    # Threads.@threads
-    for ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, ϵ̃)
+    Threads.@threads for ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, ϵ̃)
         x ∩ ϵ̃ && return ϵ̃, true
         ϵ̂, found = X(x, ∇)
         found && return ϵ̂, true
     end
     God, false
+end
+# x, ϵ, ∇ = xϵ, ϵ̂, typemax(UInt)
+# x, ϵ, ∇ = x, only(ϵ̃), ∇-1
+Φ(::Any, ::𝕋) = ○
+# Φ(x::∃, ϵ::∃) = ϵ.Φ(x.μ)
+Φ(x::∃, ϵ::∃) = ϵ.Φ(μ̃(ϵ, x.μ))
+function Φ(x::∃, ϵ::∀, ∇)
+    iszero(∇) && return Φ(x, ϵ)
+    ∂(x, ϵ) && return ○
+    ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, God.ϵ̃[ϵ])
+    isempty(ϵ̃) && return Φ(x, ϵ)
+    Φ(x, only(ϵ̃), ∇-1)
 end
 # ϵ=ϵ̂
 function ∃!(ϵ::∃, Ω=God)
@@ -298,8 +315,9 @@ function Base.:(-)(ϵ₁::∃, ϵ₂::∃)
     μ = MVector{N,T}(undef)
     ρ = MVector{N,T}(undef)
     ∂out = Vector{Tuple{Bool,Bool}}(undef, N)
-    # Threads.@threads
-    for (i, d) in enumerate(d̂)
+    # for (i, d) in enumerate(d̂)
+    Threads.@threads for i in eachindex(d̂)
+        d = d̂[i]
         ϵ₂μ, ϵ₂ρ, ϵ₂∂ = μρ(ϵ₂, d)
         ϵ₁μ, ϵ₁ρ, ϵ₁∂ = μρ(ϵ₁, d)
         żero = ϵ₂μ - ϵ₂ρ
