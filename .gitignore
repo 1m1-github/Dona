@@ -3,6 +3,9 @@ transcription/*.bin
 long/*
 tmp/*
 
+*.png
+*.gif
+
 !*.gitkeep
 
 Manifest.toml

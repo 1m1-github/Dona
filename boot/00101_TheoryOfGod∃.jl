@@ -308,34 +308,33 @@ function rm!(God::𝕋)
     delete!(God.Ο, ϵ̂̂)
 end
 # ϵ₁, ϵ₂ = ône, ẑero
-# (i, d) = collect(enumerate(d̂))[2]
+# (i, d) = collect(enumerate(d̂))[1]
 function Base.:(-)(ϵ₁::∃, ϵ₂::∃)
     d̂ = sort!(ϵ₂.d ∪ ϵ₁.d)
     N = length(d̂)
     μ = MVector{N,T}(undef)
     ρ = MVector{N,T}(undef)
     ∂out = Vector{Tuple{Bool,Bool}}(undef, N)
-    # for (i, d) in enumerate(d̂)
     Threads.@threads for i in eachindex(d̂)
         d = d̂[i]
         ϵ₂μ, ϵ₂ρ, ϵ₂∂ = μρ(ϵ₂, d)
         ϵ₁μ, ϵ₁ρ, ϵ₁∂ = μρ(ϵ₁, d)
         żero = ϵ₂μ - ϵ₂ρ
         ȯne = ϵ₁μ + ϵ₁ρ
-        ρ[i] = (ȯne - żero) / 2
+        ρ[i] = abs(ȯne - żero) / 2
         μ[i] = żero + ρ[i]
         ∂out[i] = (ϵ₂∂[1], ϵ₁∂[2])
     end
     ϵ̂ = α(ϵ₁, ϵ₂)
     ∃(ϵ̂, SVector{N}(d̂), SVector{N}(μ), SVector{N}(ρ), NTuple{N}(∂out), ϵ₁.Φ)
 end
-function gpu_safe(Φ, N)
-    try
-        @kernel gpu(Φ, x) = Φ(x)
-        x = KernelAbstractions.zeros(GPU_BACKEND, T, N)
-        gpu(GPU_BACKEND, GPU_BACKEND_WORKGROUPSIZE)(Φ, x, ndrange=1)
-        true
-    catch
-        false
-    end
-end
+# function gpu_safe(Φ, N)
+#     try
+#         @kernel gpu(Φ, x) = Φ(x)
+#         x = KernelAbstractions.zeros(GPU_BACKEND, T, N)
+#         gpu(GPU_BACKEND, GPU_BACKEND_WORKGROUPSIZE)(Φ, x, ndrange=1)
+#         true
+#     catch
+#         false
+#     end
+# end
