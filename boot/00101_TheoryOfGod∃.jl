@@ -8,18 +8,18 @@ struct ∃{N,F,P<:∀} <: ∀
     d::SVector{N,T}
     μ::SVector{N,T}
     ρ::SVector{N,T}
-    ∂::NTuple{N,Tuple{Bool,Bool}} # SVector{N,Tuple{Bool,Bool}} ?
+    ∂::SVector{N,Tuple{Bool,Bool}}
     Φ::F
     h::UInt
-    function ∃(ϵ̂::∀, d::SVector{N,T}, μ::SVector{N,T}, ρ::SVector{N,T}, ∂::NTuple{N,Tuple{Bool,Bool}}, Φ::F) where {N,F}
+    function ∃(ϵ̂::∀, d::SVector{N,T}, μ::SVector{N,T}, ρ::SVector{N,T}, ∂::SVector{N,Tuple{Bool,Bool}}, Φ::F) where {N,F}
         @assert 1 ≤ N
         @assert all(zero(T) .≤ d .≤ one(T))
         @assert all(zero(T) .≤ μ .≤ one(T))
         @assert all(zero(T) .≤ ρ .≤ one(T))
-        # @assert gpu_safe(Φ, N)
+        @assert gpu_safe(Φ, N)
         p = sortperm(d)
         d, μ, ρ = map(x -> x[p], (d, μ, ρ))
-        ∂ = ntuple(i -> ∂[p[i]], N)
+        ∂ = SVector(ntuple(i -> ∂[p[i]], N))
         h = hash(d, hash(μ, hash(ρ, hash(∂, hash(ϵ̂)))))
         new{N,F,typeof(ϵ̂)}(ϵ̂, d, μ, ρ, ∂, Φ, h)
     end
@@ -186,6 +186,8 @@ end
 # God.ϵ̃[ϵ₁]
 # hash(ϵ)
 # hash(ϵ̃[1])
+# ϵ₁==ϵ̃[1]
+# ϵ₂=ϵ̃[1]
 Base.:(==)(ϵ₁::∃, ϵ₂::∃) = ϵ₁.d==ϵ₂.d && ϵ₁.μ==ϵ₂.μ && ϵ₁.ρ==ϵ₂.ρ && ϵ₁.∂==ϵ₂.∂
 Base.:(==)(::∃, ::𝕋) = false
 function β(ϵ₁::∃, ϵ₂::∀)
@@ -314,7 +316,7 @@ function Base.:(-)(ϵ₁::∃, ϵ₂::∃)
     N = length(d̂)
     μ = MVector{N,T}(undef)
     ρ = MVector{N,T}(undef)
-    ∂out = Vector{Tuple{Bool,Bool}}(undef, N)
+    ∂out = MVector{N, Tuple{Bool,Bool}}(undef)
     Threads.@threads for i in eachindex(d̂)
         d = d̂[i]
         ϵ₂μ, ϵ₂ρ, ϵ₂∂ = μρ(ϵ₂, d)
@@ -326,7 +328,7 @@ function Base.:(-)(ϵ₁::∃, ϵ₂::∃)
         ∂out[i] = (ϵ₂∂[1], ϵ₁∂[2])
     end
     ϵ̂ = α(ϵ₁, ϵ₂)
-    ∃(ϵ̂, SVector{N}(d̂), SVector{N}(μ), SVector{N}(ρ), NTuple{N}(∂out), ϵ₁.Φ)
+    ∃(ϵ̂, SVector{N}(d̂), SVector{N}(μ), SVector{N}(ρ), SVector{N}(∂out), ϵ₁.Φ)
 end
 # function gpu_safe(Φ, N)
 #     try

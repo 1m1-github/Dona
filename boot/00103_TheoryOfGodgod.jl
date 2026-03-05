@@ -8,25 +8,17 @@ struct god
     ⚷::UInt
     ♯::NTuple
     ∇::UInt
+    d::Function
 end
-function god(; d, μ, ρ, ⚷=zero(UInt), Φ=○̂, ♯=(1,), ∇=typemax(UInt))
-    # @assert zero(T) ∉ d
-    # d̂ = SA[zero(T), d...]
-    # N = length(d̂)
+function god(; d, μ, ρ, ⚷=zero(UInt), Φ=○̂, ♯=SA[1], ∇=typemax(UInt))
     N = length(d)
-    # μ₀ = SA[t(), μ...]
-    # ρ₀ = SA[zero(T), ρ...]
-    ∂₀ = ntuple(_ -> (true, false), N)
-    # ẑero = ∃(God, d̂, μ₀, ρ₀, ∂₀, Φ)
+    ∂₀ = SVector(ntuple(_ -> (true, false), N))
     ẑero = ∃(God, d, μ, ρ, ∂₀, Φ)
-    μ₁ = @SVector ones(T, N)
-    ∂₁ = ntuple(_ -> (false, true), N)
+    μ₁ = SA[μ[1], ones(T,N-1)...]
+    ∂₁ = SVector(ntuple(_ -> (false, true), N))
     zeros = @SVector zeros(T, N)
-    # ône = ∃(God, d̂, μ₁, zeros, ∂₁, ○̂)
     ône = ∃(God, d, μ₁, zeros, ∂₁, ○̂)
-    # ♯̂ = (1, ♯...)
-    # god(ẑero, ône, true, zero(T), zero(T), 𝕋(), ⚷, ♯̂, ∇)
-    god(ẑero, ône, true, zero(T), zero(T), 𝕋(), ⚷, ♯, ∇)
+    god(ẑero, ône, true, zero(T), zero(T), 𝕋(), ⚷, ♯, ∇, (x, y) -> sqrt.(x.^2 .+ y.^2))
 end
 # isreal(ϵ::∃) = √(ϵ) === God
 # function dh(⚷, g, n)
@@ -46,12 +38,14 @@ end
 #         mod1(i[d] + ♯[d] - î, ♯[d])
 #     end
 # end
-function create(g::god, Φ, Ω=God)
+function ∃!(g::god, Φ, Ω=God)
     ϵ = g.ône - g.ẑero
-    ϵ = ∃(ϵ, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, Φ)
+    μ = SA[t(Ω.Ο[Ω]+1), ϵ.μ[2:end]...]
+    ϵ = ∃(ϵ, ϵ.d, μ, ϵ.ρ, ϵ.∂, Φ)
     # ϵ = ∃(ϵ, ϵ.d, ϵ.μ, ϵ.ρ, ϵ.∂, ℼ(Φ))
     ∃!(ϵ, Ω)
 end
+∃̇(g::god) = observe!(g, g.♯[1], g.♯[2]; backend=GPU_BACKEND)
 # const WHITE = (one(T), one(T), one(T), one(T))
 # const BLACK = (zero(T), zero(T), zero(T), one(T))
 # ∃̇(g::god) = ∃̇(g.ône - g.ẑero, g.♯, g.∇)
@@ -86,57 +80,41 @@ end
 #     end
 #     pixel
 # end
-# # # ∇(t) = t*g.ône-(1-t)*g.ẑero
-# # # ∇(0) = g.ẑero
-# # # ∇(1) = g.ône
-# # # t(ẑero), t̂
-# # # speed = dt(ẑero)/dt̂, dx/dt(ẑero), dy/dt(ẑero)
-# # # t = 1 - 1/(1+log(C)) = log(C)/(1+log(C))
-# # # dt(ẑero) = speed[1]*dt̂
-# # # dt̂=0.01
-# # # step!(g, dt̂)
-# # # wip
-# # function step!(g::god, dt̂)
-# #     dt = g.v[1] * dt̂
-# #     # g.ẑero.μ[1] += dt
-# #     # dt = Ο(g.ẑero.μ[1] + g.v[1])
-# #     # Ο(0.40938)
-# #     # t(1)
-# #     N = length(g.ẑero.μ)
-# #     μ = SVector(ntuple(N) do i
-# #         3 < i && return g.ẑero.μ[i]
-# #         i == 1 && return min(g.ẑero.μ[1] + dt, one(T))
-# #         min(g.ẑero.μ[i] + g.v[i] * dt, one(T))
-# #     end)
-# #     ρ = SVector(ntuple(N) do i
-# #         (i == 2 || i == 3) && return min(g.ẑero.ρ[i], μ[i], one(T) - μ[i])
-# #         g.ẑero.ρ[i]
-# #     end)
-# #     g.ẑero = ∃(g.ẑero.ϵ̂, g.ẑero.d, μ, ρ, g.ẑero.∂, g.ẑero.Φ)
-# # end
 # # ρ(μ) = min(μ, 1 - μ)
-# function step(g::god, dt̂=one(T))
-#     if g.∂t₀
-#         ṫ = t()
-#         μ = SVector(ntuple(i -> i == 1 ? ṫ : g.ẑero.μ[i], length(g.ẑero.μ)))
-#     else
-#         δμ = g.ône.μ .- g.ẑero.μ
-#         all(d -> iszero(d), δμ) && return
-#         α = clamp(g.v * dt̂, zero(T), one(T))
-#         μ = g.ẑero.μ .+ α .* δμ
-#     end
-#     g = move(g, μ)
-#     g.ẑero !== ○̂ && ∃!(g.ẑero)
-# end
-# speed(g::god, v) = god(g.ẑero, g.ône, g.∂t₀, clamp(T(v), zero(T), one(T)), g.ρ, g.Ω, g.⚷, g.♯, g.∇)
-# stop(g::god) = god(g.ẑero, g.ône, g.∂t₀, zero(T), g.ρ, g.Ω, g.⚷, g.♯, g.∇)
-# stoptime(g::god) = god(g.ẑero, g.ône, g.∂t₀, SA[zero(T), g.v[2:end]...], g.ρ, g.Ω, g.⚷, g.♯, g.∇)
-# scale!(g::god, ♯) = god(g.ẑero, g.ône, g.∂t₀, g.v, g.ρ, g.Ω, g.⚷, ♯, g.∇)
+function step(g::god, dt̂=one(T))
+    if g.∂t₀
+        ṫ = t()
+        μ = SVector(ntuple(i -> i == 1 ? ṫ : g.ẑero.μ[i], length(g.ẑero.μ)))
+    else
+        δμ = g.ône.μ .- g.ẑero.μ
+        all(d -> iszero(d), δμ) && return
+        α = clamp(g.v * dt̂, zero(T), one(T))
+        μ = g.ẑero.μ .+ α .* δμ
+    end
+    g = move(g, μ)
+    g.ẑero !== ○̂ && ∃!(g.ẑero)
+    g
+end
+jerk(g::god, δ) = accelerate(g, g.v*exp(δ))
+accelerate(g::god, δ) = speed(g, iszero(g.v) ? δ : g.v*exp(δ))
+speed(g::god, v) = god(g.ẑero, g.ône, g.∂t₀, clamp(T(v), zero(T), one(T)), g.ρ, g.Ω, g.⚷, g.♯, g.∇, g.d)
+# stop(g::god) = speed(g, zero(T))
+# stoptime(g::god) = god(g.ẑero, g.ône, g.∂t₀, SA[zero(T), g.v[2:end]...], g.ρ, g.Ω, g.⚷, g.♯, g.∇, g.d)
+scale(g::god, δ) = begin
+    ϵ =  g.ône - g.ẑero
+    ρ = ϵ.ρ * exp(δ)
+    ône = ϵ.μ .+ ρ
+    ẑero = ϵ.μ .- ρ
+    move(g, ône) # could be parallel
+    move(g, ẑero) # could be parallel
+end
 move(g::god, ẑeroμ) =
     god(
         ∃(g.ẑero.ϵ̂, g.ẑero.d, ẑeroμ, g.ẑero.ρ, g.ẑero.∂, g.ẑero.Φ),
-        g.ône, g.∂t₀, g.v, g.ρ, g.Ω, g.⚷, g.♯, g.∇
+        ∃(g.ône.ϵ̂, g.ône.d, SA[ẑeroμ[1] ,g.ône.μ[2:end]...], g.ône.ρ, g.ône.∂, g.ône.Φ),
+        g.∂t₀, g.v, g.ρ, g.Ω, g.⚷, g.♯, g.∇, g.d
     )
+
 # focus(g::god, ôneμ) =
 #     god(
 #         g.ẑero,
@@ -208,101 +186,7 @@ move(g::god, ẑeroμ) =
 #     KernelAbstractions.synchronize(GPU_BACKEND)
 #     Array(rgba)
 # end
-# # X(i, ♯::NTuple) = SVector{length(♯)}([isone(♯[î]) ? ○ : T(i[î] - 1) / T(♯[î] - 1) for î = eachindex(♯)])
-# X(i, ♯) = ntuple(î -> begin
-#         isone(♯[î]) && return ○
-#         # î == 4 && return # todo depth log spacing
-#         T(i[î] - 1) / T(♯[î] - 1)
-#         # T(i[î]) / T(♯[î] + 1)
-#     end, length(♯))
-# # ♯
-# # iμ(i, ♯) # index to center
-# # μi(μ, ♯) # center to index
-# # function owners(ẑerod, ẑeroμ, ∇, ♯)
-# #     N = length(ẑerod)
-# #     ẑeroρ = SVector(ntuple(_ -> zero(T), N))
-# #     ẑero∂ = ntuple(_ -> (true,true), N)
-# #     μ = ∃(God, ẑerod, ẑeroμ, ẑeroρ, ẑero∂, ○̂)
-# #     ϵ = X(μ, ∇)
-# #     ôneμ = ẑeroμ .+ 2ϵ.ρ
-# #     ônei = μi(ôneμ, ♯)
-# #     ôneCartesian = ?(ônei, ♯)
-# #     ϵ̂ = Dict{Int, ∃}()
-# #     Threads.@threads for i = 1:N
-# #         ẑeroCartesianOfSubHyperBalli = ?(ôneCartesian)
-# #         ẑeroμOfSubHyperBalli = ?(ẑeroCartesianOfSubHyperBalli) # maybe via ẑeroi if better
-# #         ♯OfSubHyperBalli = ?(♯) # smaller
-# #         subHyperBalli = owners(ẑerod, ẑeroμOfSubHyperBalli, ∇, ♯OfSubHyperBalli)
-# #         ϵ̂[globali(i, ôneCartesian)] = subHyperBalli
-# #     end
-# #     unique(collect(values(ϵ̂)))
-# # end
 
-# # function i2μ(i::Int, N::Int)
-# #     isone(N) && return ○
-# #     one(T) - log(T(N - i + 1)) / log(T(N)) # log(T(N)) const
-# # end
-# # function μ2i(μ::T, N::Int)
-# #     isone(N) && return 1
-# #     clamp(round(Int, T(N) + one(T) - T(N)^(one(T) - μ)), 1, N)
-# # end
-# # i2μ(i::NTuple{N}, ♯::NTuple{N}) where N = ntuple(d -> i2μ(i[d], ♯[d]), N)
-# # μ2i(μ, ♯::NTuple{N}) where N = ntuple(d -> μ2i(T(μ[d]), ♯[d]), N)
-# # i2μ((1,2,3,4,5,6,7,8,9,10), (10,10,10,10,10,10,10,10,10,10))
-# # function make_slab(region, box, d, N)
-# #     ntuple(N) do d2
-# #         if d2 < d
-# #             first(box[d2]):last(box[d2])
-# #         elseif d2 == d
-# #             (last(box[d])+1):last(region[d])
-# #         else
-# #             first(region[d2]):last(region[d2])
-# #         end
-# #     end
-# # end
-# # function owners(ϵ_root, region, ♯, ∇)
-# #     N = length(♯)
-# #     corner = ntuple(d -> first(region[d]), N)
-# #     x = iμ(corner, ♯)
-# #     xϵ = ∃(God, ϵ_root.d, SVector(x), zero(ϵ_root.ρ), ϵ_root.∂, ϵ_root.Φ)
-# #     owner, _ = X(xϵ, ∇)
-    
-# #     result = Vector{Tuple{∀, NTuple{N,UnitRange{Int}}}}()
-    
-# #     if owner === God
-# #         # find any entity in subtree intersecting region
-# #         node = β(xϵ, God)  # deepest ancestor
-# #         for ϵ in God.ϵ̃[node]
-# #             ϵ_box = grid_box(ℼ(ϵ), ϵ_root, ♯)
-# #             clipped = clip(ϵ_box, region)
-# #             isempty_region(clipped) && continue
-# #             # recurse starting at this entity's corner within region
-# #             append!(result, owners(ϵ_root, clipped, ♯, ∇))
-# #             # slabs: remainder of region minus clipped
-# #             append_slabs!(result, ϵ_root, region, clipped, ♯, ∇)
-# #             return result
-# #         end
-# #         # nothing intersects — entire region is God
-# #         return result
-# #     end
-    
-# #     box = clip(grid_box(ℼ(owner), ϵ_root, ♯), region)
-# #     push!(result, (owner, box))
-    
-# #     # N slabs in parallel
-# #     tasks = Vector{Task}()
-# #     for d in 1:N
-# #         slab = make_slab(region, box, d, N)
-# #         isempty_region(slab) && continue
-# #         t = Threads.@spawn owners(ϵ_root, slab, ♯, ∇)
-# #         push!(tasks, t)
-# #     end
-# #     for t in tasks
-# #         append!(result, fetch(t))
-# #     end
-    
-# #     result
-# # end
 # # i = collect(CartesianIndices(Ξ))[2678]
 # # Ξ[i].Φ(1)
 # # ∇=typemax(UInt32)
@@ -322,11 +206,3 @@ move(g::god, ẑeroμ) =
 #     end
 #     Ξ
 # end
-# # t0=time()
-# # @time begin i = CartesianIndices(Ξ)[î]
-# #         x = X(i, ♯)
-# #         # xϵ = ∃(God, ϵ.d, x, ρ₀, ϵ.∂, ϵ.Φ)
-# #         xϵ = ∃(God, ϵ.d, SVector(x), ρ₀, ϵ.∂, ϵ.Φ)
-# #         Ξ[i], _ = X(xϵ, ∇) end;
-# # time()-t0
-# # 0.09*prod(size(Ξ))
