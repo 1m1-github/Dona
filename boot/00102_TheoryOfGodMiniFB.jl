@@ -9,24 +9,12 @@ MINIFBTASK = @async while true
 end
 viewer_zero_vs_one_mode = 0
 viewer_dim = g.ẑero.d[2]
-movegod(g, d, μ, δ) = move(g, SVector(ntuple(i -> begin
-        g.ẑero.d[i] == d && return δ(μ[i], T(0.01))
-        μ[i]
-    end, length(μ))))
-focusup(g, d) = movegod(g, d, g.ône.μ, +)
-focusdown(g, d) = movegod(g, d, g.ône.μ, -)
-moveup(g, d) = movegod(g, d, g.ẑero.μ, +)
-movedown(g, d) = movegod(g, d, g.ẑero.μ, -)
-jerkdown(g) = jerk(g, T(-0.01))
-jerkup(g) = jerk(g, T(0.01))
-scaledown(g) = scale(g, T(-0.01))
-scaleup(g) = scale(g, T(0.01))
 function keyboard_cb(window::Ptr{Cvoid}, key::Int32, mod::Int32, is_pressed::Bool)::Cvoid
     try
         global g
         global viewer_dim
         global viewer_zero_vs_one_mode
-        global buffer
+        # global buffer
         println("Key pressed: $key, $mod, $(is_pressed)")
         println("viewer_zero_vs_one_mode=$viewer_zero_vs_one_mode")
         println("viewer_dim=$viewer_dim")
@@ -43,8 +31,8 @@ function keyboard_cb(window::Ptr{Cvoid}, key::Int32, mod::Int32, is_pressed::Boo
                 else
                     g = focusup(g, viewer_dim)
                 end
-                p♯ = calc_p♯(g)
-                buffer = floor.(UInt32, reshape(p♯, prod(g.♯)) .* MAX_RGB)
+                # p♯ = calc_p♯(g)
+                # buffer = floor.(UInt32, reshape(p♯, prod(g.♯)) .* MAX_RGB)
                 # global buffer = c2rgb.(buffer)
                 # global buffer = ifelse.(buffer .> 0, 0xFFFFFFFF, 0x00000000)
             elseif key == 264
@@ -53,8 +41,8 @@ function keyboard_cb(window::Ptr{Cvoid}, key::Int32, mod::Int32, is_pressed::Boo
                 else
                     g = focusdown(g, viewer_dim)
                 end
-                p♯ = calc_p♯(g)
-                buffer = floor.(UInt32, reshape(p♯, prod(g.♯)) .* MAX_RGB)
+                # p♯ = calc_p♯(g)
+                # buffer = floor.(UInt32, reshape(p♯, prod(g.♯)) .* MAX_RGB)
                 # global buffer = c2rgb.(buffer)
                 # global buffer = ifelse.(buffer .> 0, 0xFFFFFFFF, 0x00000000)
             elseif key == 81
