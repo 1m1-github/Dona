@@ -40,57 +40,95 @@ include("00103_TheoryOfGodgod.jl")
 
 const invϕ = one(T) / MathConstants.golden
 ♯space = 10
-# g = god(
-#     d=sort(SA[zero(T), invϕ, invϕ^2, invϕ^3, invϕ^4, invϕ^5, invϕ^6, one(T)]),
-#     μ=SA[t(), ○, ○, ○, ○, ○, ○, zero(T)],
-#     ρ=SA[zero(T), zero(T), zero(T), zero(T), zero(T), zero(T),zero(T), zero(T)],
-#     ♯=(♯space, ♯space))
-# const SPATIAL = [2,3,4]
 g = god(
     d=sort(SA[zero(T), invϕ, invϕ^2, one(T)]),
-    μ=SA[t(), ○, ○,○],
-    ρ=SA[zero(T), ○, ○,○],
+    μ=SA[t(), ○, ○, ○],
+    ρ=SA[zero(T), zero(T), zero(T), zero(T)],
     ♯=(♯space, ♯space))
 
-(i, ΦΦ, p0, e1, e2, d̂, Δx, Δy, c, ẑero, ône, has_gl) = ∃̇(g);
-ΦΦ
+# const God = 𝕋()
+# const Φ=○̂
+Ω=God
+Ω.Ο[Ω]
+t()
+God.ϵ̃
+g.ẑero.μ
+g.ône.μ
+g = step(g)
+
+∃!(g, ○̂)
+# g = step(g,0.01)
+
+ϵ.μ
+ϵ.ρ
+ϵ1 = God.ϵ̃[God][1];
+ϵ1.μ
+ϵ1.ρ
+ϵ2 = God.ϵ̃[ϵ1][1];
+ϵ2.μ
+ϵ2.ρ
+ϵ3 = God.ϵ̃[ϵ2][1];
+ϵ3.μ
+ϵ3.ρ
+ϵ4 = God.ϵ̃[ϵ3][1];
+ϵ4.μ
+ϵ4.ρ
+ϵ5 = God.ϵ̃[ϵ4][1];
+ϵ5.μ
+ϵ5.ρ
+
+
+# ϵ̂ = β(ϵ, Ω)
+ϵ₁, ϵ₂ = ϵ, Ω
+ϵ̃ = God.ϵ̃[ϵ₂]
+ϵ̃₂ = filter(ϵ -> ϵ ≠ ϵ₁ && ϵ₁ ⫉ ϵ, ϵ̃)
+ϵ=ϵ̃[1]
+# ϵ₁, ϵ₂=ϵ₁,ϵ̃[1]
+# isempty(ϵ̃₂) && return ϵ₂
+# β(ϵ₁, only(ϵ̃₂))
+ϵ₁, ϵ₂ = ϵ, only(ϵ̃₂)
+ϵ₁===ϵ1
+ϵ₁===ϵ2
+ϵ₁===ϵ3
+ϵ₁===ϵ4
+ϵ₂===ϵ1
+ϵ₂===ϵ2
+ϵ₂===ϵ3
+ϵ₂===ϵ4
+ϵ̂===ϵ1
+ϵ̂===ϵ2
+ϵ̂===ϵ3
+ϵ̂===ϵ4
+ϵ̃[1]===ϵ1
+ϵ̃[1]===ϵ2
+ϵ̃[1]===ϵ3
+ϵ̃[1]===ϵ4
+ϵ̃₂[1]===ϵ1
+ϵ̃₂[1]===ϵ2
+ϵ̃₂[1]===ϵ3
+ϵ̃₂[1]===ϵ4
+ϵ₁.ϵ̂ == ϵ₂
+ϵ₁.ϵ̂.ϵ̂ == ϵ₂
+ϵ₁.ϵ̂ === ϵ₂
+
+i = fill(0, g.♯..., length(GL_NODES))
+ΦΦ = []
+∇ = 1
+ϵ = ϵ1
+owners!(ϵ, i, ΦΦ, ∇)
 unique(i)
-ΦΦ[1] === ○̂
-φ_hi(x...) = T(0.3)
-∃!(g, φ_hi);
-(i, ΦΦ, p0, e1, e2, d̂, Δx, Δy, c, ẑero, ône, has_gl) = ∃̇(g);
-ΦΦ
-unique(i)
-g = move(g, SA[t(), g.ẑero.μ[2:end]...]);
-(i, ΦΦ, p0, e1, e2, d̂, Δx, Δy, c, ẑero, ône, has_gl) = ∃̇(g);
-ΦΦ
-unique(i)
+count(x -> x == 0, i)
+count(x -> x == 1, i)
+count(x -> x == 2, i)
 
-println("○̂: ", count(==(UInt32(1)), i))
-println("φ_hi: ", count(==(UInt32(2)), i))
-println("total: ", length(i))
+ϵ1.μ, ϵ1.ρ
+ϵ2.μ, ϵ2.ρ
 
-φ_lo(x...) = T(0.7)
-ṫ = t()
-∃!(∃(God, g.ẑero.d, SA[ṫ, ○, ○, ○], SA[T(0.05), T(0.25), T(0.25), T(0.25)], g.ẑero.∂, φ_lo))
-(i, ΦΦ, p0, e1, e2, d̂, Δx, Δy, c, ẑero, ône, has_gl) = ∃̇(g);
-unique(i)
+iϵ̃, ϵ̃ = collect(enumerate(get(God.ϵ̃, ϵ, [])))[1]
 
-a1 = God.ϵ̃[God][1]
-φ_lo(x...) = T(0.7)
-∃!(∃(a1, a1.d, SA[a1.μ[1], T(0.25), T(0.25), T(0.25)], SA[zero(T), T(0.15), T(0.15), T(0.15)], a1.∂, φ_lo))
 
-(i, ΦΦ, p0, e1, e2, d̂, Δx, Δy, c, ẑero, ône, has_gl) = ∃̇(g,  2);
-println(ΦΦ)
-println(unique(i))
 
-i
-God.ϵ̃[God][1].Φ
-φ_child(x...) = T(0.8)
-∃!(g, φ_child)
-g = scaleup(g)
-g = scaledown(g)
-for _=1:10 g = moveup(g, zero(T)) end
+
 
 include("00102_TheoryOfGodMiniFB.jl")
 

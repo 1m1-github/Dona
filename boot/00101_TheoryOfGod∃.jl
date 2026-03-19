@@ -63,10 +63,21 @@ t(ϵ::∀=God) = t(God.Ο[ϵ])
 #     end
 #     ϵ̃
 # end
-ρ̂(ϵ::∃) = 2 .* ϵ.ϵ̂.ρ .* ϵ.ρ
-μ̂(ϵ::∃) = ϵ.ϵ̂.μ .- ϵ.ϵ̂.ρ .+ 2 .* ϵ.ϵ̂.ρ .* ϵ.μ
+ρ̂(ρ, ρ̂) = 2 .* ρ̂ .* ρ
+ρ̂(ϵ::∃) = ρ̂(ϵ.ρ, ϵ.ϵ̂.ρ)
+# ρ̂(ϵ::∃) = 2 .* ϵ.ϵ̂.ρ .* ϵ.ρ
+μ̂(μ, μ̂, ρ̂) = μ̂ .- ρ̂ .+ 2 .* ρ̂ .* μ
+μ̂(ϵ::∃) = μ̂(ϵ.μ, ϵ.ϵ̂.μ, ϵ.ϵ̂.ρ)
+# μ̂(ϵ::∃) = ϵ.ϵ̂.μ .- ϵ.ϵ̂.ρ .+ 2 .* ϵ.ϵ̂.ρ .* ϵ.μ
 μ̃(ϵ::∃, μ) = (μ .- (ϵ.μ .- ϵ.ρ)) ./ ϵ.ρ ./ 2
 ρ̃(ϵ::∃, ρ) = ρ ./ ϵ.ρ ./ 2
+μρΩ(ϵ::∃) = begin
+    ϵ.ϵ̂ isa 𝕋 && return ϵ.μ, ϵ.ρ
+    μ̂, ρ̂ = μρΩ(ϵ.ϵ̂)
+    μ = μ̂ .- ρ̂ .+ 2 .* ρ̂ .* ϵ.μ
+    ρ = 2 .* ρ̂ .* ϵ.ρ
+    μ, ρ
+end
 function μρ(ϵ::∃, d)
     i = searchsortedfirst(ϵ.d, d)
     N = length(ϵ.d)
@@ -149,10 +160,16 @@ function α(ϵ)
 end
 function α(ϵ₁::∃, ϵ₂::∃)
     αϵ₁ = α(ϵ₁)
-    ϵ₂ ∈ αϵ₁ && return ϵ₂
+    for ϵ = αϵ₁
+        ϵ == ϵ₂ && return ϵ₂
+    end
+    # ϵ₂ ∈ αϵ₁ && return ϵ₂
     ϵ̂ = ϵ₂.ϵ̂
     while ϵ̂ isa ∃
-        ϵ̂ ∈ αϵ₁ && return ϵ̂
+        for ϵ = αϵ₁
+            ϵ == ϵ̂ && return ϵ̂
+        end
+        # ϵ̂ ∈ αϵ₁ && return ϵ̂
         ϵ̂ = ϵ̂.ϵ̂
     end
     God
@@ -163,12 +180,14 @@ function ℼ(ϵ::∃)
     ϵ̂̂ = ∃(ϵ̂.ϵ̂, ϵ.d, μ̂(ϵ), ρ̂(ϵ), ϵ.∂, ϵ.Φ)
     ℼ(ϵ̂̂)
 end
+ℼ(Ω::𝕋, ::Any) = Ω
 ℼ(ϵ, ::𝕋) = ℼ(ϵ)
 function ℼ(ϵ₁::∃, ϵ₂::∃)
     ○̂̂ = SVector(ntuple(○̂, length(ϵ₁.d)))
-    ϵ₁ === ϵ₂ && return ∃(ϵ₂, ϵ₁.d, ○̂̂, ○̂̂, ϵ₁.∂, ϵ₁.Φ)
-    ϵ₁.ϵ̂ === ϵ₂ && return ϵ₁
+    ϵ₁ == ϵ₂ && return ∃(ϵ₂, ϵ₁.d, ○̂̂, ○̂̂, ϵ₁.∂, ϵ₁.Φ)
+    ϵ₁.ϵ̂ == ϵ₂ && return ϵ₁
     if ϵ₂ ∈ α(ϵ₁)
+        # @show typeof.([ϵ₁, ϵ₂])
         # @show ϵ₂ isa 𝕋
         # @show ϵ₂ === ϵ₁
         # @show ϵ₂ == ϵ₁
@@ -186,7 +205,7 @@ end
 ⫉(ϵ, ::𝕋) = true
 # ϵ₁ , ϵ₂ = ϵ₁,ϵ̃
 function ⫉(ϵ₁::∃, ϵ₂::∃)
-    ϵ₁.ϵ̂ === ϵ₂.ϵ̂ && return ϵ₁ ⪽ ϵ₂
+    ϵ₁.ϵ̂ == ϵ₂.ϵ̂ && return ϵ₁ ⪽ ϵ₂
     ϵ̂ = α(ϵ₁, ϵ₂)
     ℼ(ϵ₁, ϵ̂) ⪽ ℼ(ϵ₂, ϵ̂)
 end
@@ -258,45 +277,45 @@ function Base.:∩(ϵ₁::∃, ϵ₂::∃)
     ϵ̂ = ℼ(ϵ₁, ϵ₂)
     all(ϵ̃ -> ϵ̂ ∩ ϵ̃, ϵ̃)
 end
-function √(ϵ::∃)
-    n = 0
-    p = ϵ
-    while !(p.ϵ̂ isa 𝕋)
-        p = p.ϵ̂
-        n += 1
-    end
-    p, n
-end
-# x=xϵ
-# ϵ=β(x, God, God)
-# ϵ.Φ(1)
-function X(x::∃, ∇)
-    ϵ = β(x, God)
-    ϵ === God && return God, true
-    ∂(x, ϵ) && return God, true
-    x ∩ ϵ && return ϵ, true # ?
-    _, n = √(ϵ)
-    ∇ < n && return God, false
-    ϵ̃ = God.ϵ̃[ϵ]
-    Threads.@threads for ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, ϵ̃)
-        x ∩ ϵ̃ && return ϵ̃, true
-        ϵ̂, found = X(x, ∇)
-        found && return ϵ̂, true
-    end
-    God, false
-end
-# x, ϵ, ∇ = xϵ, ϵ̂, typemax(UInt)
-# x, ϵ, ∇ = x, only(ϵ̃), ∇-1
-Φ(::Any, ::𝕋) = ○
-# Φ(x::∃, ϵ::∃) = ϵ.Φ(x.μ)
-Φ(x::∃, ϵ::∃) = ϵ.Φ(μ̃(ϵ, x.μ))
-function Φ(x::∃, ϵ::∀, ∇)
-    iszero(∇) && return Φ(x, ϵ)
-    ∂(x, ϵ) && return ○
-    ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, God.ϵ̃[ϵ])
-    isempty(ϵ̃) && return Φ(x, ϵ)
-    Φ(x, only(ϵ̃), ∇ - 1)
-end
+# function √(ϵ::∃)
+#     n = 0
+#     p = ϵ
+#     while !(p.ϵ̂ isa 𝕋)
+#         p = p.ϵ̂
+#         n += 1
+#     end
+#     p, n
+# end
+# # x=xϵ
+# # ϵ=β(x, God, God)
+# # ϵ.Φ(1)
+# function X(x::∃, ∇)
+#     ϵ = β(x, God)
+#     ϵ === God && return God, true
+#     ∂(x, ϵ) && return God, true
+#     x ∩ ϵ && return ϵ, true # ?
+#     _, n = √(ϵ)
+#     ∇ < n && return God, false
+#     ϵ̃ = God.ϵ̃[ϵ]
+#     Threads.@threads for ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, ϵ̃)
+#         x ∩ ϵ̃ && return ϵ̃, true
+#         ϵ̂, found = X(x, ∇)
+#         found && return ϵ̂, true
+#     end
+#     God, false
+# end
+# # x, ϵ, ∇ = xϵ, ϵ̂, typemax(UInt)
+# # x, ϵ, ∇ = x, only(ϵ̃), ∇-1
+# Φ(::Any, ::𝕋) = ○
+# # Φ(x::∃, ϵ::∃) = ϵ.Φ(x.μ)
+# Φ(x::∃, ϵ::∃) = ϵ.Φ(μ̃(ϵ, x.μ))
+# function Φ(x::∃, ϵ::∀, ∇)
+#     iszero(∇) && return Φ(x, ϵ)
+#     ∂(x, ϵ) && return ○
+#     ϵ̃ = filter(ϵ̃ -> x ⫉ ϵ̃, God.ϵ̃[ϵ])
+#     isempty(ϵ̃) && return Φ(x, ϵ)
+#     Φ(x, only(ϵ̃), ∇ - 1)
+# end
 # ϵ=ϵ̂
 function ∃!(ϵ::∃, Ω=God)
     lock(Ω.L)
@@ -325,6 +344,7 @@ function rm!(God::𝕋)
     delete!(God.Ο, ϵ̂̂)
 end
 # ϵ₁, ϵ₂ = ône, ẑero
+# ϵ₁, ϵ₂ = g.ône, g.ẑero
 # (i, d) = collect(enumerate(d̂))[1]
 function Base.:(-)(ϵ₁::∃, ϵ₂::∃)
     d̂ = sort!(ϵ₂.d ∪ ϵ₁.d)
