@@ -31,9 +31,9 @@ the current mapping is
 if complexity < 0.3
     complexity = "claude-haiku-4-5-20251001"
 elseif complexity < 0.7
-    complexity = "claude-sonnet-4-5-20250929"
+    complexity = "claude-sonnet-4-6"
 else
-    complexity = "claude-opus-4-5-20251101"
+    complexity = "claude-opus-4-6"
 end
 """
 function intelligence(;
@@ -100,19 +100,20 @@ function intelligence(;
     #DEBUG
 
     t1 = time() #DEBUG
-    # response = HTTP.post(url, headers, body_string)
-    sleep(1)
-    t2 = time()#DEBUG
-    # serialize(joinpath(LOGS, "$ts-response"), response) # DEBUG
-    # response_body = String(response.body)
-    # result = JSON3.parse(response_body)
-    # ΔE = ΔEnery(result)
+    response = HTTP.post(url, headers, body_string)
+    # sleep(1)
+    t2 = time() #DEBUG
+    serialize(joinpath(LOGS, "$ts-response"), response) # DEBUG
+    response_body = String(response.body)
+    result = JSON3.parse(response_body)
+    ΔE = ΔEnery(result)
     # v = "v" * string(abs(rand(Int)))
-    result = Dict("content" => [Dict("text" => raw"""
-        put!(Speaker,"hi")
-        """)], "usage" => "")
+    # put!(TOG,"hi")
+    # result = Dict("content" => [Dict("text" => raw"""
+    #     put!(TOG,"\$ integral_(-infinity)^(infinity) e^(-x^2) d x = sqrt(pi) \$")
+    #     """)], "usage" => "")
+    # ΔE = 0.01
 
-    ΔE = 0.01
     output = result["content"][1]["text"]
 
     #DEBUG

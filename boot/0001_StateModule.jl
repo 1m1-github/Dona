@@ -99,6 +99,7 @@ function state(x::Exception)
     sprint(showerror, x)
 end
 function state(method::Method)
+    try
     sig = method.sig
     sig isa UnionAll && (sig = Base.unwrap_unionall(sig))
     params = sig.parameters[2:end]
@@ -110,6 +111,9 @@ function state(method::Method)
     binding = Docs.Binding(m, method.name)
     doc_str = haskey(Docs.meta(m), binding) ? "\"" * strip(string(Docs.doc(f, sig))) * "\" " : ""
     doc_str * sig_str * "::$(Union{ret_types...})"
+    catch 
+        "" 
+    end
 end
 function state(v::TrackedSymbol)
     v.m ∉ MODULES && return ""
@@ -124,7 +128,8 @@ function state(v::TrackedSymbol)
     end
     if T <: Function
         return join(state.([TrackedSymbol(v.m, v.sym, method, v.timestamp) for method = methods(value, v.m)]), '\n')
-    elseif T <: Method
+    elseif T <: Method # && !startswith(string(v.sym), "#")
+        # @show v.sym, string(v.sym), !startswith(string(v.sym), "#")
         return os_time(v.timestamp) * state(value)
     end
     T_str = T ∈ [DataType, Method] ? "" : string(T)

@@ -12,6 +12,7 @@ include("/Users/1m1/Documents/LoopOS.jl/src/LoopOS.jl")
 using .LoopOS
 
 import Pkg
+Pkg.activate("..")
 "To install Julia `Pkg`s: `@install Pkg1, Pkg2, Pkg3, ...` runs `Pkg.add` and `using` if not already cached."
 macro install(pkgs...)
     new_pkgs = Symbol[]
