@@ -1,3 +1,4 @@
+"We can remove logging once all is functioning well for your privacy."
 module LoggingModule
 
 export LOGS

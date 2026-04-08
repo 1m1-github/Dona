@@ -7,8 +7,7 @@ const ROOT = @__DIR__
 const LONG_MEMORY = joinpath(ROOT, "long")
 const BOOT_KNOWLEDGE = joinpath(ROOT, "boot")
 cd(LONG_MEMORY)
-
-include("/Users/1m1/Documents/LoopOS.jl/src/LoopOS.jl")
+include("/Users/1m1/Documents/LoopOS/src/LoopOS.jl")
 using .LoopOS
 
 import Pkg
@@ -36,8 +35,8 @@ end
 
 @install Revise
 for f = sort(readdir(BOOT_KNOWLEDGE, join=true))
-    Revise.includet(f)
     m = include(f)
+    Revise.track(Main, f)
     if m isa Module
         name = nameof(m)
         eval(:(using .$name))

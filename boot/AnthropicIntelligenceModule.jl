@@ -99,16 +99,19 @@ function intelligence(;
     # cp(joinpath(LOGS, "$ts-input.json"), joinpath(LOGS, "latest-input.json"), force=true)
     #DEBUG
 
-    t1 = time() #DEBUG
+    # t1 = time() #DEBUG
     response = HTTP.post(url, headers, body_string)
     # sleep(1)
-    t2 = time() #DEBUG
-    serialize(joinpath(LOGS, "$ts-response"), response) # DEBUG
+    # t2 = time() #DEBUG
+    # serialize(joinpath(LOGS, "$ts-response"), response) # DEBUG
     response_body = String(response.body)
     result = JSON3.parse(response_body)
     ΔE = ΔEnery(result)
     # v = "v" * string(abs(rand(Int)))
     # put!(TOG,"hi")
+    # result = Dict("content" => [Dict("text" => raw"""
+    #     println("i")
+    #     """)], "usage" => "")
     # result = Dict("content" => [Dict("text" => raw"""
     #     put!(TOG,"\$ integral_(-infinity)^(infinity) e^(-x^2) d x = sqrt(pi) \$")
     #     """)], "usage" => "")

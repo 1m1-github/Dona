@@ -1,24 +1,25 @@
 module StateModule
 
-export add_module_to_state, StateModuleAdvice
+export add_module_to_state
 
-const StateModuleAdvice = raw"""
-The following is how state is made:
-state(description::String, value::Any) = description * " === BEGIN" * "\n\n" * state(value) *  "\n\n" * description * " === END"
-# `Method`s `state` as `os_time` * `docstring` * signature
-cached, volatile = Main.CachingModule.cache!(SHORT_MEMORY)
-for (i, action) = enumerate(HISTORY)
-    push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].input"), action.input, action.timestamp))
-    if istaskfailed(action.task)
-        push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].task"), action.task, action.timestamp))
-        push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].output"), action.output, action.timestamp))
-    end
-end
-push!(volatile, TrackedSymbol(LoopOS, :LOOP, LOOP, Inf))
-cached_sections = [STATE_PRE, SELF, state("SHORT MEMORY", cached)]
-volatile_section = [state("LONG_MEMORY", LONG_MEMORY), state("HISTORY ∪ SHORT MEMORY", volatile), state("OUTPUT PERIPHERALS", OUTPUT_PERIPHERAL), state("INPUTS", INPUT), STATE_POST]
-join(cached_sections, "\n\n"), join(volatile_section, "\n\n")
-"""
+# export StateModuleAdvice
+# const StateModuleAdvice = raw"""
+# The following is how state is made:
+# state(description::String, value::Any) = description * " === BEGIN" * "\n\n" * state(value) *  "\n\n" * description * " === END"
+# # `Method`s `state` as `os_time` * `docstring` * signature
+# cached, volatile = Main.CachingModule.cache!(SHORT_MEMORY)
+# for (i, action) = enumerate(HISTORY)
+#     push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].input"), action.input, action.timestamp))
+#     if istaskfailed(action.task)
+#         push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].task"), action.task, action.timestamp))
+#         push!(volatile, TrackedSymbol(LoopOS, Symbol("HISTORY[][$i].output"), action.output, action.timestamp))
+#     end
+# end
+# push!(volatile, TrackedSymbol(LoopOS, :LOOP, LOOP, Inf))
+# cached_sections = [STATE_PRE, SELF, state("SHORT MEMORY", cached)]
+# volatile_section = [state("LONG_MEMORY", LONG_MEMORY), state("HISTORY ∪ SHORT MEMORY", volatile), state("OUTPUT PERIPHERALS", OUTPUT_PERIPHERAL), state("INPUTS", INPUT), STATE_POST]
+# join(cached_sections, "\n\n"), join(volatile_section, "\n\n")
+# """
 
 import Main: LoopOS
 import Main.LoopOS: TrackedSymbol, Input, Action, LOOP, Loop, InputPeripheral, OutputPeripheral
@@ -99,21 +100,33 @@ function state(x::Exception)
     sprint(showerror, x)
 end
 function state(method::Method)
-    try
     sig = method.sig
     sig isa UnionAll && (sig = Base.unwrap_unionall(sig))
     params = sig.parameters[2:end]
     m = method.module
-    f = getfield(m, method.name)
-    ret_types = Base.return_types(f, Tuple{params...})
     sig_str = split(string(method), " @")[1]
     sig_str = replace(sig_str, "__source__::LineNumberNode, __module__::Module, " => "")
     binding = Docs.Binding(m, method.name)
-    doc_str = haskey(Docs.meta(m), binding) ? "\"" * strip(string(Docs.doc(f, sig))) * "\" " : ""
-    doc_str * sig_str * "::$(Union{ret_types...})"
-    catch 
-        "" 
+    meta = Docs.meta(m)
+    haskey(meta, binding) || return ""
+    multidoc = meta[binding]
+    paramstuple = Tuple{params...}
+    docs = []
+    if haskey(multidoc.docs, paramstuple)
+        docs = multidoc.docs[paramstuple].text
+    else
+        for (t, s) in multidoc.docs
+            if paramstuple <: t
+                docs = s.text
+                break
+            end
+        end
     end
+    isempty(docs) && return ""
+    doc_str = "\"" * strip(string(join(docs))) * "\" "
+    # f = getfield(m, method.name)
+    # ret_types = Base.return_types(f, paramstuple)
+    doc_str * sig_str # * "::$(Union{ret_types...})"
 end
 function state(v::TrackedSymbol)
     v.m ∉ MODULES && return ""
@@ -128,8 +141,7 @@ function state(v::TrackedSymbol)
     end
     if T <: Function
         return join(state.([TrackedSymbol(v.m, v.sym, method, v.timestamp) for method = methods(value, v.m)]), '\n')
-    elseif T <: Method # && !startswith(string(v.sym), "#")
-        # @show v.sym, string(v.sym), !startswith(string(v.sym), "#")
+    elseif T <: Method
         return os_time(v.timestamp) * state(value)
     end
     T_str = T ∈ [DataType, Method] ? "" : string(T)
