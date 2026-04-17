@@ -1,7 +1,6 @@
 # julia --quiet --depwarn=error --threads auto main.jl Dona
 
 const GROUP = ARGS[1]
-
 const ROOT = @__DIR__
 const LONG_MEMORY = joinpath(ROOT, "$NAME/long")
 const BOOT = joinpath(ROOT, "$NAME/boot")
