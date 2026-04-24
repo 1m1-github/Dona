@@ -1,6 +1,6 @@
 name = "Dona"
 uuid = "63b76a93-dd4e-4621-a057-fa9f1bd56d16"
-version = "9.0.0"
+version = "10.0.0"
 authors = ["1m1 <imi@1m1.io>"]
 
 [deps]

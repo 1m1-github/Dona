@@ -1,5 +1,6 @@
 module Dona
 
+using LoopOS
 using LoopOSMainAgent
 using LoopOSLogging # DEBUG
 
