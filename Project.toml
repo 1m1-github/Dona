@@ -1,6 +1,6 @@
 name = "Dona"
 uuid = "63b76a93-dd4e-4621-a057-fa9f1bd56d16"
-version = "8.0.0"
+version = "9.0.0"
 authors = ["1m1 <imi@1m1.io>"]
 
 [deps]
@@ -30,6 +30,3 @@ LoopOSMainAgent = ">=1.0.0"
 TheoryOfGodgod = ">=2.0.0"
 LoopOS = ">=2.0.0"
 Logging = ">=1.11.0"
-
-[apps.Dona]
-julia_flags = ["--threads=auto"]
