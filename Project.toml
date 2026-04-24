@@ -1,9 +1,10 @@
 name = "Dona"
 uuid = "63b76a93-dd4e-4621-a057-fa9f1bd56d16"
-version = "6.0.0"
+version = "7.0.0"
 authors = ["1m1 <imi@1m1.io>"]
 
 [deps]
+LoopOSLogging = "438239d6-17a0-4cd5-bf2a-64b5615f38a2"
 LoopOSAdvice = "6b8c2a36-25e6-4767-806f-e673a32d1960"
 TheoryOfGod = "e52bc0f9-12eb-4b66-a578-8c5dba4c0869"
 LoopOSMainAgentTextCommunication = "43f8f9e4-5995-4c15-81e0-99d4da3ccbd3"
@@ -17,6 +18,7 @@ LoopOS = "59e1c01a-66d3-4f31-a2af-c2f41340710f"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [compat]
+LoopOSLogging = ">=2.0.0"
 LoopOSAdvice = ">=2.0.0"
 TheoryOfGod = ">=2.0.0"
 LoopOSMainAgentTextCommunication = ">=3.0.0"
