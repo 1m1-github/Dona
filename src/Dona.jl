@@ -1,11 +1,7 @@
 module Dona
-
-using LoopOS
 using LoopOSMainAgent
 using LoopOSLogging # DEBUG
-
-function (@main)(ARGS) 
-    LoopOS.awaken(@__FILE__)
-end
-
+LoopOSMainAgent.start(name="Dona")
+LoopOSMainAgent.LoopOSAgentManagement.createagent(name="i")
+LoopOSMainAgent.LoopOSAgentManagement.createagent(name="Janet", pkgs=["LoopOSAgentAdvice"])
 end
